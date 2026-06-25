@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend import sam_engine
 
@@ -19,6 +19,15 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 class SetImageRequest(BaseModel):
     image_id: str
+
+
+class PredictRequest(BaseModel):
+    image_id: str = ""
+    points: list[list[float]] = Field(default_factory=list)
+    point_labels: list[int] = Field(default_factory=list)
+    box: list[float] | None = None
+    multimask_output: bool = True
+
 
 app = FastAPI(title="Local SAM Mask Editor")
 
@@ -93,6 +102,28 @@ def load_model() -> dict[str, str | bool]:
 def set_image(payload: SetImageRequest) -> dict[str, str | int | bool]:
     try:
         return sam_engine.set_image(payload.image_id)
+    except sam_engine.SamEngineError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@app.post("/predict")
+def predict(payload: PredictRequest) -> dict:
+    try:
+        return sam_engine.predict(
+            image_id=payload.image_id,
+            points=payload.points,
+            point_labels=payload.point_labels,
+            box=payload.box,
+            multimask_output=payload.multimask_output,
+        )
+    except sam_engine.SamEngineError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@app.get("/mask/{mask_id}.png")
+def get_mask(mask_id: str) -> FileResponse:
+    try:
+        return FileResponse(sam_engine.get_mask_path(mask_id), media_type="image/png")
     except sam_engine.SamEngineError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 

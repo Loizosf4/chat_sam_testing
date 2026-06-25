@@ -2,6 +2,8 @@ let apiBasePromise = null;
 const canvas = document.getElementById("image-canvas");
 const context = canvas.getContext("2d");
 const promptJson = document.getElementById("prompt-json");
+const maskCandidates = document.getElementById("mask-candidates");
+const overlayOpacity = document.getElementById("overlay-opacity");
 
 const state = {
   activeTool: "box",
@@ -12,6 +14,8 @@ const state = {
   box: null,
   draftBox: null,
   isDrawingBox: false,
+  masks: [],
+  selectedMaskIds: new Set(),
 };
 
 async function getApiBase() {
@@ -119,11 +123,14 @@ function loadImage(url, uploaded) {
     state.box = null;
     state.draftBox = null;
     state.isDrawingBox = false;
+    state.masks = [];
+    state.selectedMaskIds.clear();
 
     canvas.width = uploaded.width;
     canvas.height = uploaded.height;
     redrawCanvas();
     updatePromptJson();
+    renderMaskCandidates();
   };
 
   image.src = url;
@@ -164,6 +171,8 @@ function redrawCanvas() {
 
   context.drawImage(state.image, 0, 0, canvas.width, canvas.height);
 
+  drawSelectedMaskOverlays();
+
   const box = state.draftBox || state.box;
   if (box) {
     drawBox(box, Boolean(state.draftBox));
@@ -171,6 +180,21 @@ function redrawCanvas() {
 
   state.points.forEach((point, index) => {
     drawPoint(point, state.pointLabels[index]);
+  });
+}
+
+function drawSelectedMaskOverlays() {
+  const opacity = Number(overlayOpacity.value) || 0.45;
+
+  state.masks.forEach((mask) => {
+    if (!state.selectedMaskIds.has(mask.mask_id) || !mask.overlayCanvas) {
+      return;
+    }
+
+    context.save();
+    context.globalAlpha = opacity;
+    context.drawImage(mask.overlayCanvas, 0, 0, canvas.width, canvas.height);
+    context.restore();
   });
 }
 
@@ -242,6 +266,141 @@ function clearPrompts() {
   state.isDrawingBox = false;
   redrawCanvas();
   updatePromptJson();
+}
+
+async function predictMasks() {
+  const status = document.getElementById("status");
+
+  if (!state.imageMeta) {
+    status.textContent = "Upload an image before predicting.";
+    return;
+  }
+
+  if (state.points.length === 0 && !state.box) {
+    status.textContent = "Add at least one point or a box before predicting.";
+    return;
+  }
+
+  status.textContent = "Predicting masks...";
+
+  try {
+    const apiBase = await getApiBase();
+    const response = await fetch(`${apiBase}/predict`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        image_id: state.imageMeta.image_id,
+        points: state.points,
+        point_labels: state.pointLabels,
+        box: state.box,
+        multimask_output: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || `HTTP ${response.status}`);
+    }
+
+    const prediction = await response.json();
+    await loadMaskCandidates(prediction.masks);
+    status.textContent = `Predicted ${state.masks.length} mask candidate(s).`;
+  } catch (error) {
+    status.textContent = `Prediction failed: ${error.message}`;
+  }
+}
+
+async function loadMaskCandidates(masks) {
+  state.selectedMaskIds.clear();
+
+  state.masks = await Promise.all(
+    masks.map(
+      (mask) =>
+        new Promise((resolve) => {
+          const image = new Image();
+          image.onload = () => {
+            const overlayCanvas = createMaskOverlayCanvas(image);
+            state.selectedMaskIds.add(mask.mask_id);
+            resolve({ ...mask, image, overlayCanvas });
+          };
+          image.onerror = () => {
+            resolve({ ...mask, image: null, overlayCanvas: null });
+          };
+          image.src = `data:image/png;base64,${mask.png_base64}`;
+        }),
+    ),
+  );
+
+  renderMaskCandidates();
+  redrawCanvas();
+}
+
+function createMaskOverlayCanvas(maskImage) {
+  const overlay = document.createElement("canvas");
+  overlay.width = maskImage.naturalWidth;
+  overlay.height = maskImage.naturalHeight;
+
+  const overlayContext = overlay.getContext("2d");
+  overlayContext.drawImage(maskImage, 0, 0);
+
+  const pixels = overlayContext.getImageData(0, 0, overlay.width, overlay.height);
+  for (let index = 0; index < pixels.data.length; index += 4) {
+    const alpha = pixels.data[index];
+    pixels.data[index] = 25;
+    pixels.data[index + 1] = 113;
+    pixels.data[index + 2] = 194;
+    pixels.data[index + 3] = alpha;
+  }
+  overlayContext.putImageData(pixels, 0, 0);
+
+  return overlay;
+}
+
+function renderMaskCandidates() {
+  maskCandidates.innerHTML = "";
+
+  if (state.masks.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "No predictions yet.";
+    maskCandidates.appendChild(empty);
+    return;
+  }
+
+  state.masks.forEach((mask, index) => {
+    const item = document.createElement("label");
+    item.className = "mask-candidate";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = state.selectedMaskIds.has(mask.mask_id);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        state.selectedMaskIds.add(mask.mask_id);
+      } else {
+        state.selectedMaskIds.delete(mask.mask_id);
+      }
+      redrawCanvas();
+    });
+
+    const thumbnail = document.createElement("img");
+    thumbnail.alt = `Mask candidate ${index + 1}`;
+    thumbnail.src = `data:image/png;base64,${mask.png_base64}`;
+
+    const details = document.createElement("div");
+    details.className = "mask-candidate-details";
+    details.innerHTML = `
+      <strong>${mask.mask_id}</strong>
+      <span>score: ${mask.score.toFixed(4)}</span>
+      <span>area: ${mask.area}</span>
+      <span>bbox: ${JSON.stringify(mask.bbox)}</span>
+    `;
+
+    item.append(checkbox, thumbnail, details);
+    maskCandidates.appendChild(item);
+  });
 }
 
 function updatePromptJson() {
@@ -324,7 +483,9 @@ document.querySelectorAll("[data-tool]").forEach((button) => {
   button.addEventListener("click", () => setActiveTool(button.dataset.tool));
 });
 document.getElementById("clear-prompts").addEventListener("click", clearPrompts);
+document.getElementById("predict-button").addEventListener("click", predictMasks);
 document.getElementById("image-file").addEventListener("change", uploadSelectedImage);
+overlayOpacity.addEventListener("input", redrawCanvas);
 canvas.addEventListener("mousedown", handleCanvasMouseDown);
 window.addEventListener("mousemove", handleCanvasMouseMove);
 window.addEventListener("mouseup", handleCanvasMouseUp);

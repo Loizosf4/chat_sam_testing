@@ -36,9 +36,23 @@
         <button id="tool-positive" class="tool-button" type="button" data-tool="positive">Positive point mode</button>
         <button id="tool-negative" class="tool-button" type="button" data-tool="negative">Negative point mode</button>
         <button id="clear-prompts" type="button">Clear prompts</button>
+        <button id="predict-button" type="button">Predict</button>
       </div>
 
-      <canvas id="image-canvas" width="960" height="540"></canvas>
+      <div class="workspace">
+        <canvas id="image-canvas" width="960" height="540"></canvas>
+
+        <aside class="mask-panel" aria-labelledby="mask-candidates-heading">
+          <div class="mask-panel-header">
+            <h2 id="mask-candidates-heading">Mask Candidates</h2>
+            <label for="overlay-opacity">Opacity</label>
+            <input id="overlay-opacity" type="range" min="0" max="1" step="0.05" value="0.45">
+          </div>
+          <div id="mask-candidates" class="mask-candidates">
+            <p class="empty-state">No predictions yet.</p>
+          </div>
+        </aside>
+      </div>
 
       <section class="prompt-panel" aria-labelledby="prompt-json-heading">
         <h2 id="prompt-json-heading">Prompt JSON</h2>
