@@ -34,7 +34,23 @@
         </div>
       </dl>
 
+      <div class="prompt-tools" role="toolbar" aria-label="Prompt tools">
+        <button id="tool-box" class="tool-button is-active" type="button" data-tool="box">Box mode</button>
+        <button id="tool-positive" class="tool-button" type="button" data-tool="positive">Positive point mode</button>
+        <button id="tool-negative" class="tool-button" type="button" data-tool="negative">Negative point mode</button>
+        <button id="clear-prompts" type="button">Clear prompts</button>
+      </div>
+
       <canvas id="image-canvas" width="960" height="540"></canvas>
+
+      <section class="prompt-panel" aria-labelledby="prompt-json-heading">
+        <h2 id="prompt-json-heading">Prompt JSON</h2>
+        <pre id="prompt-json">{
+  "points": [],
+  "point_labels": [],
+  "box": null
+}</pre>
+      </section>
     </main>
     <script src="app.js"></script>
   </body>

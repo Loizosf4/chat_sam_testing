@@ -48,6 +48,11 @@ button {
   padding: 8px 14px;
 }
 
+button.is-active {
+  border-color: #1971c2;
+  background: #1971c2;
+}
+
 .image-meta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -73,12 +78,38 @@ button {
   overflow-wrap: anywhere;
 }
 
+.prompt-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 canvas {
   display: block;
   max-width: 100%;
   height: auto;
   border: 1px solid #d7dce2;
   background: #ffffff;
+  cursor: crosshair;
+}
+
+.prompt-panel {
+  margin-top: 24px;
+}
+
+.prompt-panel h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+pre {
+  margin: 0;
+  overflow-x: auto;
+  border: 1px solid #d7dce2;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 16px;
 }
 
 @media (max-width: 640px) {
