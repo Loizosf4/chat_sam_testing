@@ -77,3 +77,13 @@ async def upload_image(request: Request, image: UploadFile = File(...)) -> dict[
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.get("/style.css")
+def stylesheet() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "style.css")
+
+
+@app.get("/app.js")
+def javascript() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "app.js")
