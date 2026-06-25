@@ -60,9 +60,7 @@ async function checkBackend() {
   }
 }
 
-async function uploadImage(event) {
-  event.preventDefault();
-
+async function uploadSelectedImage() {
   const status = document.getElementById("status");
   const fileInput = document.getElementById("image-file");
   const file = fileInput.files[0];
@@ -94,6 +92,8 @@ async function uploadImage(event) {
     status.textContent = "Image uploaded.";
   } catch (error) {
     status.textContent = `Upload failed: ${error.message}`;
+  } finally {
+    fileInput.value = "";
   }
 }
 
@@ -324,7 +324,7 @@ document.querySelectorAll("[data-tool]").forEach((button) => {
   button.addEventListener("click", () => setActiveTool(button.dataset.tool));
 });
 document.getElementById("clear-prompts").addEventListener("click", clearPrompts);
-document.getElementById("upload-form").addEventListener("submit", uploadImage);
+document.getElementById("image-file").addEventListener("change", uploadSelectedImage);
 canvas.addEventListener("mousedown", handleCanvasMouseDown);
 window.addEventListener("mousemove", handleCanvasMouseMove);
 window.addEventListener("mouseup", handleCanvasMouseUp);

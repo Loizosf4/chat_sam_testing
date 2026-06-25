@@ -11,13 +11,10 @@
       <h1>Local SAM Mask Editor</h1>
       <p id="status">Checking backend...</p>
 
-      <form id="upload-form" class="upload-form">
-        <label for="image-file">Image file</label>
-        <div class="upload-row">
-          <input id="image-file" name="image" type="file" accept="image/*" required>
-          <button type="submit">Upload</button>
-        </div>
-      </form>
+      <div class="upload-form">
+        <input id="image-file" class="file-input" name="image" type="file" accept="image/*">
+        <label class="button-like" for="image-file">Choose and upload image</label>
+      </div>
 
       <dl class="image-meta">
         <div>

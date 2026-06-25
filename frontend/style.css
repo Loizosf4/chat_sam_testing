@@ -27,25 +27,38 @@ h1 {
 }
 
 .upload-form {
-  display: grid;
-  gap: 8px;
   margin-bottom: 24px;
 }
 
-.upload-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
-button {
+button,
+.button-like {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #20242a;
   border-radius: 6px;
   background: #20242a;
   color: #ffffff;
   cursor: pointer;
+  font-size: 14px;
+  line-height: 1.2;
   padding: 8px 14px;
+}
+
+button:focus-visible,
+.button-like:focus-visible,
+.file-input:focus-visible + .button-like {
+  outline: 2px solid #1971c2;
+  outline-offset: 2px;
 }
 
 button.is-active {
