@@ -35,12 +35,15 @@ README.md
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn backend.main:app --reload
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload
 ```
 
 Open `frontend/index.html` directly in your browser, or open http://127.0.0.1:8000.
+
+## Local Files
+
+The virtual environment, Python bytecode, `.env`, and uploaded runtime data are ignored by git. Recreate the virtual environment locally instead of committing `.venv/` or `__pycache__/`.
 
 ## Phase 1
 
