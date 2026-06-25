@@ -1,4 +1,4 @@
-const API_BASE = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+let apiBasePromise = null;
 const canvas = document.getElementById("image-canvas");
 const context = canvas.getContext("2d");
 const promptJson = document.getElementById("prompt-json");
@@ -14,11 +14,41 @@ const state = {
   isDrawingBox: false,
 };
 
+async function getApiBase() {
+  if (!apiBasePromise) {
+    apiBasePromise = resolveApiBase();
+  }
+
+  return apiBasePromise;
+}
+
+async function resolveApiBase() {
+  if (window.location.protocol !== "file:") {
+    return "";
+  }
+
+  for (let port = 8000; port <= 8010; port += 1) {
+    const candidate = `http://127.0.0.1:${port}`;
+
+    try {
+      const response = await fetch(`${candidate}/health`);
+      if (response.ok) {
+        return candidate;
+      }
+    } catch (error) {
+      // Try the next local development port.
+    }
+  }
+
+  return "http://127.0.0.1:8000";
+}
+
 async function checkBackend() {
   const status = document.getElementById("status");
 
   try {
-    const response = await fetch(`${API_BASE}/health`);
+    const apiBase = await getApiBase();
+    const response = await fetch(`${apiBase}/health`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
@@ -47,7 +77,8 @@ async function uploadImage(event) {
   status.textContent = "Uploading image...";
 
   try {
-    const response = await fetch(`${API_BASE}/upload_image`, {
+    const apiBase = await getApiBase();
+    const response = await fetch(`${apiBase}/upload_image`, {
       method: "POST",
       body: formData,
     });
