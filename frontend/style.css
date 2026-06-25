@@ -118,6 +118,31 @@ canvas {
   min-width: 0;
 }
 
+.mask-actions {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.mask-actions input[type="text"],
+.mask-actions input[type="number"] {
+  min-width: 0;
+  border: 1px solid #c9d1db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #20242a;
+  padding: 8px 10px;
+}
+
+.mask-action-buttons {
+  display: grid;
+  gap: 8px;
+}
+
+.mask-action-buttons button {
+  width: 100%;
+}
+
 .mask-panel-header {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -152,6 +177,16 @@ canvas {
   padding: 10px;
 }
 
+.final-mask {
+  border-color: #b6d4fe;
+  background: #f8fbff;
+}
+
+.mask-controls {
+  display: grid;
+  gap: 8px;
+}
+
 .mask-candidate img {
   width: 64px;
   height: 64px;
@@ -175,6 +210,15 @@ canvas {
 .empty-state {
   margin: 0;
   color: #59616d;
+}
+
+.final-mask-section {
+  margin-top: 24px;
+}
+
+.final-mask-section h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
 }
 
 .prompt-panel {

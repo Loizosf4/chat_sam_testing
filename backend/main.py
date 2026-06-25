@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from backend import sam_engine
+from backend import mask_ops, sam_engine
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -27,6 +27,25 @@ class PredictRequest(BaseModel):
     point_labels: list[int] = Field(default_factory=list)
     box: list[float] | None = None
     multimask_output: bool = True
+
+
+class MergeMasksRequest(BaseModel):
+    mask_ids: list[str] = Field(default_factory=list)
+    label: str | None = None
+
+
+class SubtractMasksRequest(BaseModel):
+    base_mask_id: str = ""
+    subtract_mask_ids: list[str] = Field(default_factory=list)
+    label: str | None = None
+
+
+class RefineMaskRequest(BaseModel):
+    mask_id: str = ""
+    operation: str = ""
+    label: str | None = None
+    min_area: int = 100
+    kernel_size: int = 3
 
 
 app = FastAPI(title="Local SAM Mask Editor")
@@ -125,6 +144,52 @@ def get_mask(mask_id: str) -> FileResponse:
     try:
         return FileResponse(sam_engine.get_mask_path(mask_id), media_type="image/png")
     except sam_engine.SamEngineError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@app.post("/merge_masks")
+def merge_masks(payload: MergeMasksRequest) -> dict:
+    try:
+        return mask_ops.merge_masks(mask_ids=payload.mask_ids, label=payload.label)
+    except mask_ops.MaskOpsError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@app.post("/subtract_masks")
+def subtract_masks(payload: SubtractMasksRequest) -> dict:
+    try:
+        return mask_ops.subtract_masks(
+            base_mask_id=payload.base_mask_id,
+            subtract_mask_ids=payload.subtract_mask_ids,
+            label=payload.label,
+        )
+    except mask_ops.MaskOpsError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@app.post("/refine_mask")
+def refine_mask(payload: RefineMaskRequest) -> dict:
+    try:
+        if payload.operation == "fill_holes":
+            return mask_ops.fill_holes(mask_id=payload.mask_id, label=payload.label)
+        if payload.operation == "remove_small_components":
+            return mask_ops.remove_small_components(
+                mask_id=payload.mask_id,
+                min_area=payload.min_area,
+                label=payload.label,
+            )
+        if payload.operation == "smooth":
+            return mask_ops.smooth_mask(
+                mask_id=payload.mask_id,
+                kernel_size=payload.kernel_size,
+                label=payload.label,
+            )
+
+        raise HTTPException(
+            status_code=400,
+            detail="operation must be fill_holes, remove_small_components, or smooth.",
+        )
+    except mask_ops.MaskOpsError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 

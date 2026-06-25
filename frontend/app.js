@@ -3,6 +3,7 @@ const canvas = document.getElementById("image-canvas");
 const context = canvas.getContext("2d");
 const promptJson = document.getElementById("prompt-json");
 const maskCandidates = document.getElementById("mask-candidates");
+const finalMasks = document.getElementById("final-masks");
 const overlayOpacity = document.getElementById("overlay-opacity");
 
 const state = {
@@ -16,6 +17,9 @@ const state = {
   isDrawingBox: false,
   masks: [],
   selectedMaskIds: new Set(),
+  finalMasks: [],
+  selectedFinalMaskIds: new Set(),
+  activeFinalMaskId: null,
 };
 
 async function getApiBase() {
@@ -125,12 +129,16 @@ function loadImage(url, uploaded) {
     state.isDrawingBox = false;
     state.masks = [];
     state.selectedMaskIds.clear();
+    state.finalMasks = [];
+    state.selectedFinalMaskIds.clear();
+    state.activeFinalMaskId = null;
 
     canvas.width = uploaded.width;
     canvas.height = uploaded.height;
     redrawCanvas();
     updatePromptJson();
     renderMaskCandidates();
+    renderFinalMasks();
   };
 
   image.src = url;
@@ -186,15 +194,18 @@ function redrawCanvas() {
 function drawSelectedMaskOverlays() {
   const opacity = Number(overlayOpacity.value) || 0.45;
 
-  state.masks.forEach((mask) => {
-    if (!state.selectedMaskIds.has(mask.mask_id) || !mask.overlayCanvas) {
-      return;
-    }
+  drawMaskGroupOverlays(state.masks, state.selectedMaskIds, opacity);
+  drawMaskGroupOverlays(state.finalMasks, state.selectedFinalMaskIds, opacity);
+}
 
-    context.save();
-    context.globalAlpha = opacity;
-    context.drawImage(mask.overlayCanvas, 0, 0, canvas.width, canvas.height);
-    context.restore();
+function drawMaskGroupOverlays(masks, selectedIds, opacity) {
+  masks.forEach((mask) => {
+    if (selectedIds.has(mask.mask_id) && mask.overlayCanvas) {
+      context.save();
+      context.globalAlpha = opacity;
+      context.drawImage(mask.overlayCanvas, 0, 0, canvas.width, canvas.height);
+      context.restore();
+    }
   });
 }
 
@@ -316,25 +327,162 @@ async function loadMaskCandidates(masks) {
   state.selectedMaskIds.clear();
 
   state.masks = await Promise.all(
-    masks.map(
-      (mask) =>
-        new Promise((resolve) => {
-          const image = new Image();
-          image.onload = () => {
-            const overlayCanvas = createMaskOverlayCanvas(image);
-            state.selectedMaskIds.add(mask.mask_id);
-            resolve({ ...mask, image, overlayCanvas });
-          };
-          image.onerror = () => {
-            resolve({ ...mask, image: null, overlayCanvas: null });
-          };
-          image.src = `data:image/png;base64,${mask.png_base64}`;
-        }),
-    ),
+    masks.map(async (mask) => {
+      const loadedMask = await loadMaskImage(mask);
+      state.selectedMaskIds.add(mask.mask_id);
+      return loadedMask;
+    }),
   );
 
   renderMaskCandidates();
   redrawCanvas();
+}
+
+async function mergeSelectedMasks() {
+  const status = document.getElementById("status");
+  const maskIds = getSelectedOperationMaskIds();
+
+  if (maskIds.length === 0) {
+    status.textContent = "Select at least one mask to merge.";
+    return;
+  }
+
+  status.textContent = "Merging selected masks...";
+
+  try {
+    const result = await postJson("/merge_masks", {
+      mask_ids: maskIds,
+      label: getObjectLabel(),
+    });
+    await addFinalMask(result);
+    state.selectedMaskIds.clear();
+    renderMaskCandidates();
+    redrawCanvas();
+    status.textContent = `Merged mask created: ${result.label || result.mask_id}`;
+  } catch (error) {
+    status.textContent = `Merge failed: ${error.message}`;
+  }
+}
+
+async function subtractSelectedMasks() {
+  const status = document.getElementById("status");
+
+  if (!state.activeFinalMaskId) {
+    status.textContent = "Select a final mask as the active/base mask first.";
+    return;
+  }
+
+  const subtractMaskIds = getSelectedOperationMaskIds().filter(
+    (maskId) => maskId !== state.activeFinalMaskId,
+  );
+
+  if (subtractMaskIds.length === 0) {
+    status.textContent = "Select at least one other mask to subtract.";
+    return;
+  }
+
+  status.textContent = "Subtracting selected masks...";
+
+  try {
+    const result = await postJson("/subtract_masks", {
+      base_mask_id: state.activeFinalMaskId,
+      subtract_mask_ids: subtractMaskIds,
+      label: getObjectLabel(),
+    });
+    await addFinalMask(result);
+    state.selectedMaskIds.clear();
+    renderMaskCandidates();
+    redrawCanvas();
+    status.textContent = `Cleaned mask created: ${result.label || result.mask_id}`;
+  } catch (error) {
+    status.textContent = `Subtract failed: ${error.message}`;
+  }
+}
+
+async function refineActiveMask(operation) {
+  const status = document.getElementById("status");
+
+  if (!state.activeFinalMaskId) {
+    status.textContent = "Select a final mask as the active/base mask first.";
+    return;
+  }
+
+  status.textContent = "Refining active mask...";
+
+  try {
+    const result = await postJson("/refine_mask", {
+      mask_id: state.activeFinalMaskId,
+      operation,
+      label: getObjectLabel(),
+      min_area: Number(document.getElementById("min-area").value) || 100,
+      kernel_size: normalizeKernelSize(Number(document.getElementById("kernel-size").value) || 3),
+    });
+    await addFinalMask(result);
+    status.textContent = `Refined mask created: ${result.label || result.mask_id}`;
+  } catch (error) {
+    status.textContent = `Refine failed: ${error.message}`;
+  }
+}
+
+async function postJson(path, body) {
+  const apiBase = await getApiBase();
+  const response = await fetch(`${apiBase}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+async function addFinalMask(mask) {
+  const finalMask = await loadMaskImage(mask);
+  state.finalMasks.push(finalMask);
+  state.selectedFinalMaskIds.clear();
+  state.selectedFinalMaskIds.add(finalMask.mask_id);
+  state.activeFinalMaskId = finalMask.mask_id;
+  renderFinalMasks();
+  redrawCanvas();
+}
+
+function loadMaskImage(mask) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      resolve({
+        ...mask,
+        image,
+        overlayCanvas: createMaskOverlayCanvas(image),
+      });
+    };
+    image.onerror = () => {
+      resolve({ ...mask, image: null, overlayCanvas: null });
+    };
+    image.src = `data:image/png;base64,${mask.png_base64}`;
+  });
+}
+
+function getSelectedOperationMaskIds() {
+  return [
+    ...state.selectedMaskIds,
+    ...state.selectedFinalMaskIds,
+  ];
+}
+
+function getObjectLabel() {
+  return document.getElementById("object-label").value.trim() || null;
+}
+
+function normalizeKernelSize(value) {
+  const rounded = Math.max(3, Math.round(value));
+  return rounded % 2 === 0 ? rounded + 1 : rounded;
 }
 
 function createMaskOverlayCanvas(maskImage) {
@@ -400,6 +548,68 @@ function renderMaskCandidates() {
 
     item.append(checkbox, thumbnail, details);
     maskCandidates.appendChild(item);
+  });
+}
+
+function renderFinalMasks() {
+  finalMasks.innerHTML = "";
+
+  if (state.finalMasks.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "No final masks yet.";
+    finalMasks.appendChild(empty);
+    return;
+  }
+
+  state.finalMasks.forEach((mask, index) => {
+    const item = document.createElement("div");
+    item.className = "mask-candidate final-mask";
+
+    const controls = document.createElement("div");
+    controls.className = "mask-controls";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.title = "Toggle overlay and operation selection";
+    checkbox.checked = state.selectedFinalMaskIds.has(mask.mask_id);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        state.selectedFinalMaskIds.add(mask.mask_id);
+      } else {
+        state.selectedFinalMaskIds.delete(mask.mask_id);
+      }
+      redrawCanvas();
+    });
+
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = "active-final-mask";
+    radio.title = "Use as active/base mask";
+    radio.checked = state.activeFinalMaskId === mask.mask_id;
+    radio.addEventListener("change", () => {
+      state.activeFinalMaskId = mask.mask_id;
+      renderFinalMasks();
+    });
+
+    controls.append(checkbox, radio);
+
+    const thumbnail = document.createElement("img");
+    thumbnail.alt = `Final mask ${index + 1}`;
+    thumbnail.src = `data:image/png;base64,${mask.png_base64}`;
+
+    const details = document.createElement("div");
+    details.className = "mask-candidate-details";
+    details.innerHTML = `
+      <strong>${mask.label || mask.mask_id}</strong>
+      <span>${mask.mask_id}</span>
+      <span>area: ${mask.area}</span>
+      <span>bbox: ${JSON.stringify(mask.bbox)}</span>
+      <span>${state.activeFinalMaskId === mask.mask_id ? "active/base" : ""}</span>
+    `;
+
+    item.append(controls, thumbnail, details);
+    finalMasks.appendChild(item);
   });
 }
 
@@ -484,6 +694,11 @@ document.querySelectorAll("[data-tool]").forEach((button) => {
 });
 document.getElementById("clear-prompts").addEventListener("click", clearPrompts);
 document.getElementById("predict-button").addEventListener("click", predictMasks);
+document.getElementById("merge-selected").addEventListener("click", mergeSelectedMasks);
+document.getElementById("subtract-selected").addEventListener("click", subtractSelectedMasks);
+document.getElementById("fill-holes").addEventListener("click", () => refineActiveMask("fill_holes"));
+document.getElementById("remove-small-parts").addEventListener("click", () => refineActiveMask("remove_small_components"));
+document.getElementById("smooth-edges").addEventListener("click", () => refineActiveMask("smooth"));
 document.getElementById("image-file").addEventListener("change", uploadSelectedImage);
 overlayOpacity.addEventListener("input", redrawCanvas);
 canvas.addEventListener("mousedown", handleCanvasMouseDown);
