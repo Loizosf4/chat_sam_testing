@@ -3,3 +3,5 @@ uvicorn[standard]
 python-dotenv
 python-multipart
 pillow
+numpy
+segment-anything
