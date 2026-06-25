@@ -1,5 +1,6 @@
 from pathlib import Path
 from shutil import copyfile
+from typing import Any
 from uuid import uuid4
 
 from mcp.server.fastmcp import FastMCP
@@ -95,12 +96,208 @@ def sam_set_image(image_id: str) -> dict:
         raise ValueError(str(exc)) from exc
 
 
+@mcp.tool()
+def sam_predict(
+    image_id: str,
+    points: list[dict[str, Any]] | None = None,
+    box: dict[str, Any] | None = None,
+    multimask_output: bool = True,
+) -> dict:
+    """Run SAM prediction and return mask metadata plus local PNG paths."""
+    point_coords, point_labels = _parse_prompt_points(points)
+    box_values = _parse_prompt_box(box)
+
+    try:
+        prediction = sam_engine.predict(
+            image_id=image_id,
+            points=point_coords,
+            point_labels=point_labels,
+            box=box_values,
+            multimask_output=multimask_output,
+        )
+    except sam_engine.SamEngineError as exc:
+        raise ValueError(_mcp_error(str(exc))) from exc
+
+    return {
+        "image_id": prediction["image_id"],
+        "masks": [_mask_result_for_mcp(mask) for mask in prediction["masks"]],
+    }
+
+
+@mcp.tool()
+def sam_merge_masks(mask_ids: list[str], label: str | None = None) -> dict:
+    """Merge binary mask PNGs into a new object mask."""
+    try:
+        result = mask_ops.merge_masks(mask_ids=mask_ids, label=_empty_to_none(label))
+    except mask_ops.MaskOpsError as exc:
+        raise ValueError(str(exc)) from exc
+
+    return _mask_result_for_mcp(result)
+
+
+@mcp.tool()
+def sam_subtract_masks(
+    base_mask_id: str,
+    subtract_mask_ids: list[str],
+    label: str | None = None,
+) -> dict:
+    """Subtract one or more masks from a base mask."""
+    try:
+        result = mask_ops.subtract_masks(
+            base_mask_id=base_mask_id,
+            subtract_mask_ids=subtract_mask_ids,
+            label=_empty_to_none(label),
+        )
+    except mask_ops.MaskOpsError as exc:
+        raise ValueError(str(exc)) from exc
+
+    return _mask_result_for_mcp(result)
+
+
+@mcp.tool()
+def sam_refine_mask(
+    mask_id: str,
+    operation: str,
+    label: str | None = None,
+    min_area: int = 100,
+    kernel_size: int = 3,
+) -> dict:
+    """Refine a mask with fill_holes, remove_small_components, or smooth."""
+    try:
+        if operation == "fill_holes":
+            result = mask_ops.fill_holes(mask_id=mask_id, label=_empty_to_none(label))
+        elif operation == "remove_small_components":
+            result = mask_ops.remove_small_components(
+                mask_id=mask_id,
+                min_area=min_area,
+                label=_empty_to_none(label),
+            )
+        elif operation == "smooth":
+            result = mask_ops.smooth_mask(
+                mask_id=mask_id,
+                kernel_size=kernel_size,
+                label=_empty_to_none(label),
+            )
+        else:
+            raise ValueError("operation must be fill_holes, remove_small_components, or smooth.")
+    except mask_ops.MaskOpsError as exc:
+        raise ValueError(str(exc)) from exc
+
+    return _mask_result_for_mcp(result)
+
+
+@mcp.tool()
+def sam_export_masks(
+    image_id: str,
+    masks: list[dict[str, Any]],
+    output_dir: str | None = None,
+) -> dict:
+    """Export selected masks as PNGs plus metadata.json."""
+    if not masks:
+        raise ValueError("masks must contain at least one final object mask.")
+
+    try:
+        result = mask_ops.export_masks(
+            image_id=image_id,
+            masks=[
+                {
+                    "mask_id": _string_value(mask.get("mask_id")),
+                    "label": _optional_string_value(mask.get("label")),
+                }
+                for mask in masks
+            ],
+            output_dir=_empty_to_none(output_dir),
+        )
+    except mask_ops.MaskOpsError as exc:
+        raise ValueError(str(exc)) from exc
+
+    return {
+        "export_dir": result["export_path"],
+        "files": result["files"],
+        "metadata_path": result["metadata_path"],
+    }
+
+
 def _empty_to_none(value: str | None) -> str | None:
     if value is None:
         return None
 
     stripped = value.strip()
     return stripped or None
+
+
+def _string_value(value: Any) -> str:
+    if value is None:
+        return ""
+
+    return str(value)
+
+
+def _optional_string_value(value: Any) -> str | None:
+    if value is None:
+        return None
+
+    return _empty_to_none(str(value))
+
+
+def _parse_prompt_points(
+    points: list[dict[str, Any]] | None,
+) -> tuple[list[list[float]], list[int]]:
+    if not points:
+        return [], []
+
+    point_coords = []
+    point_labels = []
+    for point in points:
+        try:
+            x = float(point["x"])
+            y = float(point["y"])
+            label = int(point["label"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("Each point must include numeric x, y, and label fields.") from exc
+
+        if label not in (0, 1):
+            raise ValueError("Point labels must be 1 for positive or 0 for negative.")
+
+        point_coords.append([x, y])
+        point_labels.append(label)
+
+    return point_coords, point_labels
+
+
+def _parse_prompt_box(box: dict[str, Any] | None) -> list[float] | None:
+    if box is None:
+        return None
+
+    try:
+        return [
+            float(box["x1"]),
+            float(box["y1"]),
+            float(box["x2"]),
+            float(box["y2"]),
+        ]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("box must include numeric x1, y1, x2, and y2 fields.") from exc
+
+
+def _mask_result_for_mcp(mask: dict[str, Any]) -> dict:
+    result = {
+        "mask_id": mask["mask_id"],
+        "area": mask["area"],
+        "bbox": mask["bbox"],
+        "path": str(mask_ops.get_mask_path(mask["mask_id"])),
+    }
+
+    if "label" in mask:
+        result["label"] = mask["label"]
+    if "score" in mask:
+        result["score"] = mask["score"]
+
+    return result
+
+
+def _mcp_error(message: str) -> str:
+    return message.replace("Call /load_model first", "Call sam_load_model first")
 
 
 if __name__ == "__main__":

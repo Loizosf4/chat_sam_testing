@@ -56,14 +56,21 @@ Install requirements, then run the MCP server over stdio:
 .\.venv\Scripts\python.exe -m backend.mcp_server
 ```
 
-Phase 7A exposes these MCP tools:
+The MCP server exposes these tools:
 
 - `sam_health`
 - `sam_load_model`
 - `sam_register_image`
 - `sam_set_image`
+- `sam_predict`
+- `sam_merge_masks`
+- `sam_subtract_masks`
+- `sam_refine_mask`
+- `sam_export_masks`
 
 `sam_health` is safe to call before loading SAM. `sam_load_model` uses `.env` by default, or accepts optional `checkpoint_path`, `model_type`, and `device` arguments. `sam_register_image` accepts a local file path only and copies the image into `data/images/`.
+
+The prediction and mask operation MCP tools call the same Python modules used by the FastAPI app. They return local file paths for generated masks and exports rather than base64 preview strings.
 
 ## Phase 1
 

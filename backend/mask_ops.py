@@ -106,7 +106,11 @@ def register_image(
     _write_image_index(image_index)
 
 
-def export_masks(image_id: str, masks: list[dict[str, str | None]]) -> dict[str, Any]:
+def export_masks(
+    image_id: str,
+    masks: list[dict[str, str | None]],
+    output_dir: str | None = None,
+) -> dict[str, Any]:
     clean_image_id = (image_id or "").strip()
     if not clean_image_id:
         raise MaskOpsError("image_id is required.")
@@ -116,7 +120,7 @@ def export_masks(image_id: str, masks: list[dict[str, str | None]]) -> dict[str,
     image_info = _get_image_info(clean_image_id)
     expected_shape = (image_info["height"], image_info["width"])
     exported_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    export_folder = _create_export_folder()
+    export_folder = _create_export_folder(output_dir)
 
     used_filenames: dict[str, int] = {}
     exported_masks = []
@@ -165,11 +169,12 @@ def export_masks(image_id: str, masks: list[dict[str, str | None]]) -> dict[str,
     return {
         "export_path": str(export_folder),
         "files": exported_files,
+        "metadata_path": str(metadata_path),
         "metadata": metadata,
     }
 
 
-def _load_mask(mask_id: str) -> np.ndarray:
+def get_mask_path(mask_id: str) -> Path:
     clean_mask_id = (mask_id or "").strip()
     if not clean_mask_id:
         raise MaskOpsError("mask_id is required.")
@@ -177,6 +182,16 @@ def _load_mask(mask_id: str) -> np.ndarray:
     mask_path = MASK_DIR / f"{clean_mask_id}.png"
     if not mask_path.is_file():
         raise MaskOpsError(f"No mask found for mask_id '{clean_mask_id}'.")
+
+    return mask_path
+
+
+def _load_mask(mask_id: str) -> np.ndarray:
+    clean_mask_id = (mask_id or "").strip()
+    if not clean_mask_id:
+        raise MaskOpsError("mask_id is required.")
+
+    mask_path = get_mask_path(clean_mask_id)
 
     try:
         with Image.open(mask_path) as image:
@@ -349,7 +364,14 @@ def _get_image_info(image_id: str) -> dict[str, Any]:
     }
 
 
-def _create_export_folder() -> Path:
+def _create_export_folder(output_dir: str | None = None) -> Path:
+    if output_dir:
+        export_folder = Path(output_dir).expanduser()
+        if not export_folder.is_absolute():
+            export_folder = (Path.cwd() / export_folder).resolve()
+        export_folder.mkdir(parents=True, exist_ok=True)
+        return export_folder
+
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     export_folder = EXPORT_DIR / timestamp
