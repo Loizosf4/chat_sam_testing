@@ -48,6 +48,16 @@ class RefineMaskRequest(BaseModel):
     kernel_size: int = 3
 
 
+class ExportMaskRef(BaseModel):
+    mask_id: str = ""
+    label: str | None = None
+
+
+class ExportRequest(BaseModel):
+    image_id: str = ""
+    masks: list[ExportMaskRef] = Field(default_factory=list)
+
+
 app = FastAPI(title="Local SAM Mask Editor")
 
 app.add_middleware(
@@ -97,6 +107,14 @@ async def upload_image(request: Request, image: UploadFile = File(...)) -> dict[
     except Exception as exc:
         image_path.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail="Invalid image file") from exc
+
+    mask_ops.register_image(
+        image_id=image_id,
+        original_filename=image.filename,
+        stored_filename=stored_filename,
+        width=width,
+        height=height,
+    )
 
     image_url = str(request.url_for("images", path=stored_filename))
 
@@ -188,6 +206,17 @@ def refine_mask(payload: RefineMaskRequest) -> dict:
         raise HTTPException(
             status_code=400,
             detail="operation must be fill_holes, remove_small_components, or smooth.",
+        )
+    except mask_ops.MaskOpsError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@app.post("/export")
+def export_masks(payload: ExportRequest) -> dict:
+    try:
+        return mask_ops.export_masks(
+            image_id=payload.image_id,
+            masks=[mask.model_dump() for mask in payload.masks],
         )
     except mask_ops.MaskOpsError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

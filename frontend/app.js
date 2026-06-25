@@ -5,6 +5,7 @@ const promptJson = document.getElementById("prompt-json");
 const maskCandidates = document.getElementById("mask-candidates");
 const finalMasks = document.getElementById("final-masks");
 const overlayOpacity = document.getElementById("overlay-opacity");
+const exportResult = document.getElementById("export-result");
 
 const state = {
   activeTool: "box",
@@ -139,6 +140,7 @@ function loadImage(url, uploaded) {
     updatePromptJson();
     renderMaskCandidates();
     renderFinalMasks();
+    renderExportResult(null);
   };
 
   image.src = url;
@@ -424,6 +426,40 @@ async function refineActiveMask(operation) {
   }
 }
 
+async function exportSelectedFinalMasks() {
+  const status = document.getElementById("status");
+
+  if (!state.imageMeta) {
+    status.textContent = "Upload an image before exporting.";
+    return;
+  }
+
+  const selectedFinalMasks = state.finalMasks.filter((mask) =>
+    state.selectedFinalMaskIds.has(mask.mask_id),
+  );
+
+  if (selectedFinalMasks.length === 0) {
+    status.textContent = "Select at least one final object mask to export.";
+    return;
+  }
+
+  status.textContent = "Exporting selected final masks...";
+
+  try {
+    const result = await postJson("/export", {
+      image_id: state.imageMeta.image_id,
+      masks: selectedFinalMasks.map((mask) => ({
+        mask_id: mask.mask_id,
+        label: mask.label || mask.mask_id,
+      })),
+    });
+    renderExportResult(result);
+    status.textContent = `Exported ${selectedFinalMasks.length} final mask(s).`;
+  } catch (error) {
+    status.textContent = `Export failed: ${error.message}`;
+  }
+}
+
 async function postJson(path, body) {
   const apiBase = await getApiBase();
   const response = await fetch(`${apiBase}${path}`, {
@@ -613,6 +649,31 @@ function renderFinalMasks() {
   });
 }
 
+function renderExportResult(result) {
+  exportResult.innerHTML = "";
+
+  if (!result) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "No export yet.";
+    exportResult.appendChild(empty);
+    return;
+  }
+
+  const path = document.createElement("p");
+  path.className = "export-path";
+  path.textContent = result.export_path;
+
+  const list = document.createElement("ul");
+  result.files.forEach((filename) => {
+    const item = document.createElement("li");
+    item.textContent = filename;
+    list.appendChild(item);
+  });
+
+  exportResult.append(path, list);
+}
+
 function updatePromptJson() {
   promptJson.textContent = JSON.stringify(
     {
@@ -699,6 +760,7 @@ document.getElementById("subtract-selected").addEventListener("click", subtractS
 document.getElementById("fill-holes").addEventListener("click", () => refineActiveMask("fill_holes"));
 document.getElementById("remove-small-parts").addEventListener("click", () => refineActiveMask("remove_small_components"));
 document.getElementById("smooth-edges").addEventListener("click", () => refineActiveMask("smooth"));
+document.getElementById("export-selected").addEventListener("click", exportSelectedFinalMasks);
 document.getElementById("image-file").addEventListener("change", uploadSelectedImage);
 overlayOpacity.addEventListener("input", redrawCanvas);
 canvas.addEventListener("mousedown", handleCanvasMouseDown);

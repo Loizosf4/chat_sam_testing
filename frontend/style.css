@@ -216,9 +216,37 @@ canvas {
   margin-top: 24px;
 }
 
-.final-mask-section h2 {
+.final-mask-section h2,
+.export-section h2 {
   margin: 0 0 12px;
   font-size: 18px;
+}
+
+.export-section {
+  margin-top: 24px;
+}
+
+.export-section button {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.export-result {
+  border: 1px solid #d7dce2;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 10px;
+  font-size: 12px;
+}
+
+.export-result ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.export-path {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .prompt-panel {

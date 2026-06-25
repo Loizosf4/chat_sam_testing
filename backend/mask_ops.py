@@ -1,6 +1,9 @@
 import base64
 import io
+import json
+import re
 from collections import deque
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -10,7 +13,10 @@ from PIL import Image
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+IMAGE_DIR = ROOT_DIR / "data" / "images"
 MASK_DIR = ROOT_DIR / "data" / "masks"
+EXPORT_DIR = ROOT_DIR / "data" / "exports"
+IMAGE_INDEX_PATH = IMAGE_DIR / "images.json"
 
 
 class MaskOpsError(Exception):
@@ -79,6 +85,88 @@ def smooth_mask(
     mask = _load_mask(mask_id)
     smoothed = _majority_filter(mask, kernel_size)
     return _save_mask_result(smoothed, label)
+
+
+def register_image(
+    image_id: str,
+    original_filename: str,
+    stored_filename: str,
+    width: int,
+    height: int,
+) -> None:
+    IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+    image_index = _read_image_index()
+    image_index[image_id] = {
+        "image_id": image_id,
+        "original_filename": original_filename,
+        "stored_filename": stored_filename,
+        "width": width,
+        "height": height,
+    }
+    _write_image_index(image_index)
+
+
+def export_masks(image_id: str, masks: list[dict[str, str | None]]) -> dict[str, Any]:
+    clean_image_id = (image_id or "").strip()
+    if not clean_image_id:
+        raise MaskOpsError("image_id is required.")
+    if not masks:
+        raise MaskOpsError("masks must contain at least one final object mask.")
+
+    image_info = _get_image_info(clean_image_id)
+    expected_shape = (image_info["height"], image_info["width"])
+    exported_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    export_folder = _create_export_folder()
+
+    used_filenames: dict[str, int] = {}
+    exported_masks = []
+    exported_files = []
+
+    for mask_ref in masks:
+        mask_id = (mask_ref.get("mask_id") or "").strip()
+        label = (mask_ref.get("label") or "").strip() or mask_id
+        if not mask_id:
+            raise MaskOpsError("Each mask entry must include mask_id.")
+
+        mask = _load_mask(mask_id)
+        if mask.shape != expected_shape:
+            raise MaskOpsError(
+                f"Mask '{mask_id}' dimensions do not match uploaded image dimensions."
+            )
+
+        filename = _unique_png_filename(label, used_filenames)
+        output_path = export_folder / filename
+        _mask_to_image(mask).save(output_path)
+
+        exported_files.append(filename)
+        exported_masks.append(
+            {
+                "label": label,
+                "mask_id": mask_id,
+                "filename": filename,
+                "area": int(mask.sum()),
+                "bbox": _mask_bbox(mask),
+            }
+        )
+
+    metadata = {
+        "image_id": clean_image_id,
+        "original_filename": image_info["original_filename"],
+        "width": image_info["width"],
+        "height": image_info["height"],
+        "exported_at": exported_at,
+        "masks": exported_masks,
+    }
+
+    metadata_path = export_folder / "metadata.json"
+    metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    exported_files.append("metadata.json")
+
+    return {
+        "export_path": str(export_folder),
+        "files": exported_files,
+        "metadata": metadata,
+    }
 
 
 def _load_mask(mask_id: str) -> np.ndarray:
@@ -216,3 +304,77 @@ def _majority_filter(mask: np.ndarray, kernel_size: int) -> np.ndarray:
             smoothed[y, x] = int(window.sum()) >= threshold
 
     return smoothed
+
+
+def _read_image_index() -> dict[str, Any]:
+    if not IMAGE_INDEX_PATH.is_file():
+        return {}
+
+    try:
+        return json.loads(IMAGE_INDEX_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise MaskOpsError(f"Image index is invalid JSON: {exc}") from exc
+
+
+def _write_image_index(image_index: dict[str, Any]) -> None:
+    IMAGE_INDEX_PATH.write_text(json.dumps(image_index, indent=2), encoding="utf-8")
+
+
+def _get_image_info(image_id: str) -> dict[str, Any]:
+    image_index = _read_image_index()
+    if image_id in image_index:
+        info = image_index[image_id]
+        image_path = IMAGE_DIR / info["stored_filename"]
+        if not image_path.is_file():
+            raise MaskOpsError(f"Uploaded image file is missing for image_id '{image_id}'.")
+        return info
+
+    matches = list(IMAGE_DIR.glob(f"{image_id}.*"))
+    if not matches:
+        raise MaskOpsError(f"No uploaded image found for image_id '{image_id}'.")
+
+    image_path = matches[0]
+    try:
+        with Image.open(image_path) as image:
+            width, height = image.size
+    except Exception as exc:
+        raise MaskOpsError(f"Failed to read uploaded image '{image_id}': {exc}") from exc
+
+    return {
+        "image_id": image_id,
+        "original_filename": image_path.name,
+        "stored_filename": image_path.name,
+        "width": width,
+        "height": height,
+    }
+
+
+def _create_export_folder() -> Path:
+    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    export_folder = EXPORT_DIR / timestamp
+
+    suffix = 2
+    while export_folder.exists():
+        export_folder = EXPORT_DIR / f"{timestamp}_{suffix}"
+        suffix += 1
+
+    export_folder.mkdir(parents=True)
+    return export_folder
+
+
+def _unique_png_filename(label: str, used_filenames: dict[str, int]) -> str:
+    base_name = _safe_filename_stem(label)
+    count = used_filenames.get(base_name, 0) + 1
+    used_filenames[base_name] = count
+
+    if count == 1:
+        return f"{base_name}.png"
+
+    return f"{base_name}_{count}.png"
+
+
+def _safe_filename_stem(label: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", label.strip().lower())
+    safe = safe.strip("_")
+    return safe or "mask"
