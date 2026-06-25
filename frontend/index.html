@@ -4,13 +4,38 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Local SAM Mask Editor</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="style.css">
   </head>
   <body>
     <main class="app-shell">
       <h1>Local SAM Mask Editor</h1>
       <p id="status">Checking backend...</p>
+
+      <form id="upload-form" class="upload-form">
+        <label for="image-file">Image file</label>
+        <div class="upload-row">
+          <input id="image-file" name="image" type="file" accept="image/*" required>
+          <button type="submit">Upload</button>
+        </div>
+      </form>
+
+      <dl class="image-meta">
+        <div>
+          <dt>Image ID</dt>
+          <dd id="image-id">-</dd>
+        </div>
+        <div>
+          <dt>Width</dt>
+          <dd id="image-width">-</dd>
+        </div>
+        <div>
+          <dt>Height</dt>
+          <dd id="image-height">-</dd>
+        </div>
+      </dl>
+
+      <canvas id="image-canvas" width="960" height="540"></canvas>
     </main>
-    <script src="/static/app.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>

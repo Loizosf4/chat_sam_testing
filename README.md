@@ -40,4 +40,8 @@ pip install -r requirements.txt
 uvicorn backend.main:app --reload
 ```
 
-Open http://127.0.0.1:8000.
+Open `frontend/index.html` directly in your browser, or open http://127.0.0.1:8000.
+
+## Phase 1
+
+The app can upload an image to `data/images/`, return its generated image ID and dimensions, and display it on the frontend canvas. SAM, points, boxes, masks, and MCP are not implemented yet.
