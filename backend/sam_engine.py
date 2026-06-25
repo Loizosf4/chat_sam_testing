@@ -42,12 +42,32 @@ _lock = RLock()
 _mask_metadata: dict[str, dict[str, Any]] = {}
 
 
-def load_model() -> dict[str, str | bool]:
+def get_status() -> dict[str, str | bool | None]:
+    with _lock:
+        return {
+            "ok": True,
+            "model_loaded": _state.predictor is not None,
+            "device": _state.device,
+            "checkpoint_path": str(_state.checkpoint_path) if _state.checkpoint_path else None,
+            "model_type": _state.model_type,
+            "active_image_id": _state.image_id,
+        }
+
+
+def load_model(
+    checkpoint_path: str | None = None,
+    model_type: str | None = None,
+    device: str | None = None,
+) -> dict[str, str | bool]:
     with _lock:
         if _state.predictor is not None:
             return _model_status()
 
-        config = _read_config()
+        config = _read_config(
+            checkpoint_path_override=checkpoint_path,
+            model_type_override=model_type,
+            device_override=device,
+        )
 
         try:
             from segment_anything import SamPredictor, sam_model_registry
@@ -207,10 +227,14 @@ def get_mask_path(mask_id: str) -> Path:
     return mask_path
 
 
-def _read_config() -> dict[str, str | Path]:
+def _read_config(
+    checkpoint_path_override: str | None = None,
+    model_type_override: str | None = None,
+    device_override: str | None = None,
+) -> dict[str, str | Path]:
     load_dotenv(ROOT_DIR / ".env")
 
-    checkpoint_path_raw = os.getenv("SAM_CHECKPOINT_PATH", "").strip()
+    checkpoint_path_raw = (checkpoint_path_override or os.getenv("SAM_CHECKPOINT_PATH", "")).strip()
     if not checkpoint_path_raw:
         raise SamEngineError(
             "SAM_CHECKPOINT_PATH is missing. Set it in .env or the environment.",
@@ -224,8 +248,8 @@ def _read_config() -> dict[str, str | Path]:
             status_code=400,
         )
 
-    model_type = os.getenv("SAM_MODEL_TYPE", DEFAULT_MODEL_TYPE).strip() or DEFAULT_MODEL_TYPE
-    device = os.getenv("SAM_DEVICE", "").strip() or _default_device()
+    model_type = (model_type_override or os.getenv("SAM_MODEL_TYPE", DEFAULT_MODEL_TYPE)).strip() or DEFAULT_MODEL_TYPE
+    device = (device_override or os.getenv("SAM_DEVICE", "")).strip() or _default_device()
 
     return {
         "checkpoint_path": checkpoint_path,

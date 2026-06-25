@@ -47,6 +47,24 @@ Open the printed URL, or open `frontend/index.html` directly in your browser. Wh
 
 The virtual environment, Python bytecode, `.env`, and uploaded runtime data are ignored by git. Recreate the virtual environment locally instead of committing `.venv/` or `__pycache__/`.
 
+## MCP Server
+
+Install requirements, then run the MCP server over stdio:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m backend.mcp_server
+```
+
+Phase 7A exposes these MCP tools:
+
+- `sam_health`
+- `sam_load_model`
+- `sam_register_image`
+- `sam_set_image`
+
+`sam_health` is safe to call before loading SAM. `sam_load_model` uses `.env` by default, or accepts optional `checkpoint_path`, `model_type`, and `device` arguments. `sam_register_image` accepts a local file path only and copies the image into `data/images/`.
+
 ## Phase 1
 
 The app can upload an image to `data/images/`, return its generated image ID and dimensions, and display it on the frontend canvas. SAM, points, boxes, masks, and MCP are not implemented yet.
