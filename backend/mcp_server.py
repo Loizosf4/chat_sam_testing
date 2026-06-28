@@ -6,7 +6,7 @@ from uuid import uuid4
 from mcp.server.fastmcp import FastMCP
 from PIL import Image
 
-from backend import mask_ops, sam_engine
+from backend import mask_ops, preview_ops, quality_ops, sam_engine
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -191,6 +191,7 @@ def sam_export_masks(
     image_id: str,
     masks: list[dict[str, Any]],
     output_dir: str | None = None,
+    include_previews: bool = False,
 ) -> dict:
     """Export selected masks as PNGs plus metadata.json."""
     if not masks:
@@ -203,18 +204,146 @@ def sam_export_masks(
                 {
                     "mask_id": _string_value(mask.get("mask_id")),
                     "label": _optional_string_value(mask.get("label")),
+                    "color": _optional_string_value(mask.get("color")),
+                }
+                for mask in masks
+            ],
+            output_dir=_empty_to_none(output_dir),
+            include_previews=include_previews,
+        )
+    except mask_ops.MaskOpsError as exc:
+        raise ValueError(str(exc)) from exc
+
+    response = {
+        "export_dir": result["export_path"],
+        "files": result["files"],
+        "metadata_path": result["metadata_path"],
+    }
+
+    if include_previews:
+        response["preview_dir"] = result["preview_dir"]
+        response["combined_preview_path"] = result["combined_preview_path"]
+
+    return response
+
+
+@mcp.tool()
+def sam_preview_mask_overlay(
+    image_id: str,
+    mask_id: str,
+    label: str | None = None,
+    color: str = "#ff3366",
+    alpha: float = 0.55,
+    outline_width: int = 3,
+    output_dir: str | None = None,
+) -> dict:
+    """Create a colored source-image overlay preview for one mask."""
+    try:
+        result = preview_ops.create_mask_overlay_preview(
+            image_id=image_id,
+            mask_id=mask_id,
+            label=_empty_to_none(label),
+            color=_empty_to_none(color) or "#ff3366",
+            alpha=alpha,
+            outline_width=outline_width,
+            output_dir=_empty_to_none(output_dir),
+        )
+    except preview_ops.PreviewOpsError as exc:
+        raise ValueError(str(exc)) from exc
+
+    return {
+        "preview_path": result["path"],
+        "image_id": result["image_id"],
+        "mask_id": result["mask_id"],
+        "label": result["label"],
+    }
+
+
+@mcp.tool()
+def sam_preview_masks_overlay(
+    image_id: str,
+    masks: list[dict[str, Any]],
+    alpha: float = 0.55,
+    outline_width: int = 3,
+    output_dir: str | None = None,
+) -> dict:
+    """Create a combined colored source-image overlay preview for multiple masks."""
+    if not masks:
+        raise ValueError("masks must contain at least one mask entry.")
+
+    try:
+        result = preview_ops.create_combined_overlay_preview(
+            image_id=image_id,
+            masks=[_preview_mask_ref_for_mcp(mask) for mask in masks],
+            alpha=alpha,
+            outline_width=outline_width,
+            output_dir=_empty_to_none(output_dir),
+        )
+    except preview_ops.PreviewOpsError as exc:
+        raise ValueError(str(exc)) from exc
+
+    return {
+        "preview_path": result["path"],
+        "image_id": result["image_id"],
+        "mask_count": len(result["masks"]),
+    }
+
+
+@mcp.tool()
+def sam_preview_candidate_contact_sheet(
+    image_id: str,
+    candidates: list[dict[str, Any]],
+    output_dir: str | None = None,
+) -> dict:
+    """Create a contact sheet for visually comparing candidate masks."""
+    if not candidates:
+        raise ValueError("candidates must contain at least one candidate group.")
+
+    try:
+        result = preview_ops.create_candidate_contact_sheet(
+            image_id=image_id,
+            candidates=[_preview_candidate_group_for_mcp(candidate) for candidate in candidates],
+            output_dir=_empty_to_none(output_dir),
+        )
+    except preview_ops.PreviewOpsError as exc:
+        raise ValueError(str(exc)) from exc
+
+    return {
+        "contact_sheet_path": result["path"],
+        "image_id": result["image_id"],
+        "groups": _unique_groups_from_panels(result["panels"]),
+    }
+
+
+@mcp.tool()
+def sam_mask_quality_report(
+    image_id: str,
+    masks: list[dict[str, Any]],
+    output_dir: str | None = None,
+) -> dict:
+    """Write mask quality diagnostics and return report paths plus summary warnings."""
+    if not masks:
+        raise ValueError("masks must contain at least one mask entry.")
+
+    try:
+        result = quality_ops.create_mask_quality_report(
+            image_id=image_id,
+            masks=[
+                {
+                    "mask_id": _string_value(mask.get("mask_id")) if isinstance(mask, dict) else "",
+                    "label": _optional_string_value(mask.get("label")) if isinstance(mask, dict) else None,
                 }
                 for mask in masks
             ],
             output_dir=_empty_to_none(output_dir),
         )
-    except mask_ops.MaskOpsError as exc:
+    except quality_ops.QualityOpsError as exc:
         raise ValueError(str(exc)) from exc
 
     return {
-        "export_dir": result["export_path"],
-        "files": result["files"],
-        "metadata_path": result["metadata_path"],
+        "report_path": result["report_path"],
+        "markdown_path": result["markdown_path"],
+        "summary": result["summary"],
     }
 
 
@@ -294,6 +423,43 @@ def _mask_result_for_mcp(mask: dict[str, Any]) -> dict:
         result["score"] = mask["score"]
 
     return result
+
+
+def _preview_mask_ref_for_mcp(mask: dict[str, Any]) -> dict[str, str | None]:
+    if not isinstance(mask, dict):
+        raise ValueError("Each mask entry must be an object.")
+
+    return {
+        "mask_id": _string_value(mask.get("mask_id")),
+        "label": _optional_string_value(mask.get("label")),
+        "color": _optional_string_value(mask.get("color")),
+    }
+
+
+def _preview_candidate_group_for_mcp(candidate: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(candidate, dict):
+        raise ValueError("Each candidate group must be an object.")
+
+    masks = candidate.get("masks")
+    if not isinstance(masks, list) or not masks:
+        raise ValueError("Each candidate group must include at least one mask entry.")
+
+    return {
+        "group_label": _optional_string_value(candidate.get("group_label")),
+        "masks": [_preview_mask_ref_for_mcp(mask) for mask in masks],
+    }
+
+
+def _unique_groups_from_panels(panels: list[dict[str, Any]]) -> list[str]:
+    groups = []
+    seen = set()
+    for panel in panels:
+        group_label = _string_value(panel.get("group_label"))
+        if group_label and group_label not in seen:
+            groups.append(group_label)
+            seen.add(group_label)
+
+    return groups
 
 
 def _mcp_error(message: str) -> str:

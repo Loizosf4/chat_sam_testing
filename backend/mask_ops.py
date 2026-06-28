@@ -108,8 +108,9 @@ def register_image(
 
 def export_masks(
     image_id: str,
-    masks: list[dict[str, str | None]],
+    masks: list[dict[str, Any]],
     output_dir: str | None = None,
+    include_previews: bool = False,
 ) -> dict[str, Any]:
     clean_image_id = (image_id or "").strip()
     if not clean_image_id:
@@ -129,6 +130,7 @@ def export_masks(
     for mask_ref in masks:
         mask_id = (mask_ref.get("mask_id") or "").strip()
         label = (mask_ref.get("label") or "").strip() or mask_id
+        color = (mask_ref.get("color") or "").strip() or _default_preview_color(len(exported_masks))
         if not mask_id:
             raise MaskOpsError("Each mask entry must include mask_id.")
 
@@ -143,15 +145,16 @@ def export_masks(
         _mask_to_image(mask).save(output_path)
 
         exported_files.append(filename)
-        exported_masks.append(
-            {
-                "label": label,
-                "mask_id": mask_id,
-                "filename": filename,
-                "area": int(mask.sum()),
-                "bbox": _mask_bbox(mask),
-            }
-        )
+        exported_mask = {
+            "label": label,
+            "mask_id": mask_id,
+            "filename": filename,
+            "area": int(mask.sum()),
+            "bbox": _mask_bbox(mask),
+        }
+        if include_previews:
+            exported_mask["color"] = color
+        exported_masks.append(exported_mask)
 
     metadata = {
         "image_id": clean_image_id,
@@ -162,16 +165,36 @@ def export_masks(
         "masks": exported_masks,
     }
 
+    preview_dir = None
+    combined_preview_path = None
+    if include_previews:
+        preview_result = _export_preview_artifacts(
+            image_id=clean_image_id,
+            masks=exported_masks,
+            export_folder=export_folder,
+        )
+        preview_dir = preview_result["preview_dir"]
+        combined_preview_path = preview_result["combined_preview_path"]
+        exported_files.extend(preview_result["files"])
+        metadata["preview_dir"] = "previews"
+        metadata["combined_preview_path"] = "previews/all_masks_overlay.png"
+
     metadata_path = export_folder / "metadata.json"
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     exported_files.append("metadata.json")
 
-    return {
+    result = {
         "export_path": str(export_folder),
         "files": exported_files,
         "metadata_path": str(metadata_path),
         "metadata": metadata,
     }
+
+    if include_previews:
+        result["preview_dir"] = str(preview_dir)
+        result["combined_preview_path"] = str(combined_preview_path)
+
+    return result
 
 
 def get_mask_path(mask_id: str) -> Path:
@@ -184,6 +207,72 @@ def get_mask_path(mask_id: str) -> Path:
         raise MaskOpsError(f"No mask found for mask_id '{clean_mask_id}'.")
 
     return mask_path
+
+
+def _export_preview_artifacts(
+    image_id: str,
+    masks: list[dict[str, Any]],
+    export_folder: Path,
+) -> dict[str, Any]:
+    from backend import preview_ops
+
+    preview_dir = export_folder / "previews"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+
+    preview_files = []
+    try:
+        for mask_ref in masks:
+            preview_filename = f"{Path(mask_ref['filename']).stem}_overlay.png"
+            preview_path = preview_dir / preview_filename
+            preview = preview_ops.create_mask_overlay_preview(
+                image_id=image_id,
+                mask_id=mask_ref["mask_id"],
+                label=mask_ref["label"],
+                color=mask_ref["color"],
+                alpha=0.55,
+                outline_width=3,
+                output_dir=str(preview_dir),
+            )
+            _replace_preview_file(Path(preview["path"]), preview_path)
+            relative_preview_path = f"previews/{preview_filename}"
+            mask_ref["preview_path"] = relative_preview_path
+            preview_files.append(relative_preview_path)
+
+        combined_preview = preview_ops.create_combined_overlay_preview(
+            image_id=image_id,
+            masks=[
+                {
+                    "mask_id": mask_ref["mask_id"],
+                    "label": mask_ref["label"],
+                    "color": mask_ref["color"],
+                }
+                for mask_ref in masks
+            ],
+            alpha=0.55,
+            outline_width=3,
+            output_dir=str(preview_dir),
+        )
+        combined_preview_path = preview_dir / "all_masks_overlay.png"
+        _replace_preview_file(Path(combined_preview["path"]), combined_preview_path)
+        preview_files.append("previews/all_masks_overlay.png")
+    except preview_ops.PreviewOpsError as exc:
+        raise MaskOpsError(f"Preview generation failed: {exc}", status_code=exc.status_code) from exc
+    except Exception as exc:
+        raise MaskOpsError(f"Preview generation failed: {exc}") from exc
+
+    return {
+        "preview_dir": preview_dir,
+        "combined_preview_path": combined_preview_path,
+        "files": preview_files,
+    }
+
+
+def _replace_preview_file(source_path: Path, target_path: Path) -> None:
+    if source_path.resolve() == target_path.resolve():
+        return
+
+    target_path.unlink(missing_ok=True)
+    source_path.replace(target_path)
 
 
 def _load_mask(mask_id: str) -> np.ndarray:
@@ -400,3 +489,17 @@ def _safe_filename_stem(label: str) -> str:
     safe = re.sub(r"[^A-Za-z0-9_-]+", "_", label.strip().lower())
     safe = safe.strip("_")
     return safe or "mask"
+
+
+def _default_preview_color(index: int) -> str:
+    colors = [
+        "#ff3366",
+        "#33ccff",
+        "#ffcc33",
+        "#66dd66",
+        "#aa66ff",
+        "#ff8833",
+        "#33ffaa",
+        "#ff66cc",
+    ]
+    return colors[index % len(colors)]
