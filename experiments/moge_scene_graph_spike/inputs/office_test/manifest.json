@@ -1,0 +1,57 @@
+{
+  "scene_id": "office_test_24457ea2",
+  "image": {
+    "filename": "office_scene.jpg",
+    "width": 447,
+    "height": 447,
+    "source_path": "data/images/24457ea245d9417484c8bc2a235fea3c.jpg",
+    "sha256": "ab3b9271b15186e4b9a2a7b2ade6a58d41c3e28781325630aa402e4b27c4f113"
+  },
+  "objects": [
+    {
+      "object_id": "e971e9fbbf5746eea108d07bfbb5764a",
+      "semantic_label": "left_tall_filing_cabinet",
+      "mask_filename": "left_tall_filing_cabinet.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/left_tall_filing_cabinet.png",
+      "mask_revision": null,
+      "sha256": "d8ee204c4fe3e842f80662ee387da877d2715c8f52c1a4c3a6e68a78ac901b4e",
+      "selection_role": ["large_furniture"]
+    },
+    {
+      "object_id": "9171a7b4d4e142ca936f2564200d0bdb",
+      "semantic_label": "desk_chair",
+      "mask_filename": "desk_chair.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/desk_chair.png",
+      "mask_revision": null,
+      "sha256": "4296a878548ea45fbbd7663495889da69f519ccb5661f342ff765e4ff04ba3c9",
+      "selection_role": ["chair_or_irregular", "partially_occluded"]
+    },
+    {
+      "object_id": "1064a3a09c4c427e80caa227d17a7cc1",
+      "semantic_label": "desktop_box",
+      "mask_filename": "desktop_box.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/desktop_box.png",
+      "mask_revision": null,
+      "sha256": "f750f7464c08950ac95430b4687d98754a4c2c969f41e6aeef58a1fef66a5587",
+      "selection_role": ["small_object"]
+    },
+    {
+      "object_id": "4ec402f9a71d4ea7925b487ac7e11249",
+      "semantic_label": "coat_rack",
+      "mask_filename": "coat_rack.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/coat_rack.png",
+      "mask_revision": null,
+      "sha256": "0bf8b3f218cabe555d370723d5c69c2af7188a2a05144eaa28c3222c811bc0d4",
+      "selection_role": ["chair_or_irregular"]
+    },
+    {
+      "object_id": "49fd02b50a914e8198bacf4644bc377f",
+      "semantic_label": "wall_light_fixture",
+      "mask_filename": "wall_light_fixture.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/wall_light_fixture.png",
+      "mask_revision": null,
+      "sha256": "c3d67eb176d3308d55df6223112eab2d776031991b76b3cff803142b31ae2fb9",
+      "selection_role": ["wall_mounted"]
+    }
+  ]
+}

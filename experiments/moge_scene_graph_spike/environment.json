@@ -1,0 +1,26 @@
+{
+  "environment_type": "venv_with_system_site_packages",
+  "venv_path": ".venv",
+  "operating_system": "Windows 11 (reported by Python as Windows 10.0.26100)",
+  "python_version": "3.10.0",
+  "base_python": "C:/Users/User2009/AppData/Local/Programs/Python/Python310/python.exe",
+  "pytorch_version": "2.12.1+cu126",
+  "torchvision_version": "0.27.1+cu126",
+  "cuda_build": "12.6",
+  "cuda_available": true,
+  "gpu": {
+    "name": "NVIDIA GeForce MX250",
+    "total_memory_bytes": 2147352576,
+    "nvidia_smi_total_memory_mib": 2048,
+    "nvidia_smi_free_memory_mib_at_detection": 1969,
+    "driver_version": "566.36"
+  },
+  "model_selection": {
+    "model": "Ruicheng/moge-2-vits-normal",
+    "reason": "The 35M-parameter MoGe-2 normal model is the smallest official normal-capable model and is appropriate for a 2 GiB GPU.",
+    "num_tokens": 1200,
+    "fp16": true
+  },
+  "official_moge_commit": "07444410f1e33f402353b99d6ccd26bd31e469e8",
+  "notes": "The venv inherits the detected CUDA-enabled PyTorch stack to avoid duplicating a large machine-specific torch installation. MoGe and its Git dependencies are installed from requirements-moge.lock.txt with --no-deps. Run pip freeze in .venv for the complete resolved environment."
+}

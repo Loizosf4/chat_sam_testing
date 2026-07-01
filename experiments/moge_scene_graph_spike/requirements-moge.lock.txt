@@ -1,0 +1,5 @@
+# MoGe source and its two Git dependencies are pinned to immutable commits.
+# Install with --no-deps inside the documented system-site-packages venv.
+moge @ git+https://github.com/microsoft/MoGe.git@07444410f1e33f402353b99d6ccd26bd31e469e8
+utils3d @ git+https://github.com/EasternJournalist/utils3d.git@3fab839f0be9931dac7c8488eb0e1600c236e183
+pipeline @ git+https://github.com/EasternJournalist/pipeline.git@866f059d2a05cde05e4a52211ec5051fd5f276d6
