@@ -40,7 +40,7 @@ Generated reconstruction artifacts belong in `outputs/`, which is ignored except
 
 ## MoGe-2 inference environment
 
-The official Microsoft documentation used for this spike is the MoGe repository README at commit `07444410f1e33f402353b99d6ccd26bd31e469e8`. The selected checkpoint is `Ruicheng/moge-2-vits-normal`: it provides metric points/depth and normals with 35M parameters, making it the appropriate official model for the detected 2 GiB NVIDIA MX250.
+The official Microsoft documentation used for this spike is the MoGe repository README at commit `07444410f1e33f402353b99d6ccd26bd31e469e8`. The selected checkpoint is `Ruicheng/moge-2-vits-normal` at revision `679230677b4d282c6f304189a93e98e14f085902`: it provides metric points/depth and normals with 35M parameters, making it the appropriate official model for the detected 2 GiB NVIDIA MX250.
 
 `environment.json` records the detected Python, PyTorch, CUDA, GPU, and model-selection details. `.venv` is created with system site packages so it can reuse the machine's CUDA-enabled PyTorch installation; MoGe and its Git dependencies are pinned in `requirements-moge.lock.txt`.
 
@@ -51,3 +51,5 @@ The official Microsoft documentation used for this spike is the MoGe repository 
 ```
 
 The default command processes only `inputs/office_test/image.png`. It does not consume object masks. Numerical results are written to `outputs/office_test/moge/` as individual NPY files and a combined `geometry.npz`; JSON metadata and lossless PNG previews accompany them.
+
+`image.png` is a lossless PNG encoding of the pixels in the original read-only `office_scene.jpg` fixture. Both remain read-only. The direct inference path intentionally omits MoGe's UI and mesh-export-only dependencies (`gradio`, `trimesh`, and `moderngl`).

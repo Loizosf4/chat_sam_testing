@@ -10,7 +10,7 @@ import numpy as np
 
 
 EXPERIMENT_ROOT = Path(__file__).resolve().parents[1]
-REQUIRED_KEYS = {"points", "depth", "valid_mask", "intrinsics"}
+REQUIRED_KEYS = {"points", "depth", "normal", "valid_mask", "intrinsics"}
 
 
 def validate_output(output_dir: Path) -> list[str]:
@@ -49,12 +49,11 @@ def validate_output(output_dir: Path) -> list[str]:
             errors.append("depth is not positive in every valid region")
         if not np.isfinite(intrinsics).all() or intrinsics[0, 0] <= 0 or intrinsics[1, 1] <= 0:
             errors.append("intrinsics are invalid")
-        if "normal" in keys:
-            normal = data["normal"]
-            if normal.shape != (height, width, 3):
-                errors.append(f"normal shape is {normal.shape}")
-            elif not np.isfinite(normal[valid]).all():
-                errors.append("normal contains non-finite values in valid regions")
+        normal = data["normal"]
+        if normal.shape != (height, width, 3):
+            errors.append(f"normal shape is {normal.shape}")
+        elif not np.isfinite(normal[valid]).all():
+            errors.append("normal contains non-finite values in valid regions")
     return errors
 
 

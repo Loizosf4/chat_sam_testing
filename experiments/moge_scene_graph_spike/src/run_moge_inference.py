@@ -21,6 +21,7 @@ from moge.model.v2 import MoGeModel
 
 
 DEFAULT_MODEL = "Ruicheng/moge-2-vits-normal"
+DEFAULT_MODEL_REVISION = "679230677b4d282c6f304189a93e98e14f085902"
 
 
 def _as_numpy(value: torch.Tensor) -> np.ndarray:
@@ -66,7 +67,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but torch.cuda.is_available() is false")
 
-    model = MoGeModel.from_pretrained(args.model).to(device).eval()
+    model = MoGeModel.from_pretrained(args.model, revision=args.model_revision).to(device).eval()
     image_tensor = image_tensor.to(device)
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
@@ -110,6 +111,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     metadata: dict[str, Any] = {
         "schema_version": 1,
         "model_name": args.model,
+        "model_revision": args.model_revision,
         "moge_version": "2",
         "device": str(device),
         "torch_version": torch.__version__,
@@ -138,6 +140,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--input", type=Path, default=EXPERIMENT_ROOT / "inputs" / "office_test" / "image.png")
     parser.add_argument("--output-dir", type=Path, default=EXPERIMENT_ROOT / "outputs" / "office_test" / "moge")
     parser.add_argument("--model", default=DEFAULT_MODEL)
+    parser.add_argument("--model-revision", default=DEFAULT_MODEL_REVISION)
     parser.add_argument("--device", default="auto", help="auto, cpu, cuda, or a specific torch device")
     parser.add_argument("--num-tokens", type=int, default=1200)
     parser.add_argument("--fp16", action=argparse.BooleanOptionalAction, default=True)

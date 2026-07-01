@@ -17,10 +17,24 @@
   },
   "model_selection": {
     "model": "Ruicheng/moge-2-vits-normal",
+    "checkpoint_revision": "679230677b4d282c6f304189a93e98e14f085902",
     "reason": "The 35M-parameter MoGe-2 normal model is the smallest official normal-capable model and is appropriate for a 2 GiB GPU.",
     "num_tokens": 1200,
     "fp16": true
   },
   "official_moge_commit": "07444410f1e33f402353b99d6ccd26bd31e469e8",
-  "notes": "The venv inherits the detected CUDA-enabled PyTorch stack to avoid duplicating a large machine-specific torch installation. MoGe and its Git dependencies are installed from requirements-moge.lock.txt with --no-deps. Run pip freeze in .venv for the complete resolved environment."
+  "resolved_inference_packages": {
+    "moge": "2.0.0",
+    "utils3d": "1.3",
+    "pipeline": "1.0.0",
+    "numpy": "2.2.6",
+    "pillow": "11.2.1",
+    "opencv-python": "4.11.0.86",
+    "scipy": "1.15.3",
+    "matplotlib": "3.10.3",
+    "huggingface-hub": "0.33.0",
+    "setuptools": "80.9.0"
+  },
+  "omitted_optional_packages": ["gradio", "trimesh", "moderngl"],
+  "notes": "The venv inherits the detected CUDA-enabled PyTorch stack to avoid duplicating a large machine-specific torch installation. MoGe and its Git dependencies are installed from requirements-moge.lock.txt with --no-deps. The omitted packages are required by ancillary UI/export utilities but are not imported by this direct inference path."
 }
