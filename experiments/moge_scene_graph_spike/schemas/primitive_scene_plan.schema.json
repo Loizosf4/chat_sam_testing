@@ -1,0 +1,1047 @@
+{
+  "$defs": {
+    "CameraCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "camera_id": {
+          "enum": [
+            "camera_perspective_moge",
+            "camera_orthographic_fitted"
+          ],
+          "title": "Camera Id",
+          "type": "string"
+        },
+        "camera_to_canonical_transform": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Camera To Canonical Transform",
+          "type": "array"
+        },
+        "camera_type": {
+          "enum": [
+            "perspective",
+            "orthographic"
+          ],
+          "title": "Camera Type",
+          "type": "string"
+        },
+        "canonical_to_camera_transform": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Canonical To Camera Transform",
+          "type": "array"
+        },
+        "fit_confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Fit Confidence",
+          "type": "number"
+        },
+        "orthographic": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OrthographicParameters"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "perspective": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PerspectiveParameters"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requires_user_review": {
+          "title": "Requires User Review",
+          "type": "boolean"
+        },
+        "source_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Evidence",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "camera_id",
+        "camera_type",
+        "camera_to_canonical_transform",
+        "canonical_to_camera_transform",
+        "perspective",
+        "orthographic",
+        "fit_confidence",
+        "source_evidence",
+        "warnings",
+        "requires_user_review"
+      ],
+      "title": "CameraCandidate",
+      "type": "object"
+    },
+    "CompilationStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "blender_objects_created": {
+          "const": false,
+          "title": "Blender Objects Created",
+          "type": "boolean"
+        },
+        "deterministic": {
+          "const": true,
+          "title": "Deterministic",
+          "type": "boolean"
+        },
+        "quality_gates_passed": {
+          "title": "Quality Gates Passed",
+          "type": "boolean"
+        },
+        "rejected_quality_gates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rejected Quality Gates",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ready_for_blender_execution",
+            "needs_compiler_revision",
+            "blocked"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "deterministic",
+        "quality_gates_passed",
+        "rejected_quality_gates",
+        "blender_objects_created"
+      ],
+      "title": "CompilationStatus",
+      "type": "object"
+    },
+    "ConstraintClassification": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "pattern": "^rel_[0-9a-f]{24}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "classification": {
+          "enum": [
+            "hard",
+            "soft",
+            "review_only",
+            "ignored_for_transform"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "decision": {
+          "enum": [
+            "accept",
+            "reject",
+            "uncertain"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "influences_transform": {
+          "title": "Influences Transform",
+          "type": "boolean"
+        },
+        "predicate": {
+          "title": "Predicate",
+          "type": "string"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "requires_user_review": {
+          "title": "Requires User Review",
+          "type": "boolean"
+        },
+        "reviewed_confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Reviewed Confidence",
+          "type": "number"
+        },
+        "source_relationship": {
+          "title": "Source Relationship",
+          "type": "string"
+        },
+        "subject_object_id": {
+          "enum": [
+            "e971e9fbbf5746eea108d07bfbb5764a",
+            "b9858c1f45f443a88d84229a1824d339",
+            "9171a7b4d4e142ca936f2564200d0bdb",
+            "1064a3a09c4c427e80caa227d17a7cc1",
+            "4ec402f9a71d4ea7925b487ac7e11249",
+            "49fd02b50a914e8198bacf4644bc377f"
+          ],
+          "title": "Subject Object Id",
+          "type": "string"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Id"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "subject_object_id",
+        "predicate",
+        "target_id",
+        "decision",
+        "reviewed_confidence",
+        "classification",
+        "influences_transform",
+        "source_relationship",
+        "rationale",
+        "requires_user_review"
+      ],
+      "title": "ConstraintClassification",
+      "type": "object"
+    },
+    "CoordinateSystemDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_to_source_matrix": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Canonical To Source Matrix",
+          "type": "array"
+        },
+        "handedness": {
+          "const": "right_handed",
+          "title": "Handedness",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "origin": {
+          "title": "Origin",
+          "type": "string"
+        },
+        "source_to_canonical_matrix": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Source To Canonical Matrix",
+          "type": "array"
+        },
+        "units": {
+          "title": "Units",
+          "type": "string"
+        },
+        "x_axis": {
+          "title": "X Axis",
+          "type": "string"
+        },
+        "y_axis": {
+          "title": "Y Axis",
+          "type": "string"
+        },
+        "z_axis": {
+          "title": "Z Axis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "handedness",
+        "x_axis",
+        "y_axis",
+        "z_axis",
+        "origin",
+        "units",
+        "source_to_canonical_matrix",
+        "canonical_to_source_matrix"
+      ],
+      "title": "CoordinateSystemDefinition",
+      "type": "object"
+    },
+    "OrthographicParameters": {
+      "additionalProperties": false,
+      "properties": {
+        "correspondence_count": {
+          "exclusiveMinimum": 0,
+          "title": "Correspondence Count",
+          "type": "integer"
+        },
+        "fit_median_error_pixels": {
+          "minimum": 0.0,
+          "title": "Fit Median Error Pixels",
+          "type": "number"
+        },
+        "fit_rmse_pixels": {
+          "minimum": 0.0,
+          "title": "Fit Rmse Pixels",
+          "type": "number"
+        },
+        "fitting_method": {
+          "title": "Fitting Method",
+          "type": "string"
+        },
+        "image_center_offset_pixels": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Image Center Offset Pixels",
+          "type": "array"
+        },
+        "orthographic_scale_vertical": {
+          "exclusiveMinimum": 0.0,
+          "title": "Orthographic Scale Vertical",
+          "type": "number"
+        },
+        "pixels_per_canonical_unit": {
+          "exclusiveMinimum": 0.0,
+          "title": "Pixels Per Canonical Unit",
+          "type": "number"
+        }
+      },
+      "required": [
+        "pixels_per_canonical_unit",
+        "orthographic_scale_vertical",
+        "image_center_offset_pixels",
+        "fit_rmse_pixels",
+        "fit_median_error_pixels",
+        "correspondence_count",
+        "fitting_method"
+      ],
+      "title": "OrthographicParameters",
+      "type": "object"
+    },
+    "PerspectiveParameters": {
+      "additionalProperties": false,
+      "properties": {
+        "horizontal_fov_degrees": {
+          "exclusiveMaximum": 180.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Horizontal Fov Degrees",
+          "type": "number"
+        },
+        "image_height": {
+          "exclusiveMinimum": 0,
+          "title": "Image Height",
+          "type": "integer"
+        },
+        "image_width": {
+          "exclusiveMinimum": 0,
+          "title": "Image Width",
+          "type": "integer"
+        },
+        "normalized_intrinsics": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Normalized Intrinsics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "normalized_intrinsics",
+        "horizontal_fov_degrees",
+        "image_width",
+        "image_height"
+      ],
+      "title": "PerspectiveParameters",
+      "type": "object"
+    },
+    "ProjectionMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "camera_id": {
+          "enum": [
+            "camera_perspective_moge",
+            "camera_orthographic_fitted"
+          ],
+          "title": "Camera Id",
+          "type": "string"
+        },
+        "centroid_error_pixels": {
+          "minimum": 0.0,
+          "title": "Centroid Error Pixels",
+          "type": "number"
+        },
+        "object_id": {
+          "enum": [
+            "e971e9fbbf5746eea108d07bfbb5764a",
+            "b9858c1f45f443a88d84229a1824d339",
+            "9171a7b4d4e142ca936f2564200d0bdb",
+            "1064a3a09c4c427e80caa227d17a7cc1",
+            "4ec402f9a71d4ea7925b487ac7e11249",
+            "49fd02b50a914e8198bacf4644bc377f"
+          ],
+          "title": "Object Id",
+          "type": "string"
+        },
+        "projected_area_ratio": {
+          "minimum": 0.0,
+          "title": "Projected Area Ratio",
+          "type": "number"
+        },
+        "projected_bbox_xyxy": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Projected Bbox Xyxy",
+          "type": "array"
+        },
+        "projected_corners_xy": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "maxItems": 8,
+          "minItems": 8,
+          "title": "Projected Corners Xy",
+          "type": "array"
+        },
+        "projected_hull_mask_iou": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Projected Hull Mask Iou",
+          "type": "number"
+        },
+        "quality": {
+          "enum": [
+            "good",
+            "marginal",
+            "failed"
+          ],
+          "title": "Quality",
+          "type": "string"
+        },
+        "source_mask_bbox_iou": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Source Mask Bbox Iou",
+          "type": "number"
+        },
+        "visibility_valid": {
+          "title": "Visibility Valid",
+          "type": "boolean"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "camera_id",
+        "object_id",
+        "projected_corners_xy",
+        "projected_bbox_xyxy",
+        "source_mask_bbox_iou",
+        "projected_hull_mask_iou",
+        "centroid_error_pixels",
+        "projected_area_ratio",
+        "visibility_valid",
+        "quality",
+        "warnings"
+      ],
+      "title": "ProjectionMetrics",
+      "type": "object"
+    },
+    "ProjectionValidation": {
+      "additionalProperties": false,
+      "properties": {
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/ProjectionMetrics"
+          },
+          "maxItems": 12,
+          "minItems": 12,
+          "title": "Metrics",
+          "type": "array"
+        },
+        "orthographic_mean_bbox_iou": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Orthographic Mean Bbox Iou",
+          "type": "number"
+        },
+        "orthographic_mean_centroid_error_pixels": {
+          "minimum": 0.0,
+          "title": "Orthographic Mean Centroid Error Pixels",
+          "type": "number"
+        },
+        "orthographic_mean_hull_iou": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Orthographic Mean Hull Iou",
+          "type": "number"
+        },
+        "other_camera_must_still_be_tested": {
+          "const": true,
+          "title": "Other Camera Must Still Be Tested",
+          "type": "boolean"
+        },
+        "perspective_mean_bbox_iou": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Perspective Mean Bbox Iou",
+          "type": "number"
+        },
+        "perspective_mean_centroid_error_pixels": {
+          "minimum": 0.0,
+          "title": "Perspective Mean Centroid Error Pixels",
+          "type": "number"
+        },
+        "perspective_mean_hull_iou": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Perspective Mean Hull Iou",
+          "type": "number"
+        },
+        "recommended_first_blender_camera": {
+          "enum": [
+            "camera_perspective_moge",
+            "camera_orthographic_fitted"
+          ],
+          "title": "Recommended First Blender Camera",
+          "type": "string"
+        },
+        "shared_geometry_across_cameras": {
+          "const": true,
+          "title": "Shared Geometry Across Cameras",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "shared_geometry_across_cameras",
+        "metrics",
+        "perspective_mean_bbox_iou",
+        "perspective_mean_hull_iou",
+        "perspective_mean_centroid_error_pixels",
+        "orthographic_mean_bbox_iou",
+        "orthographic_mean_hull_iou",
+        "orthographic_mean_centroid_error_pixels",
+        "recommended_first_blender_camera",
+        "other_camera_must_still_be_tested"
+      ],
+      "title": "ProjectionValidation",
+      "type": "object"
+    },
+    "QualityGateResult": {
+      "additionalProperties": false,
+      "properties": {
+        "details": {
+          "title": "Details",
+          "type": "string"
+        },
+        "gate": {
+          "title": "Gate",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "gate",
+        "passed",
+        "details"
+      ],
+      "title": "QualityGateResult",
+      "type": "object"
+    },
+    "SemanticPrimitive": {
+      "additionalProperties": false,
+      "properties": {
+        "center": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Center",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "constraint_strength": {
+          "enum": [
+            "hard",
+            "soft",
+            "review_only",
+            "ignored_for_transform"
+          ],
+          "title": "Constraint Strength",
+          "type": "string"
+        },
+        "dimensions": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Dimensions",
+          "type": "array"
+        },
+        "geometry_source": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Geometry Source",
+          "type": "array"
+        },
+        "geometry_strategy": {
+          "enum": [
+            "retained_obb",
+            "support_aligned_proxy",
+            "visible_surface_proxy",
+            "wall_attached_thin_proxy"
+          ],
+          "title": "Geometry Strategy",
+          "type": "string"
+        },
+        "object_id": {
+          "enum": [
+            "e971e9fbbf5746eea108d07bfbb5764a",
+            "b9858c1f45f443a88d84229a1824d339",
+            "9171a7b4d4e142ca936f2564200d0bdb",
+            "1064a3a09c4c427e80caa227d17a7cc1",
+            "4ec402f9a71d4ea7925b487ac7e11249",
+            "49fd02b50a914e8198bacf4644bc377f"
+          ],
+          "title": "Object Id",
+          "type": "string"
+        },
+        "primitive_type": {
+          "const": "cube",
+          "title": "Primitive Type",
+          "type": "string"
+        },
+        "requires_user_review": {
+          "title": "Requires User Review",
+          "type": "boolean"
+        },
+        "rotation_matrix": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Rotation Matrix",
+          "type": "array"
+        },
+        "rotation_quaternion_wxyz": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Rotation Quaternion Wxyz",
+          "type": "array"
+        },
+        "semantic_label": {
+          "title": "Semantic Label",
+          "type": "string"
+        },
+        "support_target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Support Target"
+        },
+        "transform_matrix": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Transform Matrix",
+          "type": "array"
+        },
+        "uncertainty": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Uncertainty",
+          "type": "array"
+        }
+      },
+      "required": [
+        "object_id",
+        "semantic_label",
+        "primitive_type",
+        "geometry_strategy",
+        "geometry_source",
+        "center",
+        "rotation_quaternion_wxyz",
+        "rotation_matrix",
+        "dimensions",
+        "transform_matrix",
+        "support_target",
+        "constraint_strength",
+        "confidence",
+        "uncertainty",
+        "requires_user_review"
+      ],
+      "title": "SemanticPrimitive",
+      "type": "object"
+    },
+    "SourceReference": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "path",
+        "sha256"
+      ],
+      "title": "SourceReference",
+      "type": "object"
+    },
+    "StructuralProxy": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_plane_normal": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Canonical Plane Normal",
+          "type": "array"
+        },
+        "canonical_plane_offset": {
+          "title": "Canonical Plane Offset",
+          "type": "number"
+        },
+        "center": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Center",
+          "type": "array"
+        },
+        "dimensions": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Dimensions",
+          "type": "array"
+        },
+        "equation_confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Equation Confidence",
+          "type": "number"
+        },
+        "extent_confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Extent Confidence",
+          "type": "number"
+        },
+        "extent_policy": {
+          "const": "bright_near_plane_robust_clip",
+          "title": "Extent Policy",
+          "type": "string"
+        },
+        "plane_id": {
+          "enum": [
+            "plane_floor",
+            "plane_left_wall",
+            "plane_right_wall"
+          ],
+          "title": "Plane Id",
+          "type": "string"
+        },
+        "primitive_type": {
+          "const": "cube",
+          "title": "Primitive Type",
+          "type": "string"
+        },
+        "requires_user_review": {
+          "title": "Requires User Review",
+          "type": "boolean"
+        },
+        "rotation_matrix": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Rotation Matrix",
+          "type": "array"
+        },
+        "rotation_quaternion_wxyz": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Rotation Quaternion Wxyz",
+          "type": "array"
+        },
+        "semantic_label": {
+          "enum": [
+            "floor",
+            "left_wall",
+            "right_wall"
+          ],
+          "title": "Semantic Label",
+          "type": "string"
+        },
+        "thickness_policy": {
+          "title": "Thickness Policy",
+          "type": "string"
+        },
+        "transform_matrix": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Transform Matrix",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "plane_id",
+        "semantic_label",
+        "primitive_type",
+        "canonical_plane_normal",
+        "canonical_plane_offset",
+        "center",
+        "rotation_quaternion_wxyz",
+        "rotation_matrix",
+        "dimensions",
+        "transform_matrix",
+        "equation_confidence",
+        "extent_confidence",
+        "extent_policy",
+        "thickness_policy",
+        "warnings",
+        "requires_user_review"
+      ],
+      "title": "StructuralProxy",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "camera_candidates": {
+      "items": {
+        "$ref": "#/$defs/CameraCandidate"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Camera Candidates",
+      "type": "array"
+    },
+    "compilation_status": {
+      "$ref": "#/$defs/CompilationStatus"
+    },
+    "constraint_classifications": {
+      "items": {
+        "$ref": "#/$defs/ConstraintClassification"
+      },
+      "maxItems": 98,
+      "minItems": 98,
+      "title": "Constraint Classifications",
+      "type": "array"
+    },
+    "coordinate_system": {
+      "$ref": "#/$defs/CoordinateSystemDefinition"
+    },
+    "projection_validation": {
+      "$ref": "#/$defs/ProjectionValidation"
+    },
+    "quality_gates": {
+      "items": {
+        "$ref": "#/$defs/QualityGateResult"
+      },
+      "title": "Quality Gates",
+      "type": "array"
+    },
+    "scene_id": {
+      "const": "office_test",
+      "title": "Scene Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "semantic_primitives": {
+      "items": {
+        "$ref": "#/$defs/SemanticPrimitive"
+      },
+      "maxItems": 6,
+      "minItems": 6,
+      "title": "Semantic Primitives",
+      "type": "array"
+    },
+    "source_references": {
+      "items": {
+        "$ref": "#/$defs/SourceReference"
+      },
+      "maxItems": 7,
+      "minItems": 7,
+      "title": "Source References",
+      "type": "array"
+    },
+    "structural_proxies": {
+      "items": {
+        "$ref": "#/$defs/StructuralProxy"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Structural Proxies",
+      "type": "array"
+    },
+    "uncertainties": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Uncertainties",
+      "type": "array"
+    },
+    "unit_scale_warning": {
+      "title": "Unit Scale Warning",
+      "type": "string"
+    },
+    "user_review_requirements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "User Review Requirements",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "scene_id",
+    "source_references",
+    "coordinate_system",
+    "unit_scale_warning",
+    "camera_candidates",
+    "structural_proxies",
+    "semantic_primitives",
+    "constraint_classifications",
+    "projection_validation",
+    "uncertainties",
+    "user_review_requirements",
+    "quality_gates",
+    "compilation_status"
+  ],
+  "title": "PrimitiveScenePlan",
+  "type": "object"
+}

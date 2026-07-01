@@ -105,3 +105,18 @@ $env:OPENAI_API_KEY = "..."
 The runner does not load `.env` files, pass credentials on the command line, or store request data URLs. `.env` and `.env.*` are ignored defensively. Dry-run builds and verifies `outputs/office_test/vlm/input/`, including stable candidate IDs, file hashes, the prompt/schema hashes, and the complete in-memory request. A live response is independently checked for exact object/candidate coverage, ID integrity, uncertainty preservation, forbidden numeric geometry, and semantic contradictions before `semantic_scene_graph.json` can be written.
 
 Official implementation references: [Responses API migration](https://developers.openai.com/api/docs/guides/migrate-to-responses), [images and vision](https://developers.openai.com/api/docs/guides/images-vision), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs), and [GPT-5.5 guidance](https://developers.openai.com/api/docs/guides/latest-model).
+
+## Deterministic primitive scene-plan compiler
+
+Compile the validated semantic graph into a Blender-neutral plan without calling OpenAI or creating Blender objects:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.export_primitive_plan_schema
+.\.venv\Scripts\python.exe -m src.primitive_scene_compiler
+```
+
+The compiler writes `outputs/office_test/primitive_plan/`. It produces exactly one cube for each of the six semantic object IDs, three provisional structural cubes, and both perspective and fitted-orthographic camera candidates. All numerical geometry comes from MoGe points and deterministic scene evidence.
+
+Only accepted support and attachment relationships can influence transforms. Uncertain relationships are review-only; rejected, directional, proximity, and occlusion relationships are ignored for transforms. Accepted support or attachment evidence that remains user-reviewable is soft rather than hard.
+
+Object geometry is shared by both camera candidates. Reprojection metrics and overlays are diagnostic outputs; the compiler does not retune an object independently for either camera. Structural extents, metric scale, the final camera model, incomplete chair geometry, filing-cabinet support, desktop-box depth correction, and wall-light thickness remain explicitly reviewable.
