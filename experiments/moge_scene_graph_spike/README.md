@@ -29,11 +29,11 @@ The validator requires each mask to be a PNG with one channel (or a palette whos
 ## Replace the fixture
 
 1. Create a new directory under `inputs/`; do not overwrite `office_test`.
-2. Copy one source image and 3–5 final, whole-object binary PNG masks into it. Copy from a finalized export, not a candidate or overlay directory.
+2. Copy one source image and a focused set of final, whole-object binary PNG masks into it. Copy from a finalized export, not a candidate or overlay directory.
 3. Copy `office_test/manifest.json` as a starting point.
 4. Assign a new `scene_id`; update the image filename, dimensions, source path, and SHA-256 digest.
 5. For each mask, record a unique stable `object_id`, semantic label, local filename, repository-relative source export path, SHA-256 digest, and source revision. Use `null` only when the source has no revision metadata.
-6. Keep representative coverage where available: large furniture, a chair/irregular object, a small object, a partially occluded object, and a wall-mounted object.
+6. Keep representative coverage where available: large furniture and support surfaces, a chair/irregular object, a small object, a partially occluded object, and a wall-mounted object.
 7. Mark the copied image and masks read-only and run both validation commands above.
 
 Generated reconstruction artifacts belong in `outputs/`, which is ignored except for its placeholder.
@@ -76,3 +76,15 @@ Extract deterministic geometry for the approved fixture masks without inferring 
 The main result is `outputs/office_test/geometry/object_geometry.json`. Each object has a diagnostic directory keyed by its stable object ID containing raw and conservatively filtered NPZ samples, previews, point clouds, and JSON/Markdown reports. Connected components remain supplementary parts of one semantic object.
 
 Raw values use MoGe's OpenCV camera coordinates (+X right, +Y down, +Z forward) and retain its unverified metric scale. Scene-normalized values apply one reversible uniform transform based on the valid scene's p1/p99 bounds; raw values are never overwritten. Oriented boxes are PCA estimates of visible surfaces only and are omitted below the configured confidence/stability threshold.
+
+## Deterministic scene evidence
+
+The fixture additionally includes the finalized `desk.png` mask as one semantic object with three visible connected components. Build structural room planes, canonical coordinates, support patches, and relationship candidates with:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.extract_object_geometry
+.\.venv\Scripts\python.exe -m src.build_scene_evidence
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Outputs are `outputs/office_test/geometry/scene_evidence.json`, `scene_evidence.md`, and `scene_diagnostics/`. They are evidence records, not a final scene graph. Structural fitting excludes the six known object masks and uses normal clustering plus deterministic RANSAC. The canonical world is a reversible rigid transform: +Z follows the inward-oriented floor normal, +X is camera-right projected onto the floor, and +Y completes a right-handed basis. No camera extrinsics, hidden geometry, VLM conclusions, or Blender objects are introduced.

@@ -18,6 +18,15 @@
       "selection_role": ["large_furniture"]
     },
     {
+      "object_id": "b9858c1f45f443a88d84229a1824d339",
+      "semantic_label": "desk",
+      "mask_filename": "desk.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/desk.png",
+      "mask_revision": null,
+      "sha256": "04c587d73881bf992408e42966cace36337a9e9753cd07c964314b195dfc1c74",
+      "selection_role": ["large_furniture", "support_surface"]
+    },
+    {
       "object_id": "9171a7b4d4e142ca936f2564200d0bdb",
       "semantic_label": "desk_chair",
       "mask_filename": "desk_chair.png",

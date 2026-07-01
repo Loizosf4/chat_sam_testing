@@ -22,7 +22,7 @@
     "objects": {
       "type": "array",
       "minItems": 3,
-      "maxItems": 5,
+      "maxItems": 6,
       "items": {
         "type": "object",
         "additionalProperties": false,

@@ -14,7 +14,7 @@ OUTPUT_PATH = GEOMETRY_DIR / "object_geometry.json"
 def test_extracted_object_geometry_is_self_consistent() -> None:
     data = json.loads(OUTPUT_PATH.read_text(encoding="utf-8"))
     objects = data["objects"]
-    assert len(objects) == 5
+    assert len(objects) == 6
     assert len({obj["object_id"] for obj in objects}) == len(objects)
 
     transform = data["raw_to_normalized_transformation"]

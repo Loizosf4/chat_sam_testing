@@ -288,7 +288,7 @@ def _object_warnings(
         if largest > max(5.0, 0.75 * scene_longest_extent):
             warnings.append("suspiciously large raw metric dimensions")
     if rejected_ratio > 0.02:
-        warnings.append("possible mask leakage into background or neighboring objects")
+        warnings.append("depth outliers warrant boundary review; mask leakage is not established by depth alone")
     return warnings
 
 
@@ -414,6 +414,7 @@ def extract(manifest_path: Path, moge_dir: Path, output_dir: Path) -> dict[str, 
             warnings.append("wall-mounted thin geometry may include only the outward-facing surface")
         if label == "desktop_box" and raw_count < 1000:
             warnings.append("small object; dimensions are sensitive to a few pixels")
+            warnings.append("excessive MoGe depth spread is retained; raw Z extent must not be interpreted as physical object depth")
         if "small_object" in obj.get("selection_role", []) and raw_unfiltered_geometry:
             if max(raw_unfiltered_geometry["visible_surface_dimensions"]) > 0.25 * scene_extent:
                 warnings.append("suspiciously large raw metric dimensions for a fixture selected as a small object")
