@@ -88,3 +88,20 @@ The fixture additionally includes the finalized `desk.png` mask as one semantic 
 ```
 
 Outputs are `outputs/office_test/geometry/scene_evidence.json`, `scene_evidence.md`, and `scene_diagnostics/`. They are evidence records, not a final scene graph. Structural fitting excludes the six known object masks and uses normal clustering plus deterministic RANSAC. The canonical world is a reversible rigid transform: +Z follows the inward-oriented floor normal, +X is camera-right projected onto the floor, and +Y completes a right-handed basis. No camera extrinsics, hidden geometry, VLM conclusions, or Blender objects are introduced.
+
+## OpenAI semantic review
+
+The semantic-review stage uses the current Responses API, five PNG image inputs at `detail=original`, and strict Pydantic Structured Outputs. The default model is `gpt-5.5`; set `OPENAI_MODEL` to configure it. No fallback model is selected automatically.
+
+```powershell
+.\.venv\Scripts\python.exe -m src.export_vlm_schema
+.\.venv\Scripts\python.exe -m src.vlm_review --dry-run
+
+# Live execution reads credentials only from the process environment:
+$env:OPENAI_API_KEY = "..."
+.\.venv\Scripts\python.exe -m src.vlm_review
+```
+
+The runner does not load `.env` files, pass credentials on the command line, or store request data URLs. `.env` and `.env.*` are ignored defensively. Dry-run builds and verifies `outputs/office_test/vlm/input/`, including stable candidate IDs, file hashes, the prompt/schema hashes, and the complete in-memory request. A live response is independently checked for exact object/candidate coverage, ID integrity, uncertainty preservation, forbidden numeric geometry, and semantic contradictions before `semantic_scene_graph.json` can be written.
+
+Official implementation references: [Responses API migration](https://developers.openai.com/api/docs/guides/migrate-to-responses), [images and vision](https://developers.openai.com/api/docs/guides/images-vision), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs), and [GPT-5.5 guidance](https://developers.openai.com/api/docs/guides/latest-model).

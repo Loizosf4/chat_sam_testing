@@ -1,0 +1,41 @@
+You are reviewing deterministic visual and geometric evidence for a semantic scene graph.
+
+Outcome
+
+Return exactly one schema-constrained semantic review. Review the supplied source image, object overlay, structural-plane overlay, support overlay, relationship overlay, and compact JSON evidence. This is a semantic review, not geometry generation.
+
+Hard constraints
+
+- Use only object IDs, plane IDs, and deterministic candidate IDs present in the input JSON.
+- Return exactly one object record for each allowed object ID, with no omissions, duplicates, merges, splits, or new objects.
+- Return exactly one relationship review for every deterministic candidate ID. Preserve its subject, predicate, target, and deterministic confidence exactly.
+- Never output positions, rotations, scales, transforms, dimensions, matrices, quaternions, hidden geometry, or invented metric claims.
+- Keep the desk, chair, and coat rack as one semantic object each despite disconnected visible components.
+- Do not infer hidden object parts or exact physical dimensions.
+- Additional relationships may appear only as unverified proposed_hypotheses using existing IDs, visual or semantic evidence, and mandatory user review.
+- Distinguish deterministic geometry, visual interpretation, semantic prior, and unresolved ambiguity.
+- Treat absolute scale as unverified and the perspective-versus-orthographic camera model as unresolved unless the image provides compelling evidence; never call either proven.
+- Review plane equations separately from plane extents. The floor extent includes exterior black-background pixels, so prefer equation_only or requires_reconstruction_review.
+- The chair mask contains only its visible backrest. Likely floor support may be a semantic hypothesis, but physical support is not geometrically confirmed.
+- The desktop-box mask is visually correct; its excessive depth spread is a MoGe limitation, not proof of mask leakage. Do not use its full raw Z extent.
+- Review the desktop-box/chair image-occlusion candidate skeptically because it is supported only by negligible boundary/overlap evidence.
+- Accept desktop-box support on the desk only when the source and support overlay agree.
+- Review filing-cabinet floor support carefully because it is borderline.
+- Review wall-light attachment using both source appearance and measured wall proximity.
+- primitive_policy must be one_cube for every object. geometry_strategy selects how later deterministic compilation should use existing geometry; it does not create geometry now.
+- Use concise reasoning-summary fields only. Do not include hidden chain-of-thought.
+
+Generator metadata
+
+Set provider to openai, requested_model and returned_model to the requested model string supplied in the input, and prompt_version to scene_graph_review_v1. Runtime code will replace returned_model with the actual API response model identifier before validation.
+
+Review policy
+
+- accept: visual evidence and deterministic evidence are compatible.
+- reject: evidence contradicts the candidate; explain the rejection in contradiction_summary.
+- uncertain: evidence is incomplete, marginal, camera-model-sensitive, or occlusion-limited.
+- Preserve every supplied warning or uncertainty that materially affects a decision.
+- A definitive accepted support must not coexist with accepted unknown_support for the same subject.
+- Avoid contradictory accepted directional or occlusion pairs.
+
+Stop after producing the strict structured result.

@@ -1,0 +1,520 @@
+{
+  "$defs": {
+    "CameraReview": {
+      "additionalProperties": false,
+      "properties": {
+        "recommended_model": {
+          "enum": [
+            "perspective",
+            "orthographic",
+            "unresolved"
+          ],
+          "title": "Recommended Model",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "contradictory_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Contradictory Evidence",
+          "type": "array"
+        },
+        "test_both_in_blender": {
+          "title": "Test Both In Blender",
+          "type": "boolean"
+        },
+        "requires_user_review": {
+          "title": "Requires User Review",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "recommended_model",
+        "confidence",
+        "evidence",
+        "contradictory_evidence",
+        "test_both_in_blender",
+        "requires_user_review"
+      ],
+      "title": "CameraReview",
+      "type": "object"
+    },
+    "GeneratorInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "const": "openai",
+          "title": "Provider",
+          "type": "string"
+        },
+        "requested_model": {
+          "minLength": 1,
+          "title": "Requested Model",
+          "type": "string"
+        },
+        "returned_model": {
+          "minLength": 1,
+          "title": "Returned Model",
+          "type": "string"
+        },
+        "prompt_version": {
+          "const": "scene_graph_review_v1",
+          "title": "Prompt Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "requested_model",
+        "returned_model",
+        "prompt_version"
+      ],
+      "title": "GeneratorInfo",
+      "type": "object"
+    },
+    "ObjectReview": {
+      "additionalProperties": false,
+      "properties": {
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "original_label": {
+          "minLength": 1,
+          "title": "Original Label",
+          "type": "string"
+        },
+        "reviewed_label": {
+          "minLength": 1,
+          "title": "Reviewed Label",
+          "type": "string"
+        },
+        "label_decision": {
+          "enum": [
+            "accept",
+            "correct",
+            "uncertain"
+          ],
+          "title": "Label Decision",
+          "type": "string"
+        },
+        "semantic_category": {
+          "minLength": 1,
+          "title": "Semantic Category",
+          "type": "string"
+        },
+        "primitive_policy": {
+          "const": "one_cube",
+          "title": "Primitive Policy",
+          "type": "string"
+        },
+        "geometry_strategy": {
+          "enum": [
+            "retained_obb",
+            "canonical_aabb",
+            "support_aligned_proxy",
+            "wall_attached_thin_proxy",
+            "visible_surface_proxy",
+            "requires_manual_review"
+          ],
+          "title": "Geometry Strategy",
+          "type": "string"
+        },
+        "geometry_source_reference": {
+          "minLength": 1,
+          "title": "Geometry Source Reference",
+          "type": "string"
+        },
+        "support_summary": {
+          "minLength": 1,
+          "title": "Support Summary",
+          "type": "string"
+        },
+        "attachment_summary": {
+          "minLength": 1,
+          "title": "Attachment Summary",
+          "type": "string"
+        },
+        "occlusion_summary": {
+          "minLength": 1,
+          "title": "Occlusion Summary",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "uncertainty": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Uncertainty",
+          "type": "array"
+        },
+        "requires_user_review": {
+          "title": "Requires User Review",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "object_id",
+        "original_label",
+        "reviewed_label",
+        "label_decision",
+        "semantic_category",
+        "primitive_policy",
+        "geometry_strategy",
+        "geometry_source_reference",
+        "support_summary",
+        "attachment_summary",
+        "occlusion_summary",
+        "confidence",
+        "uncertainty",
+        "requires_user_review"
+      ],
+      "title": "ObjectReview",
+      "type": "object"
+    },
+    "ProposedHypothesis": {
+      "additionalProperties": false,
+      "properties": {
+        "hypothesis_id": {
+          "minLength": 1,
+          "title": "Hypothesis Id",
+          "type": "string"
+        },
+        "subject_object_id": {
+          "minLength": 1,
+          "title": "Subject Object Id",
+          "type": "string"
+        },
+        "predicate": {
+          "enum": [
+            "supported_by",
+            "attached_to",
+            "near",
+            "in_front_of",
+            "behind",
+            "left_of",
+            "right_of",
+            "above",
+            "below",
+            "image_occludes",
+            "image_occluded_by",
+            "unknown_support"
+          ],
+          "title": "Predicate",
+          "type": "string"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Id"
+        },
+        "status": {
+          "const": "unverified",
+          "title": "Status",
+          "type": "string"
+        },
+        "evidence_type": {
+          "enum": [
+            "visual",
+            "semantic"
+          ],
+          "title": "Evidence Type",
+          "type": "string"
+        },
+        "evidence_summary": {
+          "minLength": 1,
+          "title": "Evidence Summary",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "requires_user_review": {
+          "const": true,
+          "title": "Requires User Review",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "hypothesis_id",
+        "subject_object_id",
+        "predicate",
+        "target_id",
+        "status",
+        "evidence_type",
+        "evidence_summary",
+        "confidence",
+        "requires_user_review"
+      ],
+      "title": "ProposedHypothesis",
+      "type": "object"
+    },
+    "RelationshipReview": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "subject_object_id": {
+          "minLength": 1,
+          "title": "Subject Object Id",
+          "type": "string"
+        },
+        "predicate": {
+          "enum": [
+            "supported_by",
+            "attached_to",
+            "near",
+            "in_front_of",
+            "behind",
+            "left_of",
+            "right_of",
+            "above",
+            "below",
+            "image_occludes",
+            "image_occluded_by",
+            "unknown_support"
+          ],
+          "title": "Predicate",
+          "type": "string"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Id"
+        },
+        "deterministic_confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Deterministic Confidence",
+          "type": "number"
+        },
+        "decision": {
+          "enum": [
+            "accept",
+            "reject",
+            "uncertain"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "reviewed_confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Reviewed Confidence",
+          "type": "number"
+        },
+        "evidence_summary": {
+          "minLength": 1,
+          "title": "Evidence Summary",
+          "type": "string"
+        },
+        "contradiction_summary": {
+          "title": "Contradiction Summary",
+          "type": "string"
+        },
+        "requires_user_review": {
+          "title": "Requires User Review",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "subject_object_id",
+        "predicate",
+        "target_id",
+        "deterministic_confidence",
+        "decision",
+        "reviewed_confidence",
+        "evidence_summary",
+        "contradiction_summary",
+        "requires_user_review"
+      ],
+      "title": "RelationshipReview",
+      "type": "object"
+    },
+    "StructuralPlaneReview": {
+      "additionalProperties": false,
+      "properties": {
+        "plane_id": {
+          "minLength": 1,
+          "title": "Plane Id",
+          "type": "string"
+        },
+        "semantic_label": {
+          "minLength": 1,
+          "title": "Semantic Label",
+          "type": "string"
+        },
+        "decision": {
+          "enum": [
+            "accept_equation",
+            "reject",
+            "uncertain"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "extent_policy": {
+          "enum": [
+            "equation_only",
+            "visible_image_extent",
+            "requires_reconstruction_review"
+          ],
+          "title": "Extent Policy",
+          "type": "string"
+        },
+        "reasoning_summary": {
+          "minLength": 1,
+          "title": "Reasoning Summary",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "requires_user_review": {
+          "title": "Requires User Review",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "plane_id",
+        "semantic_label",
+        "decision",
+        "confidence",
+        "extent_policy",
+        "reasoning_summary",
+        "warnings",
+        "requires_user_review"
+      ],
+      "title": "StructuralPlaneReview",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scene_id": {
+      "minLength": 1,
+      "title": "Scene Id",
+      "type": "string"
+    },
+    "generator": {
+      "$ref": "#/$defs/GeneratorInfo"
+    },
+    "camera_review": {
+      "$ref": "#/$defs/CameraReview"
+    },
+    "structural_plane_reviews": {
+      "items": {
+        "$ref": "#/$defs/StructuralPlaneReview"
+      },
+      "title": "Structural Plane Reviews",
+      "type": "array"
+    },
+    "objects": {
+      "items": {
+        "$ref": "#/$defs/ObjectReview"
+      },
+      "title": "Objects",
+      "type": "array"
+    },
+    "relationship_reviews": {
+      "items": {
+        "$ref": "#/$defs/RelationshipReview"
+      },
+      "title": "Relationship Reviews",
+      "type": "array"
+    },
+    "proposed_hypotheses": {
+      "items": {
+        "$ref": "#/$defs/ProposedHypothesis"
+      },
+      "title": "Proposed Hypotheses",
+      "type": "array"
+    },
+    "global_uncertainties": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Global Uncertainties",
+      "type": "array"
+    },
+    "requires_user_review": {
+      "title": "Requires User Review",
+      "type": "boolean"
+    },
+    "review_summary": {
+      "minLength": 1,
+      "title": "Review Summary",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "scene_id",
+    "generator",
+    "camera_review",
+    "structural_plane_reviews",
+    "objects",
+    "relationship_reviews",
+    "proposed_hypotheses",
+    "global_uncertainties",
+    "requires_user_review",
+    "review_summary"
+  ],
+  "title": "SemanticSceneGraph",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "vlm_scene_graph.schema.json"
+}
