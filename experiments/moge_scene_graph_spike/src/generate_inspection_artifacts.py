@@ -245,8 +245,8 @@ def generate(moge_dir: Path, source_image: Path) -> dict[str, Any]:
 
     pair_valid_h = valid[:, 1:] & valid[:, :-1] & finite_depth[:, 1:] & finite_depth[:, :-1]
     pair_valid_v = valid[1:, :] & valid[:-1, :] & finite_depth[1:, :] & finite_depth[:-1, :]
-    jumps_h = np.abs(depth[:, 1:] - depth[:, :-1])[pair_valid_h]
-    jumps_v = np.abs(depth[1:, :] - depth[:-1, :])[pair_valid_v]
+    jumps_h = np.abs(depth[:, 1:][pair_valid_h] - depth[:, :-1][pair_valid_h])
+    jumps_v = np.abs(depth[1:, :][pair_valid_v] - depth[:-1, :][pair_valid_v])
     jumps = np.concatenate([jumps_h, jumps_v])
     discontinuity_threshold_m = 0.5
     suspicious_jumps = jumps > discontinuity_threshold_m
@@ -295,6 +295,10 @@ def generate(moge_dir: Path, source_image: Path) -> dict[str, Any]:
             "summary": "Usable with documented caveats." if usable and concerns else ("Usable." if usable else "Not currently usable."),
             "concerns": concerns,
         },
+        "limitations": [
+            "No ground-truth camera or geometry is available, so absolute metric scale cannot be independently verified.",
+            "Planarity checks use fixed image-space regions rather than semantic floor/wall masks.",
+        ],
         "source": {
             "geometry_archive": str((moge_dir / "geometry.npz").relative_to(EXPERIMENT_ROOT)),
             "image": str(source_image.resolve().relative_to(EXPERIMENT_ROOT)),

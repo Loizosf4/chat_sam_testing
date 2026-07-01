@@ -53,3 +53,13 @@ The official Microsoft documentation used for this spike is the MoGe repository 
 The default command processes only `inputs/office_test/image.png`. It does not consume object masks. Numerical results are written to `outputs/office_test/moge/` as individual NPY files and a combined `geometry.npz`; JSON metadata and lossless PNG previews accompany them.
 
 `image.png` is a lossless PNG encoding of the pixels in the original read-only `office_scene.jpg` fixture. Both remain read-only. The direct inference path intentionally omits MoGe's UI and mesh-export-only dependencies (`gradio`, `trimesh`, and `moderngl`).
+
+## Geometry inspection
+
+Generate previews, geometry-only and source-colored PLY point clouds, camera summaries, and JSON/Markdown quality reports from the persisted MoGe arrays:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.generate_inspection_artifacts
+```
+
+Artifacts are written under `outputs/office_test/moge/inspection/`. The depth preview uses explicitly reported p2/p98 visualization clipping; raw NPY/NPZ values are never modified. Plane diagnostics use fixed image-space floor and wall regions, predicted-normal filtering, and deterministic RANSAC. They do not use the object masks.

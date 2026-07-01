@@ -9,6 +9,13 @@ int main() {
         cin>>a[i];
     }
     int total=0;
+    for(int i=n-1;i>=1;i--){
+        if(a[i]<=a[i-1]){
+            a[i]--;
+            break;
+        }
+    }
+
     for(int i=n-2;i>=0;i--){
         int tmp=i;
         vector <int> v;
@@ -26,7 +33,8 @@ int main() {
             else
                 break;
         }
-
     }
+    
+    cout<<total;
     return 0;
 }
