@@ -63,3 +63,16 @@ Generate previews, geometry-only and source-colored PLY point clouds, camera sum
 ```
 
 Artifacts are written under `outputs/office_test/moge/inspection/`. The depth preview uses explicitly reported p2/p98 visualization clipping; raw NPY/NPZ values are never modified. Plane diagnostics use fixed image-space floor and wall regions, predicted-normal filtering, and deterministic RANSAC. They do not use the object masks.
+
+## Per-object visible geometry
+
+Extract deterministic geometry for the approved fixture masks without inferring hidden surfaces:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.extract_object_geometry
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+The main result is `outputs/office_test/geometry/object_geometry.json`. Each object has a diagnostic directory keyed by its stable object ID containing raw and conservatively filtered NPZ samples, previews, point clouds, and JSON/Markdown reports. Connected components remain supplementary parts of one semantic object.
+
+Raw values use MoGe's OpenCV camera coordinates (+X right, +Y down, +Z forward) and retain its unverified metric scale. Scene-normalized values apply one reversible uniform transform based on the valid scene's p1/p99 bounds; raw values are never overwritten. Oriented boxes are PCA estimates of visible surfaces only and are omitted below the configured confidence/stability threshold.
