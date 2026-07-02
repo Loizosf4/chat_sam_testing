@@ -218,6 +218,10 @@ def _right_wall_rotation(room_report: dict[str, Any]) -> tuple[np.ndarray, np.nd
     columns = [matrix[:3, index] for index in range(3)]
     normal = min(columns, key=np.linalg.norm)
     normal /= np.linalg.norm(normal)
+    # Corrected room walls are vertical by construction.  Remove float noise
+    # along canonical gravity before building the in-wall orthonormal basis.
+    normal[2] = 0.0
+    normal /= np.linalg.norm(normal)
     if normal[0] > 0:
         normal *= -1.0
     up = np.asarray([0.0, 0.0, 1.0])
