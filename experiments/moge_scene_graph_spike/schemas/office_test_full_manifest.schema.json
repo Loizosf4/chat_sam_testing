@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "scene_id", "fixture_mode", "source_image", "objects", "mask_count", "approved_object_count", "new_object_count", "excluded_mask_count"],
+  "properties": {
+    "scene_id": {"const": "office_test_full"},
+    "fixture_mode": {"const": "immutable_source_references"},
+    "mask_count": {"const": 20},
+    "approved_object_count": {"const": 6},
+    "new_object_count": {"const": 14},
+    "excluded_mask_count": {"const": 0},
+    "objects": {
+      "type": "array", "minItems": 20, "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": ["object_id", "semantic_label", "mask_filename", "source_export_path", "sha256", "width", "height", "binary", "non_empty", "area", "fixture_classification"],
+        "properties": {
+          "object_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "width": {"const": 447}, "height": {"const": 447},
+          "binary": {"const": true}, "non_empty": {"const": true},
+          "area": {"type": "integer", "minimum": 1},
+          "fixture_classification": {"enum": ["existing_approved_object", "new_object", "excluded_structural_background"]}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "objects_already_present_and_frozen", "batch_ready_objects", "individual_review_objects", "insufficient_geometry", "excluded_objects", "recommended_batches", "recommended_ordering"],
+  "properties": {
+    "objects_already_present_and_frozen": {"type": "array", "minItems": 6, "maxItems": 6},
+    "batch_ready_objects": {"type": "array"}, "individual_review_objects": {"type": "array"},
+    "insufficient_geometry": {"type": "array"}, "excluded_objects": {"type": "array"}, "recommended_batches": {"type": "array"}, "recommended_ordering": {"type": "array", "minItems": 1}
+  }
+}

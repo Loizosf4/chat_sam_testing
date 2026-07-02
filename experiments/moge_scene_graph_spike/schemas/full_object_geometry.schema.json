@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "scene_id", "objects", "object_count"],
+  "properties": {
+    "scene_id": {"const": "office_test_full"}, "object_count": {"const": 20},
+    "objects": {"type": "array", "minItems": 20, "maxItems": 20, "items": {"type": "object", "required": ["object_id", "semantic_label", "mask_pixel_count", "valid_pixel_count", "visible_point_count", "candidate_obb", "normal_clusters", "geometry_confidence", "projected_mask_convex_hull"], "properties": {"mask_pixel_count": {"type": "integer", "minimum": 1}, "valid_pixel_count": {"type": "integer", "minimum": 1}, "visible_point_count": {"type": "integer", "minimum": 1}, "geometry_confidence": {"type": "number", "minimum": 0, "maximum": 1}}}}
+  }
+}

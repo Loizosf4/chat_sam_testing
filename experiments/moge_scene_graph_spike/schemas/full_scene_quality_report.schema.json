@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "quality_gates", "warnings", "passed"],
+  "properties": {
+    "passed": {"const": true},
+    "quality_gates": {"type": "object", "minProperties": 7, "additionalProperties": {"const": true}},
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  }
+}

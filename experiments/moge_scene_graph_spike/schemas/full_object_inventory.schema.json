@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "scene_id", "objects", "object_count"],
+  "properties": {
+    "scene_id": {"const": "office_test_full"}, "object_count": {"const": 20},
+    "objects": {"type": "array", "minItems": 20, "maxItems": 20, "items": {"type": "object", "required": ["object_id", "semantic_label", "inventory_index", "plan_classification"], "properties": {"object_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"}, "inventory_index": {"type": "integer", "minimum": 1, "maximum": 20}, "plan_classification": {"enum": ["batch_ready", "blender_review_required", "insufficient_geometry", "excluded_structure", "existing_approved_object"]}}}}
+  }
+}

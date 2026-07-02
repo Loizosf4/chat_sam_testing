@@ -1,0 +1,440 @@
+{
+  "schema_version": "1.0",
+  "scene_id": "office_test_full",
+  "fixture_mode": "immutable_source_references",
+  "source_image": {
+    "image_id": "24457ea245d9417484c8bc2a235fea3c",
+    "path": "data/images/24457ea245d9417484c8bc2a235fea3c.jpg",
+    "sha256": "ab3b9271b15186e4b9a2a7b2ade6a58d41c3e28781325630aa402e4b27c4f113",
+    "width": 447,
+    "height": 447
+  },
+  "authoritative_sam_export": "data/exports/auto_scene_final_24457ea2",
+  "authoritative_metadata": "data/exports/auto_scene_final_24457ea2/metadata.json",
+  "objects": [
+    {
+      "object_id": "d2582b5deecf41cfafa4c10ed0a244f1",
+      "semantic_label": "left_bulletin_board",
+      "mask_filename": "left_bulletin_board.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/left_bulletin_board.png",
+      "sha256": "2e063d059bff35ac92d4a080433e2818df25653c29e43a8e4a817b6b3ad6af80",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 2302,
+      "bbox_xyxy_inclusive": [
+        44,
+        153,
+        91,
+        215
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "9693e5917bcb423aa0b815619ee68eb0",
+      "semantic_label": "center_wall_frame",
+      "mask_filename": "center_wall_frame.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/center_wall_frame.png",
+      "sha256": "f6bd55d71c269dd450ec9556e469e59315787adadbdd014b943e70c7f63fe9b5",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 629,
+      "bbox_xyxy_inclusive": [
+        174,
+        133,
+        193,
+        169
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "97e5cd057eee45cbaf4acb9fd64654b4",
+      "semantic_label": "right_wall_frame",
+      "mask_filename": "right_wall_frame.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/right_wall_frame.png",
+      "sha256": "0ea4adff04ecf880e61d53df7cc06d3da2f2dd1eea6c2a7e6c2e1d9eec06fc64",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 969,
+      "bbox_xyxy_inclusive": [
+        372,
+        149,
+        399,
+        191
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "49fd02b50a914e8198bacf4644bc377f",
+      "semantic_label": "wall_light_fixture",
+      "mask_filename": "wall_light_fixture.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/wall_light_fixture.png",
+      "sha256": "c3d67eb176d3308d55df6223112eab2d776031991b76b3cff803142b31ae2fb9",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 660,
+      "bbox_xyxy_inclusive": [
+        263,
+        111,
+        343,
+        137
+      ],
+      "fixture_classification": "existing_approved_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "e971e9fbbf5746eea108d07bfbb5764a",
+      "semantic_label": "left_tall_filing_cabinet",
+      "mask_filename": "left_tall_filing_cabinet.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/left_tall_filing_cabinet.png",
+      "sha256": "d8ee204c4fe3e842f80662ee387da877d2715c8f52c1a4c3a6e68a78ac901b4e",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 6205,
+      "bbox_xyxy_inclusive": [
+        107,
+        143,
+        169,
+        257
+      ],
+      "fixture_classification": "existing_approved_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "ee161158865740b59808b248400feb9f",
+      "semantic_label": "left_drawer_cabinet",
+      "mask_filename": "left_drawer_cabinet.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/left_drawer_cabinet.png",
+      "sha256": "ab615db752dd9abdc0a2f8ce0e678b2352afd2e82a1afe63d8392b7a2db4ea4a",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 2066,
+      "bbox_xyxy_inclusive": [
+        41,
+        227,
+        82,
+        290
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "aa9ab168328b4a59bf5d0a45a9d56adf",
+      "semantic_label": "left_small_drawer_cabinet",
+      "mask_filename": "left_small_drawer_cabinet.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/left_small_drawer_cabinet.png",
+      "sha256": "40fb15b4b48b8de13b6181fb16b46953c4f7174161d8fbb388115bceabc460f0",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 715,
+      "bbox_xyxy_inclusive": [
+        80,
+        244,
+        103,
+        281
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "d121180ca0c74ffba8f79184bd7136af",
+      "semantic_label": "left_radiator",
+      "mask_filename": "left_radiator.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/left_radiator.png",
+      "sha256": "603fad3184adb2bd9c2cedc1ef2906a5c8390ce89629fb847d30578e71fb336e",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 565,
+      "bbox_xyxy_inclusive": [
+        32,
+        240,
+        47,
+        297
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "90ff0e545b1f4f77885a32d25de8c599",
+      "semantic_label": "center_tall_storage",
+      "mask_filename": "center_tall_storage.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/center_tall_storage.png",
+      "sha256": "6b8d5bcb1c67100e302bd032bb793e6f1d13b1072ec6282ec50939858bda69e8",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 1614,
+      "bbox_xyxy_inclusive": [
+        204,
+        144,
+        233,
+        223
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "6ca955bde0c047b9b8f70d81d63b295d",
+      "semantic_label": "center_low_storage",
+      "mask_filename": "center_low_storage.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/center_low_storage.png",
+      "sha256": "0e63928d483e7d2780dd2a543b126125f4864eedba8471d7c28e5dd48c15f5ea",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 1109,
+      "bbox_xyxy_inclusive": [
+        190,
+        188,
+        223,
+        228
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "b9858c1f45f443a88d84229a1824d339",
+      "semantic_label": "desk",
+      "mask_filename": "desk.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/desk.png",
+      "sha256": "04c587d73881bf992408e42966cace36337a9e9753cd07c964314b195dfc1c74",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 4748,
+      "bbox_xyxy_inclusive": [
+        183,
+        222,
+        283,
+        306
+      ],
+      "fixture_classification": "existing_approved_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "9171a7b4d4e142ca936f2564200d0bdb",
+      "semantic_label": "desk_chair",
+      "mask_filename": "desk_chair.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/desk_chair.png",
+      "sha256": "4296a878548ea45fbbd7663495889da69f519ccb5661f342ff765e4ff04ba3c9",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 663,
+      "bbox_xyxy_inclusive": [
+        245,
+        202,
+        277,
+        230
+      ],
+      "fixture_classification": "existing_approved_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "1064a3a09c4c427e80caa227d17a7cc1",
+      "semantic_label": "desktop_box",
+      "mask_filename": "desktop_box.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/desktop_box.png",
+      "sha256": "f750f7464c08950ac95430b4687d98754a4c2c969f41e6aeef58a1fef66a5587",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 752,
+      "bbox_xyxy_inclusive": [
+        245,
+        225,
+        275,
+        255
+      ],
+      "fixture_classification": "existing_approved_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "39640f6bbd5f44c2a6a40ceb313edb00",
+      "semantic_label": "right_tall_drawer_cabinet",
+      "mask_filename": "right_tall_drawer_cabinet.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/right_tall_drawer_cabinet.png",
+      "sha256": "4f3793f269d4d3c25e744700f78c4472fd4c858080e48dc8b5c37ab546bc6a54",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 1835,
+      "bbox_xyxy_inclusive": [
+        296,
+        204,
+        337,
+        267
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "813fee9b25234973ab9a496f75926564",
+      "semantic_label": "right_low_drawer_cabinet",
+      "mask_filename": "right_low_drawer_cabinet.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/right_low_drawer_cabinet.png",
+      "sha256": "ca1bc6d3a393c80675b9bc4ed848167659bb0b6f2257c3565cd37a19eba318c0",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 1335,
+      "bbox_xyxy_inclusive": [
+        317,
+        237,
+        358,
+        277
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "a5eea22ec5df4a37ae8c2fed229b18ba",
+      "semantic_label": "right_radiator",
+      "mask_filename": "right_radiator.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/right_radiator.png",
+      "sha256": "7da2e3c678ffc7750fe06f0b65693d3723eece5ff1a8c7c2bfb3d59e39c90e09",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 505,
+      "bbox_xyxy_inclusive": [
+        388,
+        238,
+        401,
+        283
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "4ec402f9a71d4ea7925b487ac7e11249",
+      "semantic_label": "coat_rack",
+      "mask_filename": "coat_rack.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/coat_rack.png",
+      "sha256": "0bf8b3f218cabe555d370723d5c69c2af7188a2a05144eaa28c3222c811bc0d4",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 1876,
+      "bbox_xyxy_inclusive": [
+        347,
+        206,
+        398,
+        298
+      ],
+      "fixture_classification": "existing_approved_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "80ca5a4d73184d3c9c15f6bcbb4ab8ef",
+      "semantic_label": "open_floor_box",
+      "mask_filename": "open_floor_box.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/open_floor_box.png",
+      "sha256": "172f0195e8c3dd02e57a970c8ccfbe10d09744c64a34a1c926fc8cecb921c0ea",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 1182,
+      "bbox_xyxy_inclusive": [
+        147,
+        288,
+        182,
+        328
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "6fb099577552459d86c1ab5bcb907fcd",
+      "semantic_label": "front_left_box",
+      "mask_filename": "front_left_box.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/front_left_box.png",
+      "sha256": "c5eaf5f9d604d974a93757343ab366acde5b168d316bb8edb8c9173d8f54bee4",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 1417,
+      "bbox_xyxy_inclusive": [
+        194,
+        317,
+        235,
+        359
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    },
+    {
+      "object_id": "4107fd7a550041fcb7aa0c4407a600cc",
+      "semantic_label": "front_rear_box",
+      "mask_filename": "front_rear_box.png",
+      "source_export_path": "data/exports/auto_scene_final_24457ea2/front_rear_box.png",
+      "sha256": "3ce3e6b351574e09e41cd552f5c363dc3010eddb27a1405755d3255ef8cb7843",
+      "mask_revision": null,
+      "width": 447,
+      "height": 447,
+      "binary": true,
+      "non_empty": true,
+      "area": 1023,
+      "bbox_xyxy_inclusive": [
+        217,
+        304,
+        258,
+        346
+      ],
+      "fixture_classification": "new_object",
+      "exclusion_reason": null
+    }
+  ],
+  "mask_count": 20,
+  "approved_object_count": 6,
+  "new_object_count": 14,
+  "excluded_mask_count": 0
+}

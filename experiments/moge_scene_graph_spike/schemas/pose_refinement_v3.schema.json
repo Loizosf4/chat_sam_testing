@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "scene_id", "method", "review_object_count", "objects", "classification_counts", "protected_inputs_unchanged", "blender_modified"],
+  "properties": {
+    "scene_id": {"const": "office_test_full"},
+    "method": {"const": "normal_first_pose_refinement_v3"},
+    "review_object_count": {"const": 8},
+    "protected_inputs_unchanged": {"const": true},
+    "blender_modified": {"const": false},
+    "objects": {
+      "type": "array", "minItems": 8, "maxItems": 8,
+      "items": {
+        "type": "object",
+        "required": ["object_id", "semantic_label", "classification", "current_blender_transform", "normal_frame", "edge_families", "candidates", "recommended_candidate_id", "recommended_transform", "no_per_candidate_bbox_fit"],
+        "properties": {
+          "object_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+          "classification": {"enum": ["apply_normal_refined_transform", "preserve_current_transform", "multiple_candidates_need_user_review", "yaw_geometrically_unobservable", "insufficient_orientation_evidence"]},
+          "no_per_candidate_bbox_fit": {"const": true},
+          "candidates": {"type": "array", "minItems": 2, "maxItems": 4},
+          "normal_frame": {"type": "object", "required": ["side_normal_coverage", "clusters", "supported_visible_faces", "normal_derived_yaw_degrees", "orientation_confidence", "ambiguity"]},
+          "recommended_transform": {"type": "object", "required": ["center", "dimensions", "quaternion_wxyz", "rotation_matrix", "yaw_degrees"]}
+        }
+      }
+    }
+  }
+}

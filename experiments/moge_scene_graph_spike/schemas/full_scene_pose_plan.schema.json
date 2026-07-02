@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "vec3": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+    "quat": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "number"}},
+    "mat3": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"$ref": "#/$defs/vec3"}}
+  },
+  "type": "object",
+  "required": ["schema_version", "scene_id", "camera", "objects", "object_count", "approved_object_count", "new_object_count"],
+  "properties": {
+    "scene_id": {"const": "office_test_full"}, "object_count": {"const": 20}, "approved_object_count": {"const": 6}, "new_object_count": {"const": 14},
+    "objects": {"type": "array", "minItems": 20, "maxItems": 20, "items": {"type": "object", "required": ["object_id", "semantic_label", "center", "dimensions", "rotation_matrix", "rotation_quaternion_wxyz", "transform_matrix", "primitive_type", "classification"], "properties": {"center": {"$ref": "#/$defs/vec3"}, "dimensions": {"$ref": "#/$defs/vec3", "items": {"type": "number", "exclusiveMinimum": 0}}, "rotation_matrix": {"$ref": "#/$defs/mat3"}, "rotation_quaternion_wxyz": {"$ref": "#/$defs/quat"}, "primitive_type": {"const": "cube"}, "classification": {"enum": ["batch_ready", "blender_review_required", "insufficient_geometry", "excluded_structure", "existing_approved_object"]}}}}
+  }
+}

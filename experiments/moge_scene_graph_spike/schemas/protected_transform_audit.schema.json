@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "protected_objects", "room_geometry", "corrected_perspective_camera", "passed"],
+  "properties": {
+    "passed": {"const": true},
+    "protected_objects": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"type": "object", "required": ["object_id", "current", "planned", "maximum_absolute_delta", "passed"], "properties": {"maximum_absolute_delta": {"type": "number", "minimum": 0, "maximum": 0.000002}, "passed": {"const": true}}}}
+  }
+}

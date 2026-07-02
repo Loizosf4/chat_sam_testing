@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "counts", "classifications"],
+  "properties": {
+    "counts": {"type": "object", "required": ["batch_ready", "blender_review_required", "insufficient_geometry", "excluded_structure", "existing_approved_object"], "properties": {"existing_approved_object": {"const": 6}}},
+    "classifications": {"type": "object", "required": ["batch_ready", "blender_review_required", "insufficient_geometry", "excluded_structure", "existing_approved_object"]}
+  }
+}
