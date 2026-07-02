@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "refined_primitive_scene_plan.schema.json",
+  "title": "Deterministic refined primitive scene plan v2",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "base_plan_schema_version",
+    "refinement_version",
+    "scene_id",
+    "source_references",
+    "source_plan_path",
+    "source_plan_sha256",
+    "semantic_primitives",
+    "structural_proxies",
+    "camera_candidates"
+  ],
+  "properties": {
+    "schema_version": {"const": "2.0"},
+    "base_plan_schema_version": {"const": "1.0"},
+    "refinement_version": {"const": "pose_refinement_v2"},
+    "scene_id": {"const": "office_test"},
+    "source_plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_references": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "type": "object",
+        "required": ["role", "path", "sha256"],
+        "properties": {
+          "role": {"type": "string"},
+          "path": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "semantic_primitives": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"$ref": "#/$defs/refinedPrimitive"}
+    },
+    "structural_proxies": {"type": "array", "minItems": 3},
+    "camera_candidates": {"type": "array", "minItems": 2}
+  },
+  "$defs": {
+    "vec3": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+    "quat": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "number"}},
+    "matrix3": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "items": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}}
+    },
+    "refinedPrimitive": {
+      "type": "object",
+      "required": [
+        "object_id", "semantic_label", "primitive_type", "center", "dimensions",
+        "rotation_matrix", "rotation_quaternion_wxyz", "orientation_method",
+        "dominant_normals", "mask_axis", "rotation_candidates", "selected_rotation",
+        "orientation_confidence", "scale_refinement", "fallback_reason",
+        "geometry_source", "support_target", "uncertainty"
+      ],
+      "properties": {
+        "object_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+        "primitive_type": {"const": "cube"},
+        "center": {"$ref": "#/$defs/vec3"},
+        "dimensions": {"$ref": "#/$defs/vec3"},
+        "rotation_quaternion_wxyz": {"$ref": "#/$defs/quat"},
+        "rotation_matrix": {"$ref": "#/$defs/matrix3"},
+        "orientation_method": {"type": "string", "minLength": 1},
+        "dominant_normals": {"type": "array"},
+        "mask_axis": {"type": "object"},
+        "rotation_candidates": {"type": "array", "minItems": 1},
+        "selected_rotation": {"type": "object"},
+        "orientation_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "scale_refinement": {"type": "object"},
+        "fallback_reason": {"type": ["string", "null"]}
+      }
+    }
+  }
+}
