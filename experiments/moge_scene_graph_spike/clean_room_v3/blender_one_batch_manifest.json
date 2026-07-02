@@ -1,0 +1,1231 @@
+{
+  "schema_version": "1.0",
+  "source": "unified_scene_plan.json",
+  "room_proxies": [
+    {
+      "plane_id": "plane_floor",
+      "semantic": "floor",
+      "center": [
+        0.06723755731257386,
+        -0.7108613284035983,
+        -0.02
+      ],
+      "dimensions": [
+        4.105447942980141,
+        3.181901047454781,
+        0.04
+      ],
+      "rotation_matrix": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "quaternion_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "plane_equation": {
+        "normal": [
+          -1.734723475976807e-18,
+          0.0,
+          1.0
+        ],
+        "offset": 0.0
+      },
+      "confidence": 0.7589569434432658,
+      "extent_policy": "robust p2-p98 raw structural inliers; conservative thickness"
+    },
+    {
+      "plane_id": "plane_left_wall",
+      "semantic": "left_wall",
+      "center": [
+        -0.9643434766948575,
+        1.3705338969301684,
+        0.822970901988062
+      ],
+      "dimensions": [
+        2.45848098167367,
+        1.4462124005518717,
+        0.04
+      ],
+      "rotation_matrix": [
+        [
+          0.7170394422649224,
+          0.0,
+          0.6970325948163465
+        ],
+        [
+          0.6970325948163465,
+          0.0,
+          -0.7170394422649224
+        ],
+        [
+          -0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "quaternion_wxyz": [
+        0.6551792583455543,
+        0.6551792583455542,
+        0.2659701852346789,
+        0.2659701852346789
+      ],
+      "plane_equation": {
+        "normal": [
+          0.6970325948163465,
+          -0.7170394422649224,
+          0.0
+        ],
+        "offset": 1.654905696914812
+      },
+      "confidence": 0.6934660459834173,
+      "extent_policy": "robust p2-p98 raw structural inliers; conservative thickness"
+    },
+    {
+      "plane_id": "plane_right_wall",
+      "semantic": "right_wall",
+      "center": [
+        0.923284258363113,
+        1.1594723655490398,
+        0.8658992822911422
+      ],
+      "dimensions": [
+        2.315549317098854,
+        1.4817713442033633,
+        0.04
+      ],
+      "rotation_matrix": [
+        [
+          0.6941936557808304,
+          0.0,
+          -0.7197882801724726
+        ],
+        [
+          -0.7197882801724726,
+          0.0,
+          -0.6941936557808304
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "quaternion_wxyz": [
+        0.6508059725795451,
+        0.6508059725795451,
+        -0.2764987993731481,
+        -0.2764987993731481
+      ],
+      "plane_equation": {
+        "normal": [
+          -0.7197882801724726,
+          -0.6941936557808304,
+          0.0
+        ],
+        "offset": 1.4694675486548372
+      },
+      "confidence": 0.6669316763203464,
+      "extent_policy": "robust p2-p98 raw structural inliers; conservative thickness"
+    }
+  ],
+  "provisional_camera": {
+    "camera_id": "clean_perspective_moge",
+    "type": "perspective",
+    "matrix_world": [
+      [
+        0.9999399723649732,
+        0.00994754822617104,
+        0.004593250594580059,
+        0.07962293535725018
+      ],
+      [
+        0.0,
+        0.4192142558974049,
+        -0.9078873320255026,
+        -8.714745947992284
+      ],
+      [
+        -0.010956809149410638,
+        0.9078328336960904,
+        0.4191890914570539,
+        4.855841877613546
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "normalized_intrinsics": [
+      [
+        2.2427978515625,
+        0.0,
+        0.5
+      ],
+      [
+        0.0,
+        2.2427978515625,
+        0.5
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "field_of_view_x_degrees": 25.135528871456874,
+    "provisional": true,
+    "confidence": 0.8
+  },
+  "semantic_primitives": [
+    {
+      "object_id": "d2582b5deecf41cfafa4c10ed0a244f1",
+      "semantic_label": "left_bulletin_board",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -1.5518010881616455,
+          0.7662895972513365,
+          0.9395950304780022
+        ],
+        "dimensions": [
+          0.5179256575912661,
+          0.5304275215745451,
+          0.04757978473631974
+        ],
+        "rotation_matrix": [
+          [
+            0.7170394422649224,
+            0.0,
+            0.6970325948163465
+          ],
+          [
+            0.6970325948163465,
+            0.0,
+            -0.7170394422649224
+          ],
+          [
+            -0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.6551792583455543,
+          0.6551792583455542,
+          0.2659701852346789,
+          0.2659701852346789
+        ]
+      },
+      "material_color": "#e6194b",
+      "confidence_classification": "yaw_unobservable",
+      "support_target": "plane_left_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "yaw_unobservable",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "9693e5917bcb423aa0b815619ee68eb0",
+      "semantic_label": "center_wall_frame",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.42085159725681687,
+          1.8538303675944117,
+          0.8771509393688796
+        ],
+        "dimensions": [
+          0.2714345606444827,
+          0.35074358184175725,
+          0.06457784642523179
+        ],
+        "rotation_matrix": [
+          [
+            0.7170394422649224,
+            0.0,
+            0.6970325948163465
+          ],
+          [
+            0.6970325948163465,
+            0.0,
+            -0.7170394422649224
+          ],
+          [
+            -0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.6551792583455543,
+          0.6551792583455542,
+          0.2659701852346789,
+          0.2659701852346789
+        ]
+      },
+      "material_color": "#3cb44b",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_left_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "97e5cd057eee45cbaf4acb9fd64654b4",
+      "semantic_label": "right_wall_frame",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          1.6008214559280511,
+          0.4194345546468816,
+          1.1843182339329787
+        ],
+        "dimensions": [
+          0.2592892915098125,
+          0.38357145439497886,
+          0.05209243835613653
+        ],
+        "rotation_matrix": [
+          [
+            0.6941936557808304,
+            0.0,
+            -0.7197882801724726
+          ],
+          [
+            -0.7197882801724726,
+            0.0,
+            -0.6941936557808304
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.6508059725795451,
+          0.6508059725795451,
+          -0.2764987993731481,
+          -0.2764987993731481
+        ]
+      },
+      "material_color": "#ffe119",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_right_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "49fd02b50a914e8198bacf4644bc377f",
+      "semantic_label": "wall_light_fixture",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.843050383273507,
+          1.2115007346330917,
+          1.4051029885954849
+        ],
+        "dimensions": [
+          1.0805867052449516,
+          0.11631607548530498,
+          0.043267278447096436
+        ],
+        "rotation_matrix": [
+          [
+            0.6941936557808304,
+            0.0,
+            -0.7197882801724726
+          ],
+          [
+            -0.7197882801724726,
+            0.0,
+            -0.6941936557808304
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.6508059725795451,
+          0.6508059725795451,
+          -0.2764987993731481,
+          -0.2764987993731481
+        ]
+      },
+      "material_color": "#4363d8",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_right_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "e971e9fbbf5746eea108d07bfbb5764a",
+      "semantic_label": "left_tall_filing_cabinet",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.8611697346265185,
+          1.181282083345866,
+          0.5411642206957613
+        ],
+        "dimensions": [
+          0.4413373213341224,
+          0.5965910227261428,
+          1.0823284413915226
+        ],
+        "rotation_matrix": [
+          [
+            -0.01280576908155393,
+            -0.9999180027773427,
+            0.0
+          ],
+          [
+            0.9999180027773427,
+            -0.01280576908155393,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.7025646699480577,
+          0.0,
+          0.0,
+          0.7116199017318002
+        ]
+      },
+      "material_color": "#f58231",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "ee161158865740b59808b248400feb9f",
+      "semantic_label": "left_drawer_cabinet",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -1.576140041590695,
+          0.2986802880324089,
+          0.2717823015595132
+        ],
+        "dimensions": [
+          0.3119067210873422,
+          0.2340916165274547,
+          0.5435646031190264
+        ],
+        "rotation_matrix": [
+          [
+            0.7074346064866516,
+            -0.7067788038312103,
+            0.0
+          ],
+          [
+            0.7067788038312103,
+            0.7074346064866516,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.923968237139852,
+          0.0,
+          0.0,
+          0.3824692102074025
+        ]
+      },
+      "material_color": "#911eb4",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_floor",
+      "collision_warnings": [
+        {
+          "object_a": "ee161158865740b59808b248400feb9f",
+          "object_b": "aa9ab168328b4a59bf5d0a45a9d56adf",
+          "penetration_estimate": 0.015001207221694735
+        }
+      ],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "aa9ab168328b4a59bf5d0a45a9d56adf",
+      "semantic_label": "left_small_drawer_cabinet",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -1.3523771565823404,
+          0.506825253877475,
+          0.15512245773003255
+        ],
+        "dimensions": [
+          0.1955662862756935,
+          0.32831154102821086,
+          0.3102449154600651
+        ],
+        "rotation_matrix": [
+          [
+            -0.7089669736737948,
+            -0.7052416821486239,
+            0.0
+          ],
+          [
+            0.7052416821486239,
+            -0.7089669736737948,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.38146626739870804,
+          0.0,
+          0.0,
+          0.9243827599197735
+        ]
+      },
+      "material_color": "#46f0f0",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_floor",
+      "collision_warnings": [
+        {
+          "object_a": "ee161158865740b59808b248400feb9f",
+          "object_b": "aa9ab168328b4a59bf5d0a45a9d56adf",
+          "penetration_estimate": 0.015001207221694735
+        }
+      ],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "d121180ca0c74ffba8f79184bd7136af",
+      "semantic_label": "left_radiator",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -1.872611142633864,
+          0.3830119752063206,
+          0.2585444456353046
+        ],
+        "dimensions": [
+          0.2664507847794313,
+          0.4859762471495629,
+          0.15
+        ],
+        "rotation_matrix": [
+          [
+            0.7170394422649224,
+            0.0,
+            0.6970325948163465
+          ],
+          [
+            0.6970325948163465,
+            0.0,
+            -0.7170394422649224
+          ],
+          [
+            -0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.6551792583455543,
+          0.6551792583455542,
+          0.2659701852346789,
+          0.2659701852346789
+        ]
+      },
+      "material_color": "#f032e6",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_left_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "90ff0e545b1f4f77885a32d25de8c599",
+      "semantic_label": "center_tall_storage",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.015443691466046336,
+          1.8760063530099458,
+          0.4092963650491643
+        ],
+        "dimensions": [
+          0.2247577513600829,
+          0.30234533678364994,
+          0.8185927300983286
+        ],
+        "rotation_matrix": [
+          [
+            0.6924298518671458,
+            -0.7214852044520681,
+            0.0
+          ],
+          [
+            0.7214852044520681,
+            0.6924298518671458,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.9198994107692281,
+          0.0,
+          0.0,
+          0.3921544007995155
+        ]
+      },
+      "material_color": "#bcf60c",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_floor",
+      "collision_warnings": [
+        {
+          "object_a": "90ff0e545b1f4f77885a32d25de8c599",
+          "object_b": "6ca955bde0c047b9b8f70d81d63b295d",
+          "penetration_estimate": 0.0001613418332422345
+        }
+      ],
+      "unresolved_ambiguity": {
+        "type": "none",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "6ca955bde0c047b9b8f70d81d63b295d",
+      "semantic_label": "center_low_storage",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.1690324451376942,
+          1.6933635063604435,
+          0.19946042048600326
+        ],
+        "dimensions": [
+          0.2392104908948125,
+          0.27991739312776986,
+          0.39892084097200653
+        ],
+        "rotation_matrix": [
+          [
+            0.6585686194666186,
+            -0.7525206797516146,
+            0.0
+          ],
+          [
+            0.7525206797516146,
+            0.6585686194666186,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.9106504871427398,
+          0.0,
+          0.0,
+          0.41317755295597886
+        ]
+      },
+      "material_color": "#fabebe",
+      "confidence_classification": "automatic_high_confidence",
+      "support_target": "plane_floor",
+      "collision_warnings": [
+        {
+          "object_a": "90ff0e545b1f4f77885a32d25de8c599",
+          "object_b": "6ca955bde0c047b9b8f70d81d63b295d",
+          "penetration_estimate": 0.0001613418332422345
+        }
+      ],
+      "unresolved_ambiguity": {
+        "type": "none",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "b9858c1f45f443a88d84229a1824d339",
+      "semantic_label": "desk",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.056118471861833136,
+          0.38284903621467736,
+          0.268905189717916
+        ],
+        "dimensions": [
+          0.49969643966063315,
+          1.2079001285216584,
+          0.537810379435832
+        ],
+        "rotation_matrix": [
+          [
+            0.6867777158252671,
+            -0.7268675044640726,
+            0.0
+          ],
+          [
+            0.7268675044640726,
+            0.6867777158252671,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.9183620516509998,
+          0.0,
+          0.0,
+          0.3957412564888407
+        ]
+      },
+      "material_color": "#008080",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_floor",
+      "collision_warnings": [
+        {
+          "object_a": "b9858c1f45f443a88d84229a1824d339",
+          "object_b": "1064a3a09c4c427e80caa227d17a7cc1",
+          "penetration_estimate": 0.27011078907016084
+        }
+      ],
+      "unresolved_ambiguity": {
+        "type": "none",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "9171a7b4d4e142ca936f2564200d0bdb",
+      "semantic_label": "desk_chair",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.46883018160380063,
+          1.069587111131962,
+          0.14548835012251288
+        ],
+        "dimensions": [
+          0.7093587214490513,
+          0.4994547548808681,
+          0.29097670024502575
+        ],
+        "rotation_matrix": [
+          [
+            -0.7317354290197068,
+            -0.681588777722569,
+            0.0
+          ],
+          [
+            0.681588777722569,
+            -0.7317354290197068,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.3662407479925555,
+          0.0,
+          0.0,
+          0.930520131168506
+        ]
+      },
+      "material_color": "#e6beff",
+      "confidence_classification": "user_review_recommended",
+      "support_target": null,
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "1064a3a09c4c427e80caa227d17a7cc1",
+      "semantic_label": "desktop_box",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.3927946243335944,
+          0.31819868920506145,
+          0.13505539453508042
+        ],
+        "dimensions": [
+          0.5269609211377779,
+          0.6586502058052904,
+          0.27011078907016084
+        ],
+        "rotation_matrix": [
+          [
+            -0.7841628183360009,
+            -0.6205551340044977,
+            0.0
+          ],
+          [
+            0.6205551340044977,
+            -0.7841628183360009,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.3285096510484883,
+          0.0,
+          0.0,
+          0.9445006136408809
+        ]
+      },
+      "material_color": "#9a6324",
+      "confidence_classification": "user_review_recommended",
+      "support_target": null,
+      "collision_warnings": [
+        {
+          "object_a": "b9858c1f45f443a88d84229a1824d339",
+          "object_b": "1064a3a09c4c427e80caa227d17a7cc1",
+          "penetration_estimate": 0.27011078907016084
+        }
+      ],
+      "unresolved_ambiguity": {
+        "type": "none",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "39640f6bbd5f44c2a6a40ceb313edb00",
+      "semantic_label": "right_tall_drawer_cabinet",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.9546885779535497,
+          0.7051370856426478,
+          0.3219604440847867
+        ],
+        "dimensions": [
+          0.284272997709869,
+          0.40227166224764727,
+          0.6439208881695734
+        ],
+        "rotation_matrix": [
+          [
+            0.7221151047023985,
+            -0.6917729219625787,
+            0.0
+          ],
+          [
+            0.6917729219625787,
+            0.7221151047023985,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.9279318683778455,
+          0.0,
+          0.0,
+          0.3727498459406801
+        ]
+      },
+      "material_color": "#fffac8",
+      "confidence_classification": "automatic_high_confidence",
+      "support_target": "plane_floor",
+      "collision_warnings": [
+        {
+          "object_a": "39640f6bbd5f44c2a6a40ceb313edb00",
+          "object_b": "813fee9b25234973ab9a496f75926564",
+          "penetration_estimate": 0.0709576668125233
+        }
+      ],
+      "unresolved_ambiguity": {
+        "type": "none",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "813fee9b25234973ab9a496f75926564",
+      "semantic_label": "right_low_drawer_cabinet",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          1.2163217637273172,
+          0.5567050694665888,
+          0.15796012484223368
+        ],
+        "dimensions": [
+          0.24962161108278602,
+          0.3096528107981667,
+          0.31592024968446736
+        ],
+        "rotation_matrix": [
+          [
+            0.6833896719091305,
+            -0.7300538037212949,
+            0.0
+          ],
+          [
+            0.7300538037212949,
+            0.6833896719091305,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.9174392818898509,
+          0.0,
+          0.0,
+          0.39787581485362333
+        ]
+      },
+      "material_color": "#800000",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_floor",
+      "collision_warnings": [
+        {
+          "object_a": "39640f6bbd5f44c2a6a40ceb313edb00",
+          "object_b": "813fee9b25234973ab9a496f75926564",
+          "penetration_estimate": 0.0709576668125233
+        },
+        {
+          "object_a": "813fee9b25234973ab9a496f75926564",
+          "object_b": "4ec402f9a71d4ea7925b487ac7e11249",
+          "penetration_estimate": 0.09313352817778375
+        }
+      ],
+      "unresolved_ambiguity": {
+        "type": "none",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "a5eea22ec5df4a37ae8c2fed229b18ba",
+      "semantic_label": "right_radiator",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          1.6485563344497352,
+          0.29942080020888373,
+          0.24916125458593705
+        ],
+        "dimensions": [
+          0.24112629855885914,
+          0.4747443408508722,
+          0.15
+        ],
+        "rotation_matrix": [
+          [
+            0.6941936557808304,
+            0.0,
+            -0.7197882801724726
+          ],
+          [
+            -0.7197882801724726,
+            0.0,
+            -0.6941936557808304
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.6508059725795451,
+          0.6508059725795451,
+          -0.2764987993731481,
+          -0.2764987993731481
+        ]
+      },
+      "material_color": "#aaffc3",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_right_wall",
+      "collision_warnings": [
+        {
+          "object_a": "a5eea22ec5df4a37ae8c2fed229b18ba",
+          "object_b": "4ec402f9a71d4ea7925b487ac7e11249",
+          "penetration_estimate": 0.15000000000000013
+        }
+      ],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "4ec402f9a71d4ea7925b487ac7e11249",
+      "semantic_label": "coat_rack",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          1.49547765376757,
+          0.3419548321237232,
+          0.41062488657596097
+        ],
+        "dimensions": [
+          0.2932557125849178,
+          0.5732853973796167,
+          0.8212497731519219
+        ],
+        "rotation_matrix": [
+          [
+            0.6945376004848598,
+            -0.7194564069578735,
+            0.0
+          ],
+          [
+            0.7194564069578735,
+            0.6945376004848598,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.9204720529393763,
+          0.0,
+          0.0,
+          0.3908083926396286
+        ]
+      },
+      "material_color": "#808000",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_floor",
+      "collision_warnings": [
+        {
+          "object_a": "813fee9b25234973ab9a496f75926564",
+          "object_b": "4ec402f9a71d4ea7925b487ac7e11249",
+          "penetration_estimate": 0.09313352817778375
+        },
+        {
+          "object_a": "a5eea22ec5df4a37ae8c2fed229b18ba",
+          "object_b": "4ec402f9a71d4ea7925b487ac7e11249",
+          "penetration_estimate": 0.15000000000000013
+        }
+      ],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "80ca5a4d73184d3c9c15f6bcbb4ab8ef",
+      "semantic_label": "open_floor_box",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.5190185728999819,
+          -0.4382220907724548,
+          0.126276965954737
+        ],
+        "dimensions": [
+          0.26102731336302887,
+          0.312379777373315,
+          0.252553931909474
+        ],
+        "rotation_matrix": [
+          [
+            -0.9627606146734693,
+            -0.27035531959546044,
+            0.0
+          ],
+          [
+            0.27035531959546044,
+            -0.9627606146734693,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.1364539946768337,
+          0.0,
+          0.0,
+          0.9906464088345219
+        ]
+      },
+      "material_color": "#ffd8b1",
+      "confidence_classification": "user_review_recommended",
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "6fb099577552459d86c1ab5bcb907fcd",
+      "semantic_label": "front_left_box",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.05198750454427523,
+          -0.9739597846295404,
+          0.1179962693123905
+        ],
+        "dimensions": [
+          0.262335164986247,
+          0.27265841421518827,
+          0.235992538624781
+        ],
+        "rotation_matrix": [
+          [
+            0.6714570507101285,
+            -0.7410434731185855,
+            0.0
+          ],
+          [
+            0.7410434731185855,
+            0.6714570507101285,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.9141818885512141,
+          0.0,
+          0.0,
+          0.4053041754595378
+        ]
+      },
+      "material_color": "#000075",
+      "confidence_classification": "yaw_unobservable",
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "yaw_unobservable",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "4107fd7a550041fcb7aa0c4407a600cc",
+      "semantic_label": "front_rear_box",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.15667245092767,
+          -0.756418059901731,
+          0.12331308569852499
+        ],
+        "dimensions": [
+          0.29301648996416974,
+          0.295182510004816,
+          0.24662617139704998
+        ],
+        "rotation_matrix": [
+          [
+            -0.6608141900552058,
+            -0.7505495361544648,
+            0.0
+          ],
+          [
+            0.7505495361544648,
+            -0.6608141900552058,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.41181659142438287,
+          0.0,
+          0.0,
+          0.9112667529475674
+        ]
+      },
+      "material_color": "#808080",
+      "confidence_classification": "yaw_unobservable",
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "yaw_unobservable",
+        "candidate_count": 4
+      }
+    }
+  ],
+  "semantic_primitive_count": 20,
+  "approved_artifact_references": []
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "patterns": [
+    "*.blend",
+    "approved transforms",
+    "manual room/camera corrections",
+    "prior renders"
+  ],
+  "included_forbidden_artifacts": [],
+  "passed": true
+}

@@ -1,0 +1,9 @@
+{
+  "required": [
+    "new .blend checkpoint",
+    "perspective render",
+    "validation JSON",
+    "protected clean-manifest hash"
+  ],
+  "semantic_cube_count": 20
+}
