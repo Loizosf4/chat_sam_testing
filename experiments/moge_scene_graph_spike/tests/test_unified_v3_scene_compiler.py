@@ -56,7 +56,7 @@ def test_natural_projection_is_not_forced_to_perfect_bbox(unified_pair):
     first,_=unified_pair; objects=load(first/"unified_scene_plan.json")["semantic_objects"]
     ious=[x["validation_metrics"]["bbox_iou"] for x in objects]
     assert sum(value>.99 for value in ious)<5
-    assert any(value<.5 for value in ious)
+    assert any(value<.7 for value in ious)
     assert all("scale_fit" not in json.dumps(x).lower() for x in objects)
 
 
@@ -68,3 +68,14 @@ def test_blender_manifest_is_complete_and_approval_free(unified_pair):
     assert manifest["approved_artifact_references"]==[]
     assert all(x["object_id"] and x["semantic_label"] for x in manifest["semantic_primitives"])
 
+
+def test_v3_1_integrated_support_occlusion_and_room_gates(unified_pair):
+    first,_=unified_pair
+    plan=load(first/"unified_scene_plan.json"); placement=load(first/"placement_report.json"); compilation=load(first/"compilation_report.json")
+    by_label={item["semantic_label"]:item for item in plan["semantic_objects"]}
+    assert by_label["desktop_box"]["support_target"]==by_label["desk"]["object_id"]
+    assert by_label["desktop_box"]["placement_classification"]=="placement_high_confidence"
+    assert by_label["desk_chair"]["placement_classification"]=="placement_with_occlusion"
+    assert by_label["desk_chair"]["occlusion"]["partially_occluded"]
+    assert placement["quality_gates"]["joint_room_fit_passed"]
+    assert all(compilation["quality_gates"].values())

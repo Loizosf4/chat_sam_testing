@@ -63,6 +63,8 @@ def fit_position_dimensions_fixed_rotation(points_world: np.ndarray, rotation: n
     rotation=np.asarray(rotation,float).copy();rotation_before=rotation.copy();center0,dims0,_=robust_extents_in_rotation(points_world,rotation,5,95);support_type=support.get("type","unknown")
     if support_type=="floor":center0[2]=dims0[2]/2
     elif support_type=="object":center0[2]=float(support["support_top_z"])+dims0[2]/2
+    elif support_type=="wall":
+        wall=support["wall"];wall_normal=np.asarray(wall["plane_equation"]["normal"],float);wall_offset=float(wall["plane_equation"]["offset"]);signed=float(wall_normal@center0+wall_offset);center0+=wall_normal*(dims0[2]/2-signed)
     local=np.asarray(points_world)@rotation
     y,x=np.nonzero(mask);target_center=np.asarray([x.mean(),y.mean()]);target_size=np.asarray([x.max()-x.min()+1,y.max()-y.min()+1],float)
     def project(values):
@@ -71,12 +73,14 @@ def fit_position_dimensions_fixed_rotation(points_world: np.ndarray, rotation: n
         center=values[:3];dims=np.maximum(values[3:],.015);projected=project(values);box=np.asarray([projected[:,0].min(),projected[:,1].min(),projected[:,0].max(),projected[:,1].max()]);pc=(box[:2]+box[2:])/2;ps=box[2:]-box[:2];center_loss=np.sum(((pc-target_center)/20)**2);size_loss=np.sum(np.log(np.maximum(ps,1)/target_size)**2);local_center=center@rotation;lower=local_center-dims/2;upper=local_center+dims/2;outside=np.maximum(lower-local,0)+np.maximum(local-upper,0);point_loss=float(np.mean((outside/np.maximum(dims,.02))**2));regularization=float(np.sum(np.log(dims/dims0)**2));support_loss=0.0
         if support_type=="floor":support_loss=((center[2]-dims[2]/2)/.04)**2
         elif support_type=="object":support_loss=((center[2]-dims[2]/2-float(support["support_top_z"]))/ .04)**2
+        elif support_type=="wall":support_loss=((wall_normal@center+wall_offset-dims[2]/2)/.04)**2
         return .28*point_loss+.25*center_loss+.18*size_loss+.14*support_loss+.15*regularization
     initial=np.r_[center0,dims0];bounds=[(center0[i]-.25,center0[i]+.25) for i in range(3)]+[(max(.015,dims0[i]*.55),dims0[i]*1.45) for i in range(3)];result=minimize(objective,initial,method="L-BFGS-B",bounds=bounds,options={"maxiter":80,"ftol":1e-10})
     values=result.x;center=values[:3];dims=np.maximum(values[3:],.015)
     if support_type=="floor":center[2]=dims[2]/2
     elif support_type=="object":center[2]=float(support["support_top_z"])+dims[2]/2
+    elif support_type=="wall":center+=wall_normal*(dims[2]/2-float(wall_normal@center+wall_offset))
     metrics=projection_metrics(project(np.r_[center,dims]),mask,occluder_masks)
     scale_ratio=dims/np.maximum(dims0,1e-9);floating=support_type=="unknown" and not occluder_masks and center[2]-dims[2]/2>.15;below=support_type=="object" and center[2]-dims[2]/2<float(support["support_top_z"])-1e-6;gates=placement_hard_gates(metrics,scale_ratio,floating,below)
     placement="placement_invalid" if gates else "placement_with_occlusion" if occluder_masks else "placement_high_confidence" if metrics["bbox_iou"]>=.55 and metrics["centroid_error_pixels"]<=8 else "placement_review_required"
-    return {"center":center,"dimensions":dims,"rotation":rotation,"rotation_unchanged":bool(np.array_equal(rotation,rotation_before)),"initial_center":center0,"initial_dimensions":dims0,"optimizer":{"success":bool(result.success),"iterations":int(result.nit),"objective":float(result.fun)},"metrics":metrics,"scale_ratio":scale_ratio.tolist(),"placement_classification":placement,"hard_gates":gates,"support_contact_error":0.0 if support_type in ("floor","object") else None}
+    return {"center":center,"dimensions":dims,"rotation":rotation,"rotation_unchanged":bool(np.array_equal(rotation,rotation_before)),"initial_center":center0,"initial_dimensions":dims0,"optimizer":{"success":bool(result.success),"iterations":int(result.nit),"objective":float(result.fun)},"metrics":metrics,"scale_ratio":scale_ratio.tolist(),"placement_classification":placement,"hard_gates":gates,"support_contact_error":0.0 if support_type in ("floor","object","wall") else None}

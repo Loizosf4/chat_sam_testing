@@ -1,0 +1,1420 @@
+{
+  "schema_version": "1.0",
+  "source": "unified_scene_plan.json",
+  "room_proxies": [
+    {
+      "plane_id": "plane_floor",
+      "semantic": "floor",
+      "center": [
+        -0.0719875361850244,
+        0.36900865611147327,
+        -0.02
+      ],
+      "dimensions": [
+        2.5355503558169348,
+        2.6852836225381753,
+        0.04
+      ],
+      "rotation_matrix": [
+        [
+          -0.7184152635383452,
+          0.6956144831119677,
+          0.0
+        ],
+        [
+          -0.6956144831119678,
+          -0.7184152635383452,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "quaternion_wxyz": [
+        0.3752230912814767,
+        -0.0,
+        -0.0,
+        -0.9269345347807323
+      ],
+      "plane_equation": {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "offset": 0.0
+      },
+      "confidence": 0.85,
+      "extent_policy": "joint visible platform quadrilateral; exterior floor-plane points excluded"
+    },
+    {
+      "plane_id": "plane_left_wall",
+      "semantic": "left_wall",
+      "center": [
+        -1.0198609153977265,
+        1.3479513320627228,
+        0.8148126413304263
+      ],
+      "dimensions": [
+        2.5355503558169348,
+        1.6296252826608526,
+        0.04
+      ],
+      "rotation_matrix": [
+        [
+          -0.7184152635383452,
+          0.0,
+          -0.6956144831119678
+        ],
+        [
+          -0.6956144831119678,
+          0.0,
+          0.7184152635383452
+        ],
+        [
+          0.0,
+          1.0,
+          -0.0
+        ]
+      ],
+      "quaternion_wxyz": [
+        0.2653227923029111,
+        0.2653227923029111,
+        -0.6554416952594535,
+        -0.6554416952594535
+      ],
+      "plane_equation": {
+        "normal": [
+          -0.6956144831119678,
+          0.7184152635383452,
+          -0.0
+        ],
+        "offset": -1.6578188349711924
+      },
+      "confidence": 0.82,
+      "extent_policy": "joint floor edge, shared corner, common visible height"
+    },
+    {
+      "plane_id": "plane_right_wall",
+      "semantic": "right_wall",
+      "center": [
+        0.8244331970886926,
+        1.2369791415322156,
+        0.8148126413304263
+      ],
+      "dimensions": [
+        2.6852836225381753,
+        1.6296252826608526,
+        0.04
+      ],
+      "rotation_matrix": [
+        [
+          0.6956144831119677,
+          0.0,
+          -0.7184152635383452
+        ],
+        [
+          -0.7184152635383452,
+          0.0,
+          -0.6956144831119677
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "quaternion_wxyz": [
+        0.6510788130311045,
+        0.6510788130311045,
+        -0.2758557217496278,
+        -0.2758557217496278
+      ],
+      "plane_equation": {
+        "normal": [
+          -0.7184152635383452,
+          -0.6956144831119677,
+          0.0
+        ],
+        "offset": 1.4727459987134512
+      },
+      "confidence": 0.82,
+      "extent_policy": "joint floor edge, shared corner, common visible height"
+    }
+  ],
+  "provisional_camera": {
+    "camera_id": "joint_perspective",
+    "type": "perspective",
+    "matrix_world": [
+      [
+        0.9996506509712973,
+        0.026109644098413227,
+        0.004106397169717504,
+        0.0796229353572502
+      ],
+      [
+        -0.007112864674245871,
+        0.4153877737888362,
+        -0.9096166250365482,
+        -8.714745947992284
+      ],
+      [
+        -0.025455513524325804,
+        0.909269643104733,
+        0.4154283728386929,
+        4.855841877613545
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "canonical_to_camera_transform": [
+      [
+        0.9996506509712975,
+        -0.007112864674245868,
+        -0.025455513524325808,
+        -0.017973979173043095
+      ],
+      [
+        -0.026109644098413237,
+        -0.41538777378883623,
+        -0.9092696431047332,
+        0.7973496190631385
+      ],
+      [
+        -0.004106397169717503,
+        0.9096166250365484,
+        -0.41542837283869294,
+        9.94465925063905
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "normalized_intrinsics": [
+      [
+        2.2398867031214476,
+        0.0,
+        0.5075272397415915
+      ],
+      [
+        0.0,
+        2.2398867031214476,
+        0.47960316681351
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "field_of_view_x_degrees": 25.167157379705085,
+    "framing_shift_pixels": [
+      3.3646761644914336,
+      -9.117384434361034
+    ],
+    "orientation_correction_degrees_xyz": [
+      -0.23762913459378804,
+      -0.02361471398631356,
+      -0.9251541446343505
+    ],
+    "focal_scale": 0.9987020014135362,
+    "structural_reprojection_rmse_pixels": 13.31709618513052,
+    "provisional": true,
+    "confidence": 0.85
+  },
+  "semantic_primitives": [
+    {
+      "object_id": "d2582b5deecf41cfafa4c10ed0a244f1",
+      "semantic_label": "left_bulletin_board",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -1.5958458092150822,
+          0.7924185336875105,
+          0.9129293770224937
+        ],
+        "dimensions": [
+          0.4794012656411878,
+          0.4949833950689602,
+          0.04312038488827801
+        ],
+        "rotation_matrix": [
+          [
+            -0.7184152635383452,
+            0.0,
+            -0.6956144831119678
+          ],
+          [
+            -0.6956144831119678,
+            0.0,
+            0.7184152635383452
+          ],
+          [
+            0.0,
+            1.0,
+            -0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.2653227923029111,
+          0.2653227923029111,
+          -0.6554416952594535,
+          -0.6554416952594535
+        ]
+      },
+      "material_color": "#e6194b",
+      "confidence_classification": "yaw_unobservable",
+      "placement_classification": "placement_high_confidence",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": false,
+        "foreground_occluders": [],
+        "hidden_geometry_policy": "none"
+      },
+      "support_target": "plane_left_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "yaw_unobservable",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "9693e5917bcb423aa0b815619ee68eb0",
+      "semantic_label": "center_wall_frame",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.45279624710388305,
+          1.9084712833798596,
+          0.8168862139309386
+        ],
+        "dimensions": [
+          0.21577216699782698,
+          0.3271523301565882,
+          0.056455384835439396
+        ],
+        "rotation_matrix": [
+          [
+            -0.7184152635383452,
+            0.0,
+            -0.6956144831119678
+          ],
+          [
+            -0.6956144831119678,
+            0.0,
+            0.7184152635383452
+          ],
+          [
+            0.0,
+            1.0,
+            -0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.2653227923029111,
+          0.2653227923029111,
+          -0.6554416952594535,
+          -0.6554416952594535
+        ]
+      },
+      "material_color": "#3cb44b",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_with_occlusion",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": true,
+        "foreground_occluders": [
+          {
+            "object_id": "e971e9fbbf5746eea108d07bfbb5764a",
+            "semantic_label": "left_tall_filing_cabinet",
+            "adjacency_pixels": 7.0,
+            "foreground_depth_delta": 0.5792403221130371
+          }
+        ],
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      },
+      "support_target": "plane_left_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "97e5cd057eee45cbaf4acb9fd64654b4",
+      "semantic_label": "right_wall_frame",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          1.6086873596756222,
+          0.42582938163370815,
+          1.1191432847751215
+        ],
+        "dimensions": [
+          0.24332572892968432,
+          0.3501164175644013,
+          0.041654720124527644
+        ],
+        "rotation_matrix": [
+          [
+            0.6956144831119677,
+            0.0,
+            -0.7184152635383452
+          ],
+          [
+            -0.7184152635383452,
+            0.0,
+            -0.6956144831119677
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.6510788130311045,
+          0.6510788130311045,
+          -0.2758557217496278,
+          -0.2758557217496278
+        ]
+      },
+      "material_color": "#ffe119",
+      "confidence_classification": "automatic_with_ambiguity",
+      "placement_classification": "placement_high_confidence",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": false,
+        "foreground_occluders": [],
+        "hidden_geometry_policy": "none"
+      },
+      "support_target": "plane_right_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "single_face_90_degree",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "49fd02b50a914e8198bacf4644bc377f",
+      "semantic_label": "wall_light_fixture",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.8606899090912911,
+          1.2035368260223887,
+          1.3752430070597934
+        ],
+        "dimensions": [
+          1.0074835344422788,
+          0.07303731293132397,
+          0.03443116741810978
+        ],
+        "rotation_matrix": [
+          [
+            0.6956144831119677,
+            0.0,
+            -0.7184152635383452
+          ],
+          [
+            -0.7184152635383452,
+            0.0,
+            -0.6956144831119677
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.6510788130311045,
+          0.6510788130311045,
+          -0.2758557217496278,
+          -0.2758557217496278
+        ]
+      },
+      "material_color": "#4363d8",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_high_confidence",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": false,
+        "foreground_occluders": [],
+        "hidden_geometry_policy": "none"
+      },
+      "support_target": "plane_right_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "e971e9fbbf5746eea108d07bfbb5764a",
+      "semantic_label": "left_tall_filing_cabinet",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.8905645452047838,
+          1.0984594395252196,
+          0.5400822797989466
+        ],
+        "dimensions": [
+          0.23562470157050863,
+          0.5544261196645331,
+          1.0801645595978933
+        ],
+        "rotation_matrix": [
+          [
+            -0.021787062008677964,
+            -0.9997626337931569,
+            0.0
+          ],
+          [
+            0.9997626337931569,
+            -0.021787062008677964,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.6993614723414932,
+          0.0,
+          0.0,
+          0.7147681659141927
+        ]
+      },
+      "material_color": "#f58231",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_with_occlusion",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": true,
+        "foreground_occluders": [
+          {
+            "object_id": "aa9ab168328b4a59bf5d0a45a9d56adf",
+            "semantic_label": "left_small_drawer_cabinet",
+            "adjacency_pixels": 10.0,
+            "foreground_depth_delta": 0.4242691993713379
+          }
+        ],
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      },
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "ee161158865740b59808b248400feb9f",
+      "semantic_label": "left_drawer_cabinet",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -1.6179348099448094,
+          0.2330860896303013,
+          0.34034558383532254
+        ],
+        "dimensions": [
+          0.18068782718586462,
+          0.2743822006835431,
+          0.5207835711663737
+        ],
+        "rotation_matrix": [
+          [
+            -0.7026377895318775,
+            -0.7115477051623151,
+            0.0
+          ],
+          [
+            0.7115477051623151,
+            -0.7026377895318775,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.3855918894816918,
+          0.0,
+          0.0,
+          0.9226694395968357
+        ]
+      },
+      "material_color": "#911eb4",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_high_confidence",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": false,
+        "foreground_occluders": [],
+        "hidden_geometry_policy": "none"
+      },
+      "support_target": null,
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "aa9ab168328b4a59bf5d0a45a9d56adf",
+      "semantic_label": "left_small_drawer_cabinet",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -1.35661387584663,
+          0.4377428951397667,
+          0.15593688575317077
+        ],
+        "dimensions": [
+          0.0746531215548674,
+          0.21342216548063245,
+          0.31187377150634155
+        ],
+        "rotation_matrix": [
+          [
+            -0.7037771490417495,
+            -0.7104208080332861,
+            0.0
+          ],
+          [
+            0.7104208080332861,
+            -0.7037771490417495,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.384852472356779,
+          0.0,
+          0.0,
+          0.9229781007807687
+        ]
+      },
+      "material_color": "#46f0f0",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_with_occlusion",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": true,
+        "foreground_occluders": [
+          {
+            "object_id": "ee161158865740b59808b248400feb9f",
+            "semantic_label": "left_drawer_cabinet",
+            "adjacency_pixels": 1.0,
+            "foreground_depth_delta": 0.24815702438354492
+          }
+        ],
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      },
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "d121180ca0c74ffba8f79184bd7136af",
+      "semantic_label": "left_radiator",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -1.9654947318038014,
+          0.5337120019260715,
+          0.10263830691181923
+        ],
+        "dimensions": [
+          0.09688074810521433,
+          0.471805830424973,
+          0.18566923093820242
+        ],
+        "rotation_matrix": [
+          [
+            -0.7184152635383452,
+            0.0,
+            -0.6956144831119678
+          ],
+          [
+            -0.6956144831119678,
+            0.0,
+            0.7184152635383452
+          ],
+          [
+            0.0,
+            1.0,
+            -0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.2653227923029111,
+          0.2653227923029111,
+          -0.6554416952594535,
+          -0.6554416952594535
+        ]
+      },
+      "material_color": "#f032e6",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_with_occlusion",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": true,
+        "foreground_occluders": [
+          {
+            "object_id": "ee161158865740b59808b248400feb9f",
+            "semantic_label": "left_drawer_cabinet",
+            "adjacency_pixels": 1.0,
+            "foreground_depth_delta": 0.11993122100830078
+          }
+        ],
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      },
+      "support_target": "plane_left_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "90ff0e545b1f4f77885a32d25de8c599",
+      "semantic_label": "center_tall_storage",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.029272621220189338,
+          1.839004149615405,
+          0.5180088496014139
+        ],
+        "dimensions": [
+          0.17975542571899736,
+          0.23128735816182552,
+          0.7932037262412113
+        ],
+        "rotation_matrix": [
+          [
+            0.6945705632064578,
+            -0.7194245844611261,
+            0.0
+          ],
+          [
+            0.7194245844611261,
+            0.6945705632064578,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.92048100556352,
+          0.0,
+          0.0,
+          0.39078730582859406
+        ]
+      },
+      "material_color": "#bcf60c",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_with_occlusion",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": true,
+        "foreground_occluders": [
+          {
+            "object_id": "b9858c1f45f443a88d84229a1824d339",
+            "semantic_label": "desk",
+            "adjacency_pixels": 1.4142135623730951,
+            "foreground_depth_delta": 1.4818220138549805
+          }
+        ],
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      },
+      "support_target": null,
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "none",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "6ca955bde0c047b9b8f70d81d63b295d",
+      "semantic_label": "center_low_storage",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.20980174706154747,
+          1.6568101676491203,
+          0.2252392030904015
+        ],
+        "dimensions": [
+          0.18706706123491632,
+          0.2601244720595107,
+          0.3532288111536141
+        ],
+        "rotation_matrix": [
+          [
+            0.6584224444444946,
+            -0.7526485797845741,
+            0.0
+          ],
+          [
+            0.7526485797845741,
+            0.6584224444444946,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.910610356970668,
+          0.0,
+          0.0,
+          0.4132659891374473
+        ]
+      },
+      "material_color": "#fabebe",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_with_occlusion",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": true,
+        "foreground_occluders": [
+          {
+            "object_id": "b9858c1f45f443a88d84229a1824d339",
+            "semantic_label": "desk",
+            "adjacency_pixels": 1.0,
+            "foreground_depth_delta": 1.467376708984375
+          }
+        ],
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      },
+      "support_target": null,
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "none",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "b9858c1f45f443a88d84229a1824d339",
+      "semantic_label": "desk",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.08901362217294927,
+          0.22669993013542922,
+          0.24530291596829068
+        ],
+        "dimensions": [
+          0.9905870563111026,
+          0.3563934777976141,
+          0.49060583193658136
+        ],
+        "rotation_matrix": [
+          [
+            -0.735613490873567,
+            -0.6774014998837872,
+            0.0
+          ],
+          [
+            0.6774014998837872,
+            -0.735613490873567,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.36358390305845023,
+          0.0,
+          0.0,
+          0.9315614555340853
+        ]
+      },
+      "material_color": "#008080",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_with_occlusion",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": true,
+        "foreground_occluders": [
+          {
+            "object_id": "1064a3a09c4c427e80caa227d17a7cc1",
+            "semantic_label": "desktop_box",
+            "adjacency_pixels": 1.0,
+            "foreground_depth_delta": 0.1638484001159668
+          },
+          {
+            "object_id": "4107fd7a550041fcb7aa0c4407a600cc",
+            "semantic_label": "front_rear_box",
+            "adjacency_pixels": 4.123105625617661,
+            "foreground_depth_delta": 0.7247982025146484
+          }
+        ],
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      },
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "none",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "9171a7b4d4e142ca936f2564200d0bdb",
+      "semantic_label": "desk_chair",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.3937443503968352,
+          1.0453927799921876,
+          0.376422020551117
+        ],
+        "dimensions": [
+          0.3976391957801324,
+          0.03157501286766304,
+          0.19275331586671643
+        ],
+        "rotation_matrix": [
+          [
+            -0.731198281097535,
+            -0.6821649901013759,
+            0.0
+          ],
+          [
+            0.6821649901013759,
+            -0.731198281097535,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.3666072277673103,
+          0.0,
+          0.0,
+          0.930375806085244
+        ]
+      },
+      "material_color": "#e6beff",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_with_occlusion",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": true,
+        "foreground_occluders": [
+          {
+            "object_id": "1064a3a09c4c427e80caa227d17a7cc1",
+            "semantic_label": "desktop_box",
+            "adjacency_pixels": 0.0,
+            "foreground_depth_delta": 1.0181159973144531
+          },
+          {
+            "object_id": "b9858c1f45f443a88d84229a1824d339",
+            "semantic_label": "desk",
+            "adjacency_pixels": 7.211102550927978,
+            "foreground_depth_delta": 0.8542675971984863
+          }
+        ],
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      },
+      "support_target": null,
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "1064a3a09c4c427e80caa227d17a7cc1",
+      "semantic_label": "desktop_box",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.355110035884256,
+          -0.016034772351067678,
+          0.6100046951697831
+        ],
+        "dimensions": [
+          0.20620414330721182,
+          0.18978364251592664,
+          0.17075054967711442
+        ],
+        "rotation_matrix": [
+          [
+            0.7551080987900283,
+            -0.6556003044094083,
+            0.0
+          ],
+          [
+            0.6556003044094083,
+            0.7551080987900283,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.936778548748323,
+          0.0,
+          0.0,
+          0.34992277805965394
+        ]
+      },
+      "material_color": "#9a6324",
+      "confidence_classification": "yaw_unobservable",
+      "placement_classification": "placement_high_confidence",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": false,
+        "foreground_occluders": [],
+        "hidden_geometry_policy": "none"
+      },
+      "support_target": "b9858c1f45f443a88d84229a1824d339",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "yaw_unobservable",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "39640f6bbd5f44c2a6a40ceb313edb00",
+      "semantic_label": "right_tall_drawer_cabinet",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.9381565979064489,
+          0.7513684958366089,
+          0.30351977400590485
+        ],
+        "dimensions": [
+          0.224978386180799,
+          0.3257896933067507,
+          0.6070395480118097
+        ],
+        "rotation_matrix": [
+          [
+            0.6966044939199981,
+            -0.717455349865386,
+            0.0
+          ],
+          [
+            0.717455349865386,
+            0.6966044939199981,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.9210332496495439,
+          0.0,
+          0.0,
+          0.3894839573589661
+        ]
+      },
+      "material_color": "#fffac8",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_high_confidence",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": false,
+        "foreground_occluders": [],
+        "hidden_geometry_policy": "none"
+      },
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "813fee9b25234973ab9a496f75926564",
+      "semantic_label": "right_low_drawer_cabinet",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          1.1705955288716663,
+          0.49678310425895666,
+          0.14212208469949256
+        ],
+        "dimensions": [
+          0.3018672032184983,
+          0.2105905735711986,
+          0.2842441693989851
+        ],
+        "rotation_matrix": [
+          [
+            -0.7434683647723894,
+            -0.6687711047755198,
+            0.0
+          ],
+          [
+            0.6687711047755198,
+            -0.7434683647723894,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.3581421751397137,
+          0.0,
+          0.0,
+          0.9336670618513833
+        ]
+      },
+      "material_color": "#800000",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_with_occlusion",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": true,
+        "foreground_occluders": [
+          {
+            "object_id": "4ec402f9a71d4ea7925b487ac7e11249",
+            "semantic_label": "coat_rack",
+            "adjacency_pixels": 5.0990195135927845,
+            "foreground_depth_delta": 0.20852375030517578
+          }
+        ],
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      },
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "none",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "a5eea22ec5df4a37ae8c2fed229b18ba",
+      "semantic_label": "right_radiator",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          1.7338964178903002,
+          0.29805882098279096,
+          0.17972905226833782
+        ],
+        "dimensions": [
+          0.08231917080969571,
+          0.4500648274901524,
+          0.039508628023384
+        ],
+        "rotation_matrix": [
+          [
+            0.6956144831119677,
+            0.0,
+            -0.7184152635383452
+          ],
+          [
+            -0.7184152635383452,
+            0.0,
+            -0.6956144831119677
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.6510788130311045,
+          0.6510788130311045,
+          -0.2758557217496278,
+          -0.2758557217496278
+        ]
+      },
+      "material_color": "#aaffc3",
+      "confidence_classification": "user_review_recommended",
+      "placement_classification": "placement_high_confidence",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": false,
+        "foreground_occluders": [],
+        "hidden_geometry_policy": "none"
+      },
+      "support_target": "plane_right_wall",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "insufficient",
+        "candidate_count": 1
+      }
+    },
+    {
+      "object_id": "4ec402f9a71d4ea7925b487ac7e11249",
+      "semantic_label": "coat_rack",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          1.4979158346089163,
+          0.2686510302932908,
+          0.38586212876121345
+        ],
+        "dimensions": [
+          0.2919490561644749,
+          0.3125931933756417,
+          0.7717242575224269
+        ],
+        "rotation_matrix": [
+          [
+            -0.7171316976809453,
+            -0.6969376788359525,
+            0.0
+          ],
+          [
+            0.6969376788359525,
+            -0.7171316976809453,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.37607732071945965,
+          0.0,
+          0.0,
+          0.9265882844286737
+        ]
+      },
+      "material_color": "#808000",
+      "confidence_classification": "yaw_unobservable",
+      "placement_classification": "placement_review_required",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": false,
+        "foreground_occluders": [],
+        "hidden_geometry_policy": "none"
+      },
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "yaw_unobservable",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "80ca5a4d73184d3c9c15f6bcbb4ab8ef",
+      "semantic_label": "open_floor_box",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.5731992760405926,
+          -0.4486374103413635,
+          0.11708104718029132
+        ],
+        "dimensions": [
+          0.24459512084669835,
+          0.24562175460246607,
+          0.23416209436058263
+        ],
+        "rotation_matrix": [
+          [
+            -0.963487116556896,
+            -0.2677546941304264,
+            0.0
+          ],
+          [
+            0.2677546941304264,
+            -0.963487116556896,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.13511640063867889,
+          0.0,
+          0.0,
+          0.9908297322337719
+        ]
+      },
+      "material_color": "#ffd8b1",
+      "confidence_classification": "yaw_unobservable",
+      "placement_classification": "placement_high_confidence",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": false,
+        "foreground_occluders": [],
+        "hidden_geometry_policy": "none"
+      },
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "yaw_unobservable",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "6fb099577552459d86c1ab5bcb907fcd",
+      "semantic_label": "front_left_box",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          -0.09928957342602272,
+          -0.9809592144594893,
+          0.11290625801789894
+        ],
+        "dimensions": [
+          0.2321699935217773,
+          0.24980486485369777,
+          0.22581251603579788
+        ],
+        "rotation_matrix": [
+          [
+            0.6705589586904733,
+            -0.7418562414106578,
+            0.0
+          ],
+          [
+            0.7418562414106578,
+            0.6705589586904733,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.9139362556246671,
+          0.0,
+          0.0,
+          0.4058577591407651
+        ]
+      },
+      "material_color": "#000075",
+      "confidence_classification": "yaw_unobservable",
+      "placement_classification": "placement_high_confidence",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": false,
+        "foreground_occluders": [],
+        "hidden_geometry_policy": "none"
+      },
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "yaw_unobservable",
+        "candidate_count": 4
+      }
+    },
+    {
+      "object_id": "4107fd7a550041fcb7aa0c4407a600cc",
+      "semantic_label": "front_rear_box",
+      "primitive_type": "cube",
+      "transform": {
+        "center": [
+          0.1451470382323396,
+          -0.7508287449899395,
+          0.12002157053841464
+        ],
+        "dimensions": [
+          0.2473633009100105,
+          0.22956500774144778,
+          0.24004314107682928
+        ],
+        "rotation_matrix": [
+          [
+            -0.6827313955877947,
+            -0.7306694474786408,
+            0.0
+          ],
+          [
+            0.7306694474786408,
+            -0.6827313955877947,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "quaternion_wxyz": [
+          0.3982892192943498,
+          0.0,
+          0.0,
+          0.9172598856343264
+        ]
+      },
+      "material_color": "#808080",
+      "confidence_classification": "yaw_unobservable",
+      "placement_classification": "placement_with_occlusion",
+      "placement_hard_gates": [],
+      "occlusion": {
+        "partially_occluded": true,
+        "foreground_occluders": [
+          {
+            "object_id": "6fb099577552459d86c1ab5bcb907fcd",
+            "semantic_label": "front_left_box",
+            "adjacency_pixels": 1.0,
+            "foreground_depth_delta": 0.19531679153442383
+          }
+        ],
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      },
+      "support_target": "plane_floor",
+      "collision_warnings": [],
+      "unresolved_ambiguity": {
+        "type": "yaw_unobservable",
+        "candidate_count": 4
+      }
+    }
+  ],
+  "semantic_primitive_count": 20,
+  "approved_artifact_references": []
+}

@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from src.occlusion_aware_fitting import (
     detect_occlusion, fit_position_dimensions_fixed_rotation,
@@ -48,6 +49,15 @@ def test_unsupported_object_is_not_floor_snapped():
     rotation=np.eye(3);center=np.asarray([0,0,1.2]);dims=np.asarray([.3,.2,.2]);points=cuboid_surface(center,dims,rotation,20);mask=mask_for(center,dims,rotation)
     result=fit_position_dimensions_fixed_rotation(points,rotation,mask,CAMERA,{"type":"unknown","target":None,"confidence":.2})
     assert result["center"][2]-result["dimensions"][2]/2>.5
+
+
+def test_wall_supported_object_keeps_wall_contact_during_mask_fit():
+    rotation=np.asarray([[1,0,0],[0,0,1],[0,-1,0]],float);center=np.asarray([0,.12,.6]);dims=np.asarray([.5,.12,.7]);points=cuboid_surface(center,dims,rotation,20);mask=mask_for(center,dims,rotation)
+    wall={"plane_equation":{"normal":[0,1,0],"offset":0.0}}
+    result=fit_position_dimensions_fixed_rotation(points,rotation,mask,CAMERA,{"type":"wall","target":"plane_wall","confidence":1,"wall":wall})
+    np.testing.assert_array_equal(result["rotation"],rotation)
+    assert np.asarray(wall["plane_equation"]["normal"])@result["center"]==pytest.approx(result["dimensions"][2]/2,abs=1e-8)
+    assert result["support_contact_error"]==0
 
 
 def test_high_iou_but_incorrect_scale_is_rejected():
