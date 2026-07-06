@@ -3,97 +3,94 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Local SAM Mask Editor</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Scene mask review</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/static/sync-style.css">
+    <link rel="stylesheet" href="/static/utilities.css">
   </head>
   <body>
     <main class="app-shell">
-      <h1>Local SAM Mask Editor</h1>
-      <p id="status">Checking backend...</p>
-
-      <div class="upload-form">
-        <input id="image-file" class="file-input" name="image" type="file" accept="image/*">
-        <label class="button-like" for="image-file">Choose and upload image</label>
-      </div>
-
-      <dl class="image-meta">
-        <div>
-          <dt>Image ID</dt>
-          <dd id="image-id">-</dd>
+      <header class="topbar">
+        <div class="brand-block">
+          <span class="brand-mark" aria-hidden="true">S</span>
+          <div><h1>Scene review</h1><p>Semantic mask workspace</p></div>
         </div>
-        <div>
-          <dt>Width</dt>
-          <dd id="image-width">-</dd>
+        <form id="scene-form" class="scene-loader">
+          <label class="sr-only" for="scene-id">Scene ID</label>
+          <input id="scene-id" autocomplete="off" placeholder="Scene ID" required>
+          <button class="secondary" type="submit">Load scene</button>
+        </form>
+        <div id="save-state" class="save-state is-saved"><span></span>All changes saved</div>
+        <div id="blender-status" class="blender-status" data-status="disconnected" title="Blender semantic synchronization status"><span></span><strong>Blender</strong><output>Disconnected</output></div>
+      </header>
+
+      <section id="empty-state" class="welcome-panel">
+        <p class="eyebrow">Scene package</p>
+        <h2>Load a scene to review its semantic masks.</h2>
+        <p>Enter a scene ID above, or import a scene package using the API. A <code>?scene=…</code> URL opens a review directly.</p>
+      </section>
+
+      <section id="review-app" class="review-app" hidden>
+        <div id="reconstruction-banner" class="reconstruction-banner" hidden>
+          <strong>Reconstruction update required</strong>
+          <span>Mask geometry changed. Primitive transforms and downstream objects are stale.</span>
         </div>
-        <div>
-          <dt>Height</dt>
-          <dd id="image-height">-</dd>
-        </div>
-      </dl>
 
-      <div class="prompt-tools" role="toolbar" aria-label="Prompt tools">
-        <button id="tool-box" class="tool-button is-active" type="button" data-tool="box">Box mode</button>
-        <button id="tool-positive" class="tool-button" type="button" data-tool="positive">Positive point mode</button>
-        <button id="tool-negative" class="tool-button" type="button" data-tool="negative">Negative point mode</button>
-        <button id="clear-prompts" type="button">Clear prompts</button>
-        <button id="predict-button" type="button">Predict</button>
-      </div>
+        <div id="sync-error-banner" class="sync-error-banner" hidden><strong>Blender synchronization failed</strong><span id="sync-error-message"></span><button id="retry-blender" class="secondary" type="button">Reconnect</button></div>
 
-      <div class="workspace">
-        <canvas id="image-canvas" width="960" height="540"></canvas>
-
-        <aside class="mask-panel" aria-labelledby="mask-candidates-heading">
-          <div class="mask-actions">
-            <label for="object-label">Object label</label>
-            <input id="object-label" type="text" placeholder="desk">
-            <div class="mask-action-buttons">
-              <button id="merge-selected" type="button">Merge selected</button>
-              <button id="subtract-selected" type="button">Subtract selected from active mask</button>
-              <button id="fill-holes" type="button">Fill holes</button>
-              <button id="remove-small-parts" type="button">Remove small parts</button>
-              <button id="smooth-edges" type="button">Smooth edges</button>
+        <div class="review-grid">
+          <aside class="object-panel panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Inventory</p><h2>Semantic objects</h2></div>
+              <span id="object-count" class="count-pill">0</span>
             </div>
-            <label for="min-area">Min area</label>
-            <input id="min-area" type="number" min="1" step="1" value="100">
-            <label for="kernel-size">Kernel size</label>
-            <input id="kernel-size" type="number" min="3" step="2" value="3">
-          </div>
+            <div class="object-search"><span aria-hidden="true">⌕</span><input id="object-search" placeholder="Filter objects" aria-label="Filter objects"></div>
+            <div id="object-list" class="object-list" role="listbox" aria-label="Semantic objects"></div>
+          </aside>
 
-          <div class="mask-panel-header">
-            <h2 id="mask-candidates-heading">Mask Candidates</h2>
-            <label for="overlay-opacity">Opacity</label>
-            <input id="overlay-opacity" type="range" min="0" max="1" step="0.05" value="0.45">
-          </div>
-          <div id="mask-candidates" class="mask-candidates">
-              <p class="empty-state">No predictions yet.</p>
-          </div>
+          <section class="canvas-column">
+            <div class="canvas-toolbar panel" role="toolbar" aria-label="Canvas controls">
+              <div class="tool-group">
+                <button class="icon-tool is-active" data-tool="inspect" title="Inspect" aria-label="Inspect">⌁</button>
+                <button class="icon-tool" data-tool="add" title="Add mask brush" aria-label="Add mask brush">＋</button>
+                <button class="icon-tool" data-tool="remove" title="Remove mask brush" aria-label="Remove mask brush">−</button>
+                <button class="icon-tool" data-tool="pan" title="Pan" aria-label="Pan">✥</button>
+              </div>
+              <div class="tool-divider"></div>
+              <label class="range-control">Brush <input id="brush-size" type="range" min="1" max="80" value="18"><output id="brush-size-output">18 px</output></label>
+              <div class="tool-divider"></div>
+              <button id="undo" class="text-tool" disabled>↶ Undo</button>
+              <button id="redo" class="text-tool" disabled>↷ Redo</button>
+              <button id="reset-mask" class="text-tool" disabled>Reset</button>
+              <span class="toolbar-spacer"></span>
+              <button id="zoom-out" class="icon-tool" aria-label="Zoom out">−</button>
+              <output id="zoom-level" class="zoom-level">100%</output>
+              <button id="zoom-in" class="icon-tool" aria-label="Zoom in">＋</button>
+              <button id="fit-view" class="text-tool">Fit</button>
+            </div>
 
-          <section class="final-mask-section" aria-labelledby="final-masks-heading">
-            <h2 id="final-masks-heading">Final Object Masks</h2>
-            <div id="final-masks" class="mask-candidates">
-              <p class="empty-state">No final masks yet.</p>
+            <div id="canvas-stage" class="canvas-stage">
+              <canvas id="image-canvas" aria-label="Source image with semantic mask overlays"></canvas>
+              <div id="canvas-empty" class="canvas-empty">Loading source image…</div>
+              <div class="canvas-label before-label" id="before-label" hidden>Before</div>
+              <div class="canvas-label after-label" id="after-label" hidden>After</div>
+            </div>
+
+            <div class="overlay-bar panel">
+              <label class="switch-control"><input id="combined-overlay" type="checkbox" checked><span></span>Combined overlay</label>
+              <label class="range-control opacity-control">Overlay opacity <input id="overlay-opacity" type="range" min="0" max="1" step="0.05" value="0.55"><output id="opacity-output">55%</output></label>
+              <button id="compare-mask" class="secondary">◐ Before / after</button>
+              <span id="cycle-hint" class="cycle-hint">Click overlapping pixels again to cycle</span>
             </div>
           </section>
 
-          <section class="export-section" aria-labelledby="export-heading">
-            <h2 id="export-heading">Export Final Masks</h2>
-            <button id="export-selected" type="button">Export selected final masks</button>
-            <div id="export-result" class="export-result">
-              <p class="empty-state">No export yet.</p>
-            </div>
-          </section>
-        </aside>
-      </div>
-
-      <section class="prompt-panel" aria-labelledby="prompt-json-heading">
-        <h2 id="prompt-json-heading">Prompt JSON</h2>
-        <pre id="prompt-json">{
-  "points": [],
-  "point_labels": [],
-  "box": null
-}</pre>
+          <aside class="details-panel panel">
+            <div id="object-details" class="details-content"></div>
+          </aside>
+        </div>
       </section>
     </main>
-    <script src="app.js"></script>
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+    <script type="module" src="/app.js"></script>
   </body>
 </html>

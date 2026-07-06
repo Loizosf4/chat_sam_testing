@@ -1,0 +1,58 @@
+{
+  "status": "passed",
+  "blender_version": "4.4.0",
+  "scene_id": "office_test_unified_v3_1_1_clean",
+  "managed_object_count": 23,
+  "semantic_object_count": 20,
+  "room_proxy_count": 3,
+  "unrelated_object_preserved": true,
+  "repeat_sync_created": 0,
+  "repeat_sync_updated": 0,
+  "repeat_sync_unchanged": 23,
+  "selective_update_ids": [
+    "d2582b5deecf41cfafa4c10ed0a244f1"
+  ],
+  "stale_scene_error_code": "stale_revision",
+  "selected_semantic_id": "d2582b5deecf41cfafa4c10ed0a244f1",
+  "reported_event_types": [
+    "selection_changed",
+    "transform_update"
+  ],
+  "saved_sync_status": {
+    "scene_id": "office_test_unified_v3_1_1_clean",
+    "revision": 2,
+    "status": "synchronized",
+    "details": {
+      "created": [],
+      "stale_object_ids": [],
+      "unchanged": [
+        "plane_floor",
+        "plane_left_wall",
+        "plane_right_wall",
+        "9693e5917bcb423aa0b815619ee68eb0",
+        "97e5cd057eee45cbaf4acb9fd64654b4",
+        "49fd02b50a914e8198bacf4644bc377f",
+        "e971e9fbbf5746eea108d07bfbb5764a",
+        "ee161158865740b59808b248400feb9f",
+        "aa9ab168328b4a59bf5d0a45a9d56adf",
+        "d121180ca0c74ffba8f79184bd7136af",
+        "90ff0e545b1f4f77885a32d25de8c599",
+        "6ca955bde0c047b9b8f70d81d63b295d",
+        "b9858c1f45f443a88d84229a1824d339",
+        "9171a7b4d4e142ca936f2564200d0bdb",
+        "1064a3a09c4c427e80caa227d17a7cc1",
+        "39640f6bbd5f44c2a6a40ceb313edb00",
+        "813fee9b25234973ab9a496f75926564",
+        "a5eea22ec5df4a37ae8c2fed229b18ba",
+        "4ec402f9a71d4ea7925b487ac7e11249",
+        "80ca5a4d73184d3c9c15f6bcbb4ab8ef",
+        "6fb099577552459d86c1ab5bcb907fcd",
+        "4107fd7a550041fcb7aa0c4407a600cc"
+      ],
+      "updated": [
+        "d2582b5deecf41cfafa4c10ed0a244f1"
+      ]
+    }
+  },
+  "blend_file": "accepted-office-v3.1.1-sync.blend"
+}

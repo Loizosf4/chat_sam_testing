@@ -23,11 +23,13 @@ def mask_adjacency(mask_a: np.ndarray, mask_b: np.ndarray) -> float:
 def estimate_top_surface(item: dict[str,Any]) -> dict[str,Any]:
     points=np.asarray(item["points"]);normals=np.asarray(item["normals"]);up=normals[:,2]>=0.78
     if up.sum()>=20:
-        candidates=points[up];cut=np.quantile(candidates[:,2],0.85);top_points=candidates[candidates[:,2]>=cut];z=float(np.median(top_points[:,2]));confidence=float(min(1,up.mean()*2.5))
+        candidates=points[up];candidate_normals=normals[up];cut=np.quantile(candidates[:,2],0.85);selected=candidates[:,2]>=cut;top_points=candidates[selected];top_normals=candidate_normals[selected];z=float(np.median(top_points[:,2]));confidence=float(min(1,up.mean()*2.5))
     else:
-        z=float(np.percentile(points[:,2],92));top_points=points[points[:,2]>=np.percentile(points[:,2],85)];confidence=.3
+        z=float(np.percentile(points[:,2],92));selected=points[:,2]>=np.percentile(points[:,2],85);top_points=points[selected];top_normals=normals[selected];confidence=.3
+    normal=np.median(top_normals,axis=0);normal=normal/max(1e-12,np.linalg.norm(normal))
+    if normal[2]<0:normal*=-1
     lo,hi=_bounds(top_points)
-    return {"z":z,"xy_bounds":[lo[:2].tolist(),hi[:2].tolist()],"confidence":confidence,"point_count":int(len(top_points))}
+    return {"z":z,"normal":normal.tolist(),"xy_bounds":[lo[:2].tolist(),hi[:2].tolist()],"confidence":confidence,"point_count":int(len(top_points))}
 
 
 def semantic_support_compatibility(subject_label: str, support_label: str) -> float:
@@ -48,7 +50,7 @@ def infer_support_graph(objects: list[dict[str,Any]], wall_assignments: dict[str
             candidates.append({"subject_object_id":sid,"support_object_id":support["object_id"],"support_label":support["semantic_label"],"score":float(min(1,score)),"bottom_to_top_distance":gap,"horizontal_overlap_ratio":overlap,"mask_adjacency_pixels":adjacency,"relative_depth":depth_order,"support_top":top})
         best=max(candidates,key=lambda x:x["score"])
         if best["score"]>=.62 and best["horizontal_overlap_ratio"]>=.08 and abs(best["bottom_to_top_distance"])<=.22:
-            assignments[sid]={"target":best["support_object_id"],"type":"object","confidence":best["score"],"support_top_z":best["support_top"]["z"]};best["selected"]=True;relationships.append(best)
+            assignments[sid]={"target":best["support_object_id"],"type":"object","confidence":best["score"],"support_top_z":best["support_top"]["z"],"support_normal":best["support_top"]["normal"]};best["selected"]=True;relationships.append(best)
         elif bottom<=.10:
             assignments[sid]={"target":"plane_floor","type":"floor","confidence":float(max(.35,1-abs(bottom)/.12))}
         else:

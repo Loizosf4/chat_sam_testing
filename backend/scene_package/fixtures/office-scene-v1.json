@@ -1,0 +1,1818 @@
+{
+  "schema_version": "1.0.0",
+  "package_revision": 1,
+  "scene_id": "office_test_unified_v3_1_1_clean",
+  "source_image": {
+    "artifact_id": "source-image:24457ea245d9417484c8bc2a235fea3c",
+    "url": "/artifacts/source-images/24457ea245d9417484c8bc2a235fea3c",
+    "original_filename": "images.jpg",
+    "sha256": "ab3b9271b15186e4b9a2a7b2ade6a58d41c3e28781325630aa402e4b27c4f113"
+  },
+  "image_dimensions": {
+    "width": 447,
+    "height": 447
+  },
+  "coordinate_systems": [
+    {
+      "coordinate_system_id": "canonical_world",
+      "handedness": "right",
+      "up_axis": "+Z",
+      "forward_axis": "-Y",
+      "units": "meters",
+      "origin": "joint room reconstruction origin",
+      "transform_to_world": null,
+      "metadata": {
+        "absolute_scale_verified": false
+      }
+    },
+    {
+      "coordinate_system_id": "image_pixels",
+      "handedness": "right",
+      "up_axis": "-Y",
+      "forward_axis": "+Z",
+      "units": "pixels",
+      "origin": "top-left pixel center",
+      "transform_to_world": null,
+      "metadata": {}
+    },
+    {
+      "coordinate_system_id": "moge_raw",
+      "handedness": "right",
+      "up_axis": "-Y",
+      "forward_axis": "+Z",
+      "units": "meters",
+      "origin": "MoGe camera frame",
+      "transform_to_world": [
+        [
+          0.9999399723649732,
+          -0.00994754822617104,
+          -0.004593250594580059,
+          0.07962293535725018
+        ],
+        [
+          0.0,
+          -0.4192142558974049,
+          0.9078873320255026,
+          -8.714745947992284
+        ],
+        [
+          -0.010956809149410638,
+          -0.9078328336960904,
+          -0.4191890914570539,
+          4.855841877613546
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "metadata": {}
+    }
+  ],
+  "camera_candidates": [
+    {
+      "camera_id": "joint_perspective",
+      "camera_type": "perspective",
+      "transform": [
+        [
+          0.9996506509712973,
+          0.026109644098413227,
+          0.004106397169717504,
+          0.0796229353572502
+        ],
+        [
+          -0.007112864674245871,
+          0.4153877737888362,
+          -0.9096166250365482,
+          -8.714745947992284
+        ],
+        [
+          -0.025455513524325804,
+          0.909269643104733,
+          0.4154283728386929,
+          4.855841877613545
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "normalized_intrinsics": [
+        [
+          2.2398867031214476,
+          0.0,
+          0.5075272397415915
+        ],
+        [
+          0.0,
+          2.2398867031214476,
+          0.47960316681351
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "field_of_view_x_degrees": 25.167157379705085,
+      "confidence": 0.85,
+      "provisional": true,
+      "metadata": {
+        "canonical_to_camera_transform": [
+          [
+            0.9996506509712975,
+            -0.007112864674245868,
+            -0.025455513524325808,
+            -0.017973979173043095
+          ],
+          [
+            -0.026109644098413237,
+            -0.41538777378883623,
+            -0.9092696431047332,
+            0.7973496190631385
+          ],
+          [
+            -0.004106397169717503,
+            0.9096166250365484,
+            -0.41542837283869294,
+            9.94465925063905
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "framing_shift_pixels": [
+          3.3646761644914336,
+          -9.117384434361034
+        ],
+        "orientation_correction_degrees_xyz": [
+          -0.23762913459378804,
+          -0.02361471398631356,
+          -0.9251541446343505
+        ],
+        "focal_scale": 0.9987020014135362,
+        "structural_reprojection_rmse_pixels": 13.31709618513052
+      }
+    },
+    {
+      "camera_id": "joint_orthographic",
+      "camera_type": "orthographic",
+      "transform": [
+        [
+          0.9996506509712973,
+          0.026109644098413227,
+          0.004106397169717504,
+          0.0796229353572502
+        ],
+        [
+          -0.007112864674245871,
+          0.4153877737888362,
+          -0.9096166250365482,
+          -8.714745947992284
+        ],
+        [
+          -0.025455513524325804,
+          0.909269643104733,
+          0.4154283728386929,
+          4.855841877613545
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "normalized_intrinsics": null,
+      "field_of_view_x_degrees": null,
+      "confidence": 0.65,
+      "provisional": false,
+      "metadata": {
+        "structural_reprojection_rmse_pixels": 20.97090447529187,
+        "orthographic_scale": 3.6251328904265367
+      }
+    }
+  ],
+  "selected_camera": "joint_perspective",
+  "structural_room_proxies": [
+    {
+      "proxy_id": "plane_floor",
+      "semantic": "floor",
+      "display_name": "Floor",
+      "transform": {
+        "center": [
+          -0.0719875361850244,
+          0.36900865611147327,
+          -0.02
+        ],
+        "dimensions": [
+          2.5355503558169348,
+          2.6852836225381753,
+          0.04
+        ],
+        "quaternion": [
+          0.3752230912814767,
+          -0.0,
+          -0.0,
+          -0.9269345347807323
+        ]
+      },
+      "confidence": 0.85,
+      "metadata": {
+        "source_semantic": "floor",
+        "extent_policy": "joint visible platform quadrilateral; exterior floor-plane points excluded"
+      }
+    },
+    {
+      "proxy_id": "plane_left_wall",
+      "semantic": "wall",
+      "display_name": "Left Wall",
+      "transform": {
+        "center": [
+          -1.0198609153977265,
+          1.3479513320627228,
+          0.8148126413304263
+        ],
+        "dimensions": [
+          2.5355503558169348,
+          1.6296252826608526,
+          0.04
+        ],
+        "quaternion": [
+          0.2653227923029111,
+          0.2653227923029111,
+          -0.6554416952594535,
+          -0.6554416952594535
+        ]
+      },
+      "confidence": 0.82,
+      "metadata": {
+        "source_semantic": "left_wall",
+        "extent_policy": "joint floor edge, shared corner, common visible height"
+      }
+    },
+    {
+      "proxy_id": "plane_right_wall",
+      "semantic": "wall",
+      "display_name": "Right Wall",
+      "transform": {
+        "center": [
+          0.8244331970886926,
+          1.2369791415322156,
+          0.8148126413304263
+        ],
+        "dimensions": [
+          2.6852836225381753,
+          1.6296252826608526,
+          0.04
+        ],
+        "quaternion": [
+          0.6510788130311045,
+          0.6510788130311045,
+          -0.2758557217496278,
+          -0.2758557217496278
+        ]
+      },
+      "confidence": 0.82,
+      "metadata": {
+        "source_semantic": "right_wall",
+        "extent_policy": "joint floor edge, shared corner, common visible height"
+      }
+    }
+  ],
+  "generation_status": {
+    "overall": "completed",
+    "stages": {
+      "sam_masks": "completed",
+      "moge_geometry": "completed",
+      "primitive_transforms": "completed",
+      "blender_objects": "pending",
+      "asset_replacement": "pending"
+    },
+    "updated_at": "2026-06-29T08:08:16Z",
+    "errors": []
+  },
+  "artifact_urls": {
+    "sam_export_manifest": {
+      "artifact_id": "sam-manifest:office_test_unified_v3_1_1_clean",
+      "url": "/artifacts/scene-inputs/office_test_unified_v3_1_1_clean/sam-manifest",
+      "media_type": "application/json",
+      "sha256": "a70a43b3f29768f512cc57fe74aeca029df7bcc7d9dbb8b866cf6750c78f0e61"
+    },
+    "unified_scene_manifest": {
+      "artifact_id": "unified-manifest:office_test_unified_v3_1_1_clean",
+      "url": "/artifacts/scene-inputs/office_test_unified_v3_1_1_clean/unified-v3-1-1",
+      "media_type": "application/json",
+      "sha256": "ff80fcec7d1da607f0312b627b20c71da71d3ec9c0637bd654437d88a4b729e8"
+    },
+    "moge_geometry": {
+      "artifact_id": "moge-geometry:office_test_unified_v3_1_1_clean",
+      "url": "/artifacts/scene-inputs/office_test_unified_v3_1_1_clean/moge-geometry",
+      "media_type": "application/octet-stream",
+      "sha256": null
+    }
+  },
+  "semantic_objects": [
+    {
+      "object_id": "d2582b5deecf41cfafa4c10ed0a244f1",
+      "version": 1,
+      "semantic_label": "left_bulletin_board",
+      "display_name": "Left Bulletin Board",
+      "mask_filename": "left_bulletin_board.png",
+      "mask_url": "/artifacts/masks/d2582b5deecf41cfafa4c10ed0a244f1/1335a92a30d95cf9ae90acd21ce45cea",
+      "mask_revision": "1335a92a30d95cf9ae90acd21ce45cea",
+      "mask_hash": "2e063d059bff35ac92d4a080433e2818df25653c29e43a8e4a817b6b3ad6af80",
+      "overlay_url": "/artifacts/mask-overlays/d2582b5deecf41cfafa4c10ed0a244f1/1335a92a30d95cf9ae90acd21ce45cea",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "yaw_unobservable"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.935349063720188,
+      "placement_confidence": 0.8969087353679953,
+      "center": [
+        -1.5958458092150822,
+        0.7924185336875105,
+        0.9129293770224937
+      ],
+      "dimensions": [
+        0.4794012656411878,
+        0.4949833950689602,
+        0.04312038488827801
+      ],
+      "quaternion": [
+        0.2653227923029111,
+        0.2653227923029111,
+        -0.6554416952594535,
+        -0.6554416952594535
+      ],
+      "support_target": "plane_left_wall",
+      "support_type": "wall",
+      "occlusion_state": "visible",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "yaw_unobservable",
+        "source_placement_classification": "placement_high_confidence",
+        "support_confidence": 0.8888953722024259,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "none"
+      }
+    },
+    {
+      "object_id": "9693e5917bcb423aa0b815619ee68eb0",
+      "version": 1,
+      "semantic_label": "center_wall_frame",
+      "display_name": "Center Wall Frame",
+      "mask_filename": "center_wall_frame.png",
+      "mask_url": "/artifacts/masks/9693e5917bcb423aa0b815619ee68eb0/8b0f618d249d515088c4c81969de6501",
+      "mask_revision": "8b0f618d249d515088c4c81969de6501",
+      "mask_hash": "f6bd55d71c269dd450ec9556e469e59315787adadbdd014b943e70c7f63fe9b5",
+      "overlay_url": "/artifacts/mask-overlays/9693e5917bcb423aa0b815619ee68eb0/8b0f618d249d515088c4c81969de6501",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 0.884,
+      "orientation_confidence": 0.9450648127000039,
+      "placement_confidence": 0.8227833552044985,
+      "center": [
+        -0.45279624710388305,
+        1.9084712833798596,
+        0.8168862139309386
+      ],
+      "dimensions": [
+        0.21577216699782698,
+        0.3271523301565882,
+        0.056455384835439396
+      ],
+      "quaternion": [
+        0.2653227923029111,
+        0.2653227923029111,
+        -0.6554416952594535,
+        -0.6554416952594535
+      ],
+      "support_target": "plane_left_wall",
+      "support_type": "wall",
+      "occlusion_state": "partially_occluded",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_with_occlusion",
+        "support_confidence": 0.7938783018571918,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      }
+    },
+    {
+      "object_id": "97e5cd057eee45cbaf4acb9fd64654b4",
+      "version": 1,
+      "semantic_label": "right_wall_frame",
+      "display_name": "Right Wall Frame",
+      "mask_filename": "right_wall_frame.png",
+      "mask_url": "/artifacts/masks/97e5cd057eee45cbaf4acb9fd64654b4/b71c5e35f19a58759f1ffb60d158dd55",
+      "mask_revision": "b71c5e35f19a58759f1ffb60d158dd55",
+      "mask_hash": "0ea4adff04ecf880e61d53df7cc06d3da2f2dd1eea6c2a7e6c2e1d9eec06fc64",
+      "overlay_url": "/artifacts/mask-overlays/97e5cd057eee45cbaf4acb9fd64654b4/b71c5e35f19a58759f1ffb60d158dd55",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "automatic_with_ambiguity"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.3249999999774235,
+      "placement_confidence": 0.6694320789842165,
+      "center": [
+        1.6086873596756222,
+        0.42582938163370815,
+        1.1191432847751215
+      ],
+      "dimensions": [
+        0.24332572892968432,
+        0.3501164175644013,
+        0.041654720124527644
+      ],
+      "quaternion": [
+        0.6510788130311045,
+        0.6510788130311045,
+        -0.2758557217496278,
+        -0.2758557217496278
+      ],
+      "support_target": "plane_right_wall",
+      "support_type": "wall",
+      "occlusion_state": "visible",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "automatic_with_ambiguity",
+        "source_placement_classification": "placement_high_confidence",
+        "support_confidence": 0.9571504988020304,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "none"
+      }
+    },
+    {
+      "object_id": "49fd02b50a914e8198bacf4644bc377f",
+      "version": 1,
+      "semantic_label": "wall_light_fixture",
+      "display_name": "Wall Light Fixture",
+      "mask_filename": "wall_light_fixture.png",
+      "mask_url": "/artifacts/masks/49fd02b50a914e8198bacf4644bc377f/7ca6641be2335a8d87d5270bb7a0ceb4",
+      "mask_revision": "7ca6641be2335a8d87d5270bb7a0ceb4",
+      "mask_hash": "c3d67eb176d3308d55df6223112eab2d776031991b76b3cff803142b31ae2fb9",
+      "overlay_url": "/artifacts/mask-overlays/49fd02b50a914e8198bacf4644bc377f/7ca6641be2335a8d87d5270bb7a0ceb4",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 0.654,
+      "orientation_confidence": 0.1378859808030203,
+      "placement_confidence": 0.5990837688109706,
+      "center": [
+        0.8606899090912911,
+        1.2035368260223887,
+        1.3752430070597934
+      ],
+      "dimensions": [
+        1.0074835344422788,
+        0.07303731293132397,
+        0.03443116741810978
+      ],
+      "quaternion": [
+        0.6510788130311045,
+        0.6510788130311045,
+        -0.2758557217496278,
+        -0.2758557217496278
+      ],
+      "support_target": "plane_right_wall",
+      "support_type": "wall",
+      "occlusion_state": "visible",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_high_confidence",
+        "support_confidence": 0.945633488534239,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "none"
+      }
+    },
+    {
+      "object_id": "e971e9fbbf5746eea108d07bfbb5764a",
+      "version": 1,
+      "semantic_label": "left_tall_filing_cabinet",
+      "display_name": "Left Tall Filing Cabinet",
+      "mask_filename": "left_tall_filing_cabinet.png",
+      "mask_url": "/artifacts/masks/e971e9fbbf5746eea108d07bfbb5764a/6c3a996f83095523a4391ffa407ce321",
+      "mask_revision": "6c3a996f83095523a4391ffa407ce321",
+      "mask_hash": "d8ee204c4fe3e842f80662ee387da877d2715c8f52c1a4c3a6e68a78ac901b4e",
+      "overlay_url": "/artifacts/mask-overlays/e971e9fbbf5746eea108d07bfbb5764a/6c3a996f83095523a4391ffa407ce321",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.43787811321088055,
+      "placement_confidence": 0.6418298092881934,
+      "center": [
+        -0.8905645452047838,
+        1.0984594395252196,
+        0.5400822797989466
+      ],
+      "dimensions": [
+        0.23562470157050863,
+        0.5544261196645331,
+        1.0801645595978933
+      ],
+      "quaternion": [
+        0.6993614723414932,
+        0.0,
+        0.0,
+        0.7147681659141927
+      ],
+      "support_target": "plane_floor",
+      "support_type": "floor",
+      "occlusion_state": "partially_occluded",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_with_occlusion",
+        "support_confidence": 0.35,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      }
+    },
+    {
+      "object_id": "ee161158865740b59808b248400feb9f",
+      "version": 1,
+      "semantic_label": "left_drawer_cabinet",
+      "display_name": "Left Drawer Cabinet",
+      "mask_filename": "left_drawer_cabinet.png",
+      "mask_url": "/artifacts/masks/ee161158865740b59808b248400feb9f/c65945bbf6e55773ada49989c35458e3",
+      "mask_revision": "c65945bbf6e55773ada49989c35458e3",
+      "mask_hash": "ab615db752dd9abdc0a2f8ce0e678b2352afd2e82a1afe63d8392b7a2db4ea4a",
+      "overlay_url": "/artifacts/mask-overlays/ee161158865740b59808b248400feb9f/c65945bbf6e55773ada49989c35458e3",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.7916365663350359,
+      "placement_confidence": 0.746684861920051,
+      "center": [
+        -1.6179348099448094,
+        0.2330860896303013,
+        0.34034558383532254
+      ],
+      "dimensions": [
+        0.18068782718586462,
+        0.2743822006835431,
+        0.5207835711663737
+      ],
+      "quaternion": [
+        0.3855918894816918,
+        0.0,
+        0.0,
+        0.9226694395968357
+      ],
+      "support_target": null,
+      "support_type": "unknown",
+      "occlusion_state": "visible",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_high_confidence",
+        "support_confidence": 0.25,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "none"
+      }
+    },
+    {
+      "object_id": "aa9ab168328b4a59bf5d0a45a9d56adf",
+      "version": 1,
+      "semantic_label": "left_small_drawer_cabinet",
+      "display_name": "Left Small Drawer Cabinet",
+      "mask_filename": "left_small_drawer_cabinet.png",
+      "mask_url": "/artifacts/masks/aa9ab168328b4a59bf5d0a45a9d56adf/e8271336c0bf590fa398ead2fe4091ad",
+      "mask_revision": "e8271336c0bf590fa398ead2fe4091ad",
+      "mask_hash": "40fb15b4b48b8de13b6181fb16b46953c4f7174161d8fbb388115bceabc460f0",
+      "overlay_url": "/artifacts/mask-overlays/aa9ab168328b4a59bf5d0a45a9d56adf/e8271336c0bf590fa398ead2fe4091ad",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.6770146636239637,
+      "placement_confidence": 0.6944964941067348,
+      "center": [
+        -1.35661387584663,
+        0.4377428951397667,
+        0.15593688575317077
+      ],
+      "dimensions": [
+        0.0746531215548674,
+        0.21342216548063245,
+        0.31187377150634155
+      ],
+      "quaternion": [
+        0.384852472356779,
+        0.0,
+        0.0,
+        0.9229781007807687
+      ],
+      "support_target": "plane_floor",
+      "support_type": "floor",
+      "occlusion_state": "partially_occluded",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_with_occlusion",
+        "support_confidence": 0.43203647520862565,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      }
+    },
+    {
+      "object_id": "d121180ca0c74ffba8f79184bd7136af",
+      "version": 1,
+      "semantic_label": "left_radiator",
+      "display_name": "Left Radiator",
+      "mask_filename": "left_radiator.png",
+      "mask_url": "/artifacts/masks/d121180ca0c74ffba8f79184bd7136af/d9de2aac34a754fc838bfb9e3863b22c",
+      "mask_revision": "d9de2aac34a754fc838bfb9e3863b22c",
+      "mask_hash": "603fad3184adb2bd9c2cedc1ef2906a5c8390ce89629fb847d30578e71fb336e",
+      "overlay_url": "/artifacts/mask-overlays/d121180ca0c74ffba8f79184bd7136af/d9de2aac34a754fc838bfb9e3863b22c",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 0.614,
+      "orientation_confidence": 0.5995524997204413,
+      "placement_confidence": 0.5300012696389966,
+      "center": [
+        -1.9654947318038014,
+        0.5337120019260715,
+        0.10263830691181923
+      ],
+      "dimensions": [
+        0.09688074810521433,
+        0.471805830424973,
+        0.18566923093820242
+      ],
+      "quaternion": [
+        0.2653227923029111,
+        0.2653227923029111,
+        -0.6554416952594535,
+        -0.6554416952594535
+      ],
+      "support_target": "plane_left_wall",
+      "support_type": "wall",
+      "occlusion_state": "partially_occluded",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_with_occlusion",
+        "support_confidence": 0.3,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      }
+    },
+    {
+      "object_id": "90ff0e545b1f4f77885a32d25de8c599",
+      "version": 1,
+      "semantic_label": "center_tall_storage",
+      "display_name": "Center Tall Storage",
+      "mask_filename": "center_tall_storage.png",
+      "mask_url": "/artifacts/masks/90ff0e545b1f4f77885a32d25de8c599/0103e4b5fbec593994bba69cfb82612a",
+      "mask_revision": "0103e4b5fbec593994bba69cfb82612a",
+      "mask_hash": "6b8d5bcb1c67100e302bd032bb793e6f1d13b1072ec6282ec50939858bda69e8",
+      "overlay_url": "/artifacts/mask-overlays/90ff0e545b1f4f77885a32d25de8c599/0103e4b5fbec593994bba69cfb82612a",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.8380154807787334,
+      "placement_confidence": 0.6742053680402164,
+      "center": [
+        -0.029272621220189338,
+        1.839004149615405,
+        0.5180088496014139
+      ],
+      "dimensions": [
+        0.17975542571899736,
+        0.23128735816182552,
+        0.7932037262412113
+      ],
+      "quaternion": [
+        0.92048100556352,
+        0.0,
+        0.0,
+        0.39078730582859406
+      ],
+      "support_target": null,
+      "support_type": "unknown",
+      "occlusion_state": "partially_occluded",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_with_occlusion",
+        "support_confidence": 0.25,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      }
+    },
+    {
+      "object_id": "6ca955bde0c047b9b8f70d81d63b295d",
+      "version": 1,
+      "semantic_label": "center_low_storage",
+      "display_name": "Center Low Storage",
+      "mask_filename": "center_low_storage.png",
+      "mask_url": "/artifacts/masks/6ca955bde0c047b9b8f70d81d63b295d/2d6c21f6f28f59bf9f3462b6f9a4bbf1",
+      "mask_revision": "2d6c21f6f28f59bf9f3462b6f9a4bbf1",
+      "mask_hash": "0e63928d483e7d2780dd2a543b126125f4864eedba8471d7c28e5dd48c15f5ea",
+      "overlay_url": "/artifacts/mask-overlays/6ca955bde0c047b9b8f70d81d63b295d/2d6c21f6f28f59bf9f3462b6f9a4bbf1",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.7624468283843684,
+      "placement_confidence": 0.7071794910605851,
+      "center": [
+        -0.20980174706154747,
+        1.6568101676491203,
+        0.2252392030904015
+      ],
+      "dimensions": [
+        0.18706706123491632,
+        0.2601244720595107,
+        0.3532288111536141
+      ],
+      "quaternion": [
+        0.910610356970668,
+        0.0,
+        0.0,
+        0.4132659891374473
+      ],
+      "support_target": null,
+      "support_type": "unknown",
+      "occlusion_state": "partially_occluded",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_with_occlusion",
+        "support_confidence": 0.25,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      }
+    },
+    {
+      "object_id": "b9858c1f45f443a88d84229a1824d339",
+      "version": 1,
+      "semantic_label": "desk",
+      "display_name": "Desk",
+      "mask_filename": "desk.png",
+      "mask_url": "/artifacts/masks/b9858c1f45f443a88d84229a1824d339/7bccdc0b0c31535f8f4554da6d1f52f8",
+      "mask_revision": "7bccdc0b0c31535f8f4554da6d1f52f8",
+      "mask_hash": "04c587d73881bf992408e42966cace36337a9e9753cd07c964314b195dfc1c74",
+      "overlay_url": "/artifacts/mask-overlays/b9858c1f45f443a88d84229a1824d339/7bccdc0b0c31535f8f4554da6d1f52f8",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.424195674069773,
+      "placement_confidence": 0.6728265680657364,
+      "center": [
+        0.08901362217294927,
+        0.22669993013542922,
+        0.24530291596829068
+      ],
+      "dimensions": [
+        0.9905870563111026,
+        0.3563934777976141,
+        0.49060583193658136
+      ],
+      "quaternion": [
+        0.36358390305845023,
+        0.0,
+        0.0,
+        0.9315614555340853
+      ],
+      "support_target": "plane_floor",
+      "support_type": "floor",
+      "occlusion_state": "partially_occluded",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_with_occlusion",
+        "support_confidence": 0.7537279515505089,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      }
+    },
+    {
+      "object_id": "9171a7b4d4e142ca936f2564200d0bdb",
+      "version": 1,
+      "semantic_label": "desk_chair",
+      "display_name": "Desk Chair",
+      "mask_filename": "desk_chair.png",
+      "mask_url": "/artifacts/masks/9171a7b4d4e142ca936f2564200d0bdb/4f3a2d3d027f561cb2fcce9ee264c64e",
+      "mask_revision": "4f3a2d3d027f561cb2fcce9ee264c64e",
+      "mask_hash": "4296a878548ea45fbbd7663495889da69f519ccb5661f342ff765e4ff04ba3c9",
+      "overlay_url": "/artifacts/mask-overlays/9171a7b4d4e142ca936f2564200d0bdb/4f3a2d3d027f561cb2fcce9ee264c64e",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 0.924,
+      "orientation_confidence": 0.8351096680796956,
+      "placement_confidence": 0.7269730703805649,
+      "center": [
+        0.3937443503968352,
+        1.0453927799921876,
+        0.376422020551117
+      ],
+      "dimensions": [
+        0.3976391957801324,
+        0.03157501286766304,
+        0.19275331586671643
+      ],
+      "quaternion": [
+        0.3666072277673103,
+        0.0,
+        0.0,
+        0.930375806085244
+      ],
+      "support_target": null,
+      "support_type": "unknown",
+      "occlusion_state": "partially_occluded",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_with_occlusion",
+        "support_confidence": 0.25,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      }
+    },
+    {
+      "object_id": "1064a3a09c4c427e80caa227d17a7cc1",
+      "version": 1,
+      "semantic_label": "desktop_box",
+      "display_name": "Desktop Box",
+      "mask_filename": "desktop_box.png",
+      "mask_url": "/artifacts/masks/1064a3a09c4c427e80caa227d17a7cc1/98459d5c590b5f98a80d850f2b5d295e",
+      "mask_revision": "98459d5c590b5f98a80d850f2b5d295e",
+      "mask_hash": "f750f7464c08950ac95430b4687d98754a4c2c969f41e6aeef58a1fef66a5587",
+      "overlay_url": "/artifacts/mask-overlays/1064a3a09c4c427e80caa227d17a7cc1/98459d5c590b5f98a80d850f2b5d295e",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "yaw_unobservable"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.5737293386045546,
+      "placement_confidence": 0.7472475203684064,
+      "center": [
+        0.355110035884256,
+        -0.016034772351067678,
+        0.5759811067751386
+      ],
+      "dimensions": [
+        0.20620414330721182,
+        0.18978364251592664,
+        0.17075054967711442
+      ],
+      "quaternion": [
+        0.936778548748323,
+        0.0,
+        0.0,
+        0.34992277805965394
+      ],
+      "support_target": "b9858c1f45f443a88d84229a1824d339",
+      "support_type": "object",
+      "occlusion_state": "visible",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "yaw_unobservable",
+        "source_placement_classification": "placement_high_confidence",
+        "support_confidence": 1.0,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "none"
+      }
+    },
+    {
+      "object_id": "39640f6bbd5f44c2a6a40ceb313edb00",
+      "version": 1,
+      "semantic_label": "right_tall_drawer_cabinet",
+      "display_name": "Right Tall Drawer Cabinet",
+      "mask_filename": "right_tall_drawer_cabinet.png",
+      "mask_url": "/artifacts/masks/39640f6bbd5f44c2a6a40ceb313edb00/b3bdd3afefa95ba0b51e150cbc0ce50a",
+      "mask_revision": "b3bdd3afefa95ba0b51e150cbc0ce50a",
+      "mask_hash": "4f3793f269d4d3c25e744700f78c4472fd4c858080e48dc8b5c37ab546bc6a54",
+      "overlay_url": "/artifacts/mask-overlays/39640f6bbd5f44c2a6a40ceb313edb00/b3bdd3afefa95ba0b51e150cbc0ce50a",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.7568138800915477,
+      "placement_confidence": 0.7011729305348212,
+      "center": [
+        0.9381565979064489,
+        0.7513684958366089,
+        0.30351977400590485
+      ],
+      "dimensions": [
+        0.224978386180799,
+        0.3257896933067507,
+        0.6070395480118097
+      ],
+      "quaternion": [
+        0.9210332496495439,
+        0.0,
+        0.0,
+        0.3894839573589661
+      ],
+      "support_target": "plane_floor",
+      "support_type": "floor",
+      "occlusion_state": "visible",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_high_confidence",
+        "support_confidence": 0.35,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "none"
+      }
+    },
+    {
+      "object_id": "813fee9b25234973ab9a496f75926564",
+      "version": 1,
+      "semantic_label": "right_low_drawer_cabinet",
+      "display_name": "Right Low Drawer Cabinet",
+      "mask_filename": "right_low_drawer_cabinet.png",
+      "mask_url": "/artifacts/masks/813fee9b25234973ab9a496f75926564/4905b920b167555a87545c67185e4aed",
+      "mask_revision": "4905b920b167555a87545c67185e4aed",
+      "mask_hash": "ca1bc6d3a393c80675b9bc4ed848167659bb0b6f2257c3565cd37a19eba318c0",
+      "overlay_url": "/artifacts/mask-overlays/813fee9b25234973ab9a496f75926564/4905b920b167555a87545c67185e4aed",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.7364837590358511,
+      "placement_confidence": 0.737195677807069,
+      "center": [
+        1.1705955288716663,
+        0.49678310425895666,
+        0.14212208469949256
+      ],
+      "dimensions": [
+        0.3018672032184983,
+        0.2105905735711986,
+        0.2842441693989851
+      ],
+      "quaternion": [
+        0.3581421751397137,
+        0.0,
+        0.0,
+        0.9336670618513833
+      ],
+      "support_target": "plane_floor",
+      "support_type": "floor",
+      "occlusion_state": "partially_occluded",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_with_occlusion",
+        "support_confidence": 0.42909220554501404,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      }
+    },
+    {
+      "object_id": "a5eea22ec5df4a37ae8c2fed229b18ba",
+      "version": 1,
+      "semantic_label": "right_radiator",
+      "display_name": "Right Radiator",
+      "mask_filename": "right_radiator.png",
+      "mask_url": "/artifacts/masks/a5eea22ec5df4a37ae8c2fed229b18ba/605852c211fa5055839407ec89ee3e7a",
+      "mask_revision": "605852c211fa5055839407ec89ee3e7a",
+      "mask_hash": "7da2e3c678ffc7750fe06f0b65693d3723eece5ff1a8c7c2bfb3d59e39c90e09",
+      "overlay_url": "/artifacts/mask-overlays/a5eea22ec5df4a37ae8c2fed229b18ba/605852c211fa5055839407ec89ee3e7a",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "user_review_recommended"
+      ],
+      "geometry_confidence": 0.602,
+      "orientation_confidence": 0.6805968345405727,
+      "placement_confidence": 0.7085294113230489,
+      "center": [
+        1.7338964178903002,
+        0.29805882098279096,
+        0.17972905226833782
+      ],
+      "dimensions": [
+        0.08231917080969571,
+        0.4500648274901524,
+        0.039508628023384
+      ],
+      "quaternion": [
+        0.6510788130311045,
+        0.6510788130311045,
+        -0.2758557217496278,
+        -0.2758557217496278
+      ],
+      "support_target": "plane_right_wall",
+      "support_type": "wall",
+      "occlusion_state": "visible",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "user_review_recommended",
+        "source_placement_classification": "placement_high_confidence",
+        "support_confidence": 0.9448780011636662,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "none"
+      }
+    },
+    {
+      "object_id": "4ec402f9a71d4ea7925b487ac7e11249",
+      "version": 1,
+      "semantic_label": "coat_rack",
+      "display_name": "Coat Rack",
+      "mask_filename": "coat_rack.png",
+      "mask_url": "/artifacts/masks/4ec402f9a71d4ea7925b487ac7e11249/6117c990609a5d168f18f4e6a3fbeefc",
+      "mask_revision": "6117c990609a5d168f18f4e6a3fbeefc",
+      "mask_hash": "0bf8b3f218cabe555d370723d5c69c2af7188a2a05144eaa28c3222c811bc0d4",
+      "overlay_url": "/artifacts/mask-overlays/4ec402f9a71d4ea7925b487ac7e11249/6117c990609a5d168f18f4e6a3fbeefc",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "placement_review_required",
+        "yaw_unobservable"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.28064647003629695,
+      "placement_confidence": 0.5399419381549966,
+      "center": [
+        1.4979158346089163,
+        0.2686510302932908,
+        0.38586212876121345
+      ],
+      "dimensions": [
+        0.2919490561644749,
+        0.3125931933756417,
+        0.7717242575224269
+      ],
+      "quaternion": [
+        0.37607732071945965,
+        0.0,
+        0.0,
+        0.9265882844286737
+      ],
+      "support_target": "plane_floor",
+      "support_type": "floor",
+      "occlusion_state": "visible",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "yaw_unobservable",
+        "source_placement_classification": "placement_review_required",
+        "support_confidence": 0.7020818660924653,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "none"
+      }
+    },
+    {
+      "object_id": "80ca5a4d73184d3c9c15f6bcbb4ab8ef",
+      "version": 1,
+      "semantic_label": "open_floor_box",
+      "display_name": "Open Floor Box",
+      "mask_filename": "open_floor_box.png",
+      "mask_url": "/artifacts/masks/80ca5a4d73184d3c9c15f6bcbb4ab8ef/6d596b1798ec5f158832a7b5abceaff3",
+      "mask_revision": "6d596b1798ec5f158832a7b5abceaff3",
+      "mask_hash": "172f0195e8c3dd02e57a970c8ccfbe10d09744c64a34a1c926fc8cecb921c0ea",
+      "overlay_url": "/artifacts/mask-overlays/80ca5a4d73184d3c9c15f6bcbb4ab8ef/6d596b1798ec5f158832a7b5abceaff3",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "yaw_unobservable"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.5849322877576222,
+      "placement_confidence": 0.6931753247534829,
+      "center": [
+        -0.5731992760405926,
+        -0.4486374103413635,
+        0.11708104718029132
+      ],
+      "dimensions": [
+        0.24459512084669835,
+        0.24562175460246607,
+        0.23416209436058263
+      ],
+      "quaternion": [
+        0.13511640063867889,
+        0.0,
+        0.0,
+        0.9908297322337719
+      ],
+      "support_target": "plane_floor",
+      "support_type": "floor",
+      "occlusion_state": "visible",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "yaw_unobservable",
+        "source_placement_classification": "placement_high_confidence",
+        "support_confidence": 0.4171435596812255,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "none"
+      }
+    },
+    {
+      "object_id": "6fb099577552459d86c1ab5bcb907fcd",
+      "version": 1,
+      "semantic_label": "front_left_box",
+      "display_name": "Front Left Box",
+      "mask_filename": "front_left_box.png",
+      "mask_url": "/artifacts/masks/6fb099577552459d86c1ab5bcb907fcd/8d86a595527a585d83656d19051a6d1c",
+      "mask_revision": "8d86a595527a585d83656d19051a6d1c",
+      "mask_hash": "c5eaf5f9d604d974a93757343ab366acde5b168d316bb8edb8c9173d8f54bee4",
+      "overlay_url": "/artifacts/mask-overlays/6fb099577552459d86c1ab5bcb907fcd/8d86a595527a585d83656d19051a6d1c",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "yaw_unobservable"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.6416556602219221,
+      "placement_confidence": 0.7049277320391206,
+      "center": [
+        -0.09928957342602272,
+        -0.9809592144594893,
+        0.11290625801789894
+      ],
+      "dimensions": [
+        0.2321699935217773,
+        0.24980486485369777,
+        0.22581251603579788
+      ],
+      "quaternion": [
+        0.9139362556246671,
+        0.0,
+        0.0,
+        0.4058577591407651
+      ],
+      "support_target": "plane_floor",
+      "support_type": "floor",
+      "occlusion_state": "visible",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "yaw_unobservable",
+        "source_placement_classification": "placement_high_confidence",
+        "support_confidence": 0.429646206753756,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "none"
+      }
+    },
+    {
+      "object_id": "4107fd7a550041fcb7aa0c4407a600cc",
+      "version": 1,
+      "semantic_label": "front_rear_box",
+      "display_name": "Front Rear Box",
+      "mask_filename": "front_rear_box.png",
+      "mask_url": "/artifacts/masks/4107fd7a550041fcb7aa0c4407a600cc/03d519b408bf5dfaa700fec3d9e50da2",
+      "mask_revision": "03d519b408bf5dfaa700fec3d9e50da2",
+      "mask_hash": "3ce3e6b351574e09e41cd552f5c363dc3010eddb27a1405755d3255ef8cb7843",
+      "overlay_url": "/artifacts/mask-overlays/4107fd7a550041fcb7aa0c4407a600cc/03d519b408bf5dfaa700fec3d9e50da2",
+      "approval_status": "unreviewed",
+      "quality_warnings": [
+        "yaw_unobservable"
+      ],
+      "geometry_confidence": 1.0,
+      "orientation_confidence": 0.47251991968921764,
+      "placement_confidence": 0.6164775671477309,
+      "center": [
+        0.1451470382323396,
+        -0.7508287449899395,
+        0.12002157053841464
+      ],
+      "dimensions": [
+        0.2473633009100105,
+        0.22956500774144778,
+        0.24004314107682928
+      ],
+      "quaternion": [
+        0.3982892192943498,
+        0.0,
+        0.0,
+        0.9172598856343264
+      ],
+      "support_target": "plane_floor",
+      "support_type": "floor",
+      "occlusion_state": "partially_occluded",
+      "blender_object_identifier": null,
+      "selected_asset_identifier": null,
+      "metadata": {
+        "primitive_type": "cube",
+        "source_confidence_classification": "yaw_unobservable",
+        "source_placement_classification": "placement_with_occlusion",
+        "support_confidence": 0.38270505787197096,
+        "orientation_method": "normal_first_v3_universal",
+        "hidden_geometry_policy": "visible_surface_proxy; hidden lower volume remains unknown"
+      }
+    }
+  ],
+  "mask_revisions": [
+    {
+      "revision_id": "1335a92a30d95cf9ae90acd21ce45cea",
+      "object_id": "d2582b5deecf41cfafa4c10ed0a244f1",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "2e063d059bff35ac92d4a080433e2818df25653c29e43a8e4a817b6b3ad6af80",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 2302,
+        "bbox_xyxy": [
+          44,
+          153,
+          91,
+          215
+        ],
+        "warnings": [
+          "yaw_unobservable"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "8b0f618d249d515088c4c81969de6501",
+      "object_id": "9693e5917bcb423aa0b815619ee68eb0",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "f6bd55d71c269dd450ec9556e469e59315787adadbdd014b943e70c7f63fe9b5",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 629,
+        "bbox_xyxy": [
+          174,
+          133,
+          193,
+          169
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "b71c5e35f19a58759f1ffb60d158dd55",
+      "object_id": "97e5cd057eee45cbaf4acb9fd64654b4",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "0ea4adff04ecf880e61d53df7cc06d3da2f2dd1eea6c2a7e6c2e1d9eec06fc64",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 969,
+        "bbox_xyxy": [
+          372,
+          149,
+          399,
+          191
+        ],
+        "warnings": [
+          "automatic_with_ambiguity"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "7ca6641be2335a8d87d5270bb7a0ceb4",
+      "object_id": "49fd02b50a914e8198bacf4644bc377f",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "c3d67eb176d3308d55df6223112eab2d776031991b76b3cff803142b31ae2fb9",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 660,
+        "bbox_xyxy": [
+          263,
+          111,
+          343,
+          137
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "6c3a996f83095523a4391ffa407ce321",
+      "object_id": "e971e9fbbf5746eea108d07bfbb5764a",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "d8ee204c4fe3e842f80662ee387da877d2715c8f52c1a4c3a6e68a78ac901b4e",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 6205,
+        "bbox_xyxy": [
+          107,
+          143,
+          169,
+          257
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "c65945bbf6e55773ada49989c35458e3",
+      "object_id": "ee161158865740b59808b248400feb9f",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "ab615db752dd9abdc0a2f8ce0e678b2352afd2e82a1afe63d8392b7a2db4ea4a",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 2066,
+        "bbox_xyxy": [
+          41,
+          227,
+          82,
+          290
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "e8271336c0bf590fa398ead2fe4091ad",
+      "object_id": "aa9ab168328b4a59bf5d0a45a9d56adf",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "40fb15b4b48b8de13b6181fb16b46953c4f7174161d8fbb388115bceabc460f0",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 715,
+        "bbox_xyxy": [
+          80,
+          244,
+          103,
+          281
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "d9de2aac34a754fc838bfb9e3863b22c",
+      "object_id": "d121180ca0c74ffba8f79184bd7136af",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "603fad3184adb2bd9c2cedc1ef2906a5c8390ce89629fb847d30578e71fb336e",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 565,
+        "bbox_xyxy": [
+          32,
+          240,
+          47,
+          297
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "0103e4b5fbec593994bba69cfb82612a",
+      "object_id": "90ff0e545b1f4f77885a32d25de8c599",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "6b8d5bcb1c67100e302bd032bb793e6f1d13b1072ec6282ec50939858bda69e8",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 1614,
+        "bbox_xyxy": [
+          204,
+          144,
+          233,
+          223
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "2d6c21f6f28f59bf9f3462b6f9a4bbf1",
+      "object_id": "6ca955bde0c047b9b8f70d81d63b295d",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "0e63928d483e7d2780dd2a543b126125f4864eedba8471d7c28e5dd48c15f5ea",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 1109,
+        "bbox_xyxy": [
+          190,
+          188,
+          223,
+          228
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "7bccdc0b0c31535f8f4554da6d1f52f8",
+      "object_id": "b9858c1f45f443a88d84229a1824d339",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "04c587d73881bf992408e42966cace36337a9e9753cd07c964314b195dfc1c74",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 4748,
+        "bbox_xyxy": [
+          183,
+          222,
+          283,
+          306
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "4f3a2d3d027f561cb2fcce9ee264c64e",
+      "object_id": "9171a7b4d4e142ca936f2564200d0bdb",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "4296a878548ea45fbbd7663495889da69f519ccb5661f342ff765e4ff04ba3c9",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 663,
+        "bbox_xyxy": [
+          245,
+          202,
+          277,
+          230
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "98459d5c590b5f98a80d850f2b5d295e",
+      "object_id": "1064a3a09c4c427e80caa227d17a7cc1",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "f750f7464c08950ac95430b4687d98754a4c2c969f41e6aeef58a1fef66a5587",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 752,
+        "bbox_xyxy": [
+          245,
+          225,
+          275,
+          255
+        ],
+        "warnings": [
+          "yaw_unobservable"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "b3bdd3afefa95ba0b51e150cbc0ce50a",
+      "object_id": "39640f6bbd5f44c2a6a40ceb313edb00",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "4f3793f269d4d3c25e744700f78c4472fd4c858080e48dc8b5c37ab546bc6a54",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 1835,
+        "bbox_xyxy": [
+          296,
+          204,
+          337,
+          267
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "4905b920b167555a87545c67185e4aed",
+      "object_id": "813fee9b25234973ab9a496f75926564",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "ca1bc6d3a393c80675b9bc4ed848167659bb0b6f2257c3565cd37a19eba318c0",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 1335,
+        "bbox_xyxy": [
+          317,
+          237,
+          358,
+          277
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "605852c211fa5055839407ec89ee3e7a",
+      "object_id": "a5eea22ec5df4a37ae8c2fed229b18ba",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "7da2e3c678ffc7750fe06f0b65693d3723eece5ff1a8c7c2bfb3d59e39c90e09",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 505,
+        "bbox_xyxy": [
+          388,
+          238,
+          401,
+          283
+        ],
+        "warnings": [
+          "user_review_recommended"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "6117c990609a5d168f18f4e6a3fbeefc",
+      "object_id": "4ec402f9a71d4ea7925b487ac7e11249",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "0bf8b3f218cabe555d370723d5c69c2af7188a2a05144eaa28c3222c811bc0d4",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 1876,
+        "bbox_xyxy": [
+          347,
+          206,
+          398,
+          298
+        ],
+        "warnings": [
+          "placement_review_required",
+          "yaw_unobservable"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "6d596b1798ec5f158832a7b5abceaff3",
+      "object_id": "80ca5a4d73184d3c9c15f6bcbb4ab8ef",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "172f0195e8c3dd02e57a970c8ccfbe10d09744c64a34a1c926fc8cecb921c0ea",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 1182,
+        "bbox_xyxy": [
+          147,
+          288,
+          182,
+          328
+        ],
+        "warnings": [
+          "yaw_unobservable"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "8d86a595527a585d83656d19051a6d1c",
+      "object_id": "6fb099577552459d86c1ab5bcb907fcd",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "c5eaf5f9d604d974a93757343ab366acde5b168d316bb8edb8c9173d8f54bee4",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 1417,
+        "bbox_xyxy": [
+          194,
+          317,
+          235,
+          359
+        ],
+        "warnings": [
+          "yaw_unobservable"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    },
+    {
+      "revision_id": "03d519b408bf5dfaa700fec3d9e50da2",
+      "object_id": "4107fd7a550041fcb7aa0c4407a600cc",
+      "revision_number": 1,
+      "parent_revision": null,
+      "binary_mask_hash": "3ce3e6b351574e09e41cd552f5c363dc3010eddb27a1405755d3255ef8cb7843",
+      "edit_operation": "initial_sam_export",
+      "author": "SAM final export adapter",
+      "source": "import_adapter",
+      "timestamp": "2026-06-29T08:08:16Z",
+      "quality_report": {
+        "binary": true,
+        "non_empty": true,
+        "area_pixels": 1023,
+        "bbox_xyxy": [
+          217,
+          304,
+          258,
+          346
+        ],
+        "warnings": [
+          "yaw_unobservable"
+        ],
+        "metrics": {}
+      },
+      "geometry_invalidation_status": "valid"
+    }
+  ],
+  "metadata": {
+    "source_contract": "Unified V3.1.1 clean scene manifest",
+    "source_mode": "clean_reconstruction",
+    "input_manifest_sha256": "b8188914e48a1b9955b8462f1a5240613cde4fb8e41360b17924175ab4410c35",
+    "uncertainties": [
+      "absolute scale is unverified",
+      "camera selection is based on structural reprojection only",
+      "finite room boundaries remain partially occluded by furniture"
+    ]
+  }
+}

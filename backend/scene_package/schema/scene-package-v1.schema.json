@@ -1,0 +1,913 @@
+{
+  "$defs": {
+    "ApprovalStatus": {
+      "enum": [
+        "unreviewed",
+        "approved",
+        "rejected",
+        "needs_revision"
+      ],
+      "title": "ApprovalStatus",
+      "type": "string"
+    },
+    "ArtifactReference": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "media_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Media Type"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "url"
+      ],
+      "title": "ArtifactReference",
+      "type": "object"
+    },
+    "AuthorSource": {
+      "enum": [
+        "sam",
+        "frontend",
+        "backend",
+        "import_adapter",
+        "blender",
+        "unknown"
+      ],
+      "title": "AuthorSource",
+      "type": "string"
+    },
+    "CameraCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "camera_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$",
+          "title": "Camera Id",
+          "type": "string"
+        },
+        "camera_type": {
+          "$ref": "#/$defs/CameraType"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "field_of_view_x_degrees": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 180,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field Of View X Degrees"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "normalized_intrinsics": {
+          "anyOf": [
+            {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Normalized Intrinsics"
+        },
+        "provisional": {
+          "default": true,
+          "title": "Provisional",
+          "type": "boolean"
+        },
+        "transform": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "title": "Transform",
+          "type": "array"
+        }
+      },
+      "required": [
+        "camera_id",
+        "camera_type",
+        "transform",
+        "confidence"
+      ],
+      "title": "CameraCandidate",
+      "type": "object"
+    },
+    "CameraType": {
+      "enum": [
+        "perspective",
+        "orthographic"
+      ],
+      "title": "CameraType",
+      "type": "string"
+    },
+    "CoordinateSystem": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinate_system_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$",
+          "title": "Coordinate System Id",
+          "type": "string"
+        },
+        "forward_axis": {
+          "enum": [
+            "+X",
+            "-X",
+            "+Y",
+            "-Y",
+            "+Z",
+            "-Z"
+          ],
+          "title": "Forward Axis",
+          "type": "string"
+        },
+        "handedness": {
+          "enum": [
+            "right",
+            "left"
+          ],
+          "title": "Handedness",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "origin": {
+          "title": "Origin",
+          "type": "string"
+        },
+        "transform_to_world": {
+          "anyOf": [
+            {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transform To World"
+        },
+        "units": {
+          "enum": [
+            "meters",
+            "pixels",
+            "normalized"
+          ],
+          "title": "Units",
+          "type": "string"
+        },
+        "up_axis": {
+          "enum": [
+            "+X",
+            "-X",
+            "+Y",
+            "-Y",
+            "+Z",
+            "-Z"
+          ],
+          "title": "Up Axis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinate_system_id",
+        "handedness",
+        "up_axis",
+        "forward_axis",
+        "units",
+        "origin"
+      ],
+      "title": "CoordinateSystem",
+      "type": "object"
+    },
+    "EditOperation": {
+      "enum": [
+        "initial_sam_export",
+        "merge",
+        "subtract",
+        "fill_holes",
+        "remove_small_components",
+        "smooth",
+        "manual",
+        "imported",
+        "other"
+      ],
+      "title": "EditOperation",
+      "type": "string"
+    },
+    "GenerationState": {
+      "enum": [
+        "pending",
+        "running",
+        "completed",
+        "failed",
+        "stale"
+      ],
+      "title": "GenerationState",
+      "type": "string"
+    },
+    "GenerationStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "errors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Errors",
+          "type": "array"
+        },
+        "overall": {
+          "$ref": "#/$defs/GenerationState"
+        },
+        "stages": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GenerationState"
+          },
+          "title": "Stages",
+          "type": "object"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "overall",
+        "updated_at"
+      ],
+      "title": "GenerationStatus",
+      "type": "object"
+    },
+    "GeometryInvalidationStatus": {
+      "enum": [
+        "not_computed",
+        "valid",
+        "invalidated",
+        "recompute_required"
+      ],
+      "title": "GeometryInvalidationStatus",
+      "type": "string"
+    },
+    "ImageDimensions": {
+      "additionalProperties": false,
+      "properties": {
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "title": "ImageDimensions",
+      "type": "object"
+    },
+    "MaskQualityReport": {
+      "additionalProperties": false,
+      "properties": {
+        "area_pixels": {
+          "minimum": 0,
+          "title": "Area Pixels",
+          "type": "integer"
+        },
+        "bbox_xyxy": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bbox Xyxy"
+        },
+        "binary": {
+          "title": "Binary",
+          "type": "boolean"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Metrics",
+          "type": "object"
+        },
+        "non_empty": {
+          "title": "Non Empty",
+          "type": "boolean"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "binary",
+        "non_empty",
+        "area_pixels"
+      ],
+      "title": "MaskQualityReport",
+      "type": "object"
+    },
+    "MaskRevision": {
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "title": "Author",
+          "type": "string"
+        },
+        "binary_mask_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Binary Mask Hash",
+          "type": "string"
+        },
+        "edit_operation": {
+          "$ref": "#/$defs/EditOperation"
+        },
+        "geometry_invalidation_status": {
+          "$ref": "#/$defs/GeometryInvalidationStatus"
+        },
+        "object_id": {
+          "pattern": "^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$",
+          "title": "Object Id",
+          "type": "string"
+        },
+        "parent_revision": {
+          "anyOf": [
+            {
+              "pattern": "^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Revision"
+        },
+        "quality_report": {
+          "$ref": "#/$defs/MaskQualityReport"
+        },
+        "revision_id": {
+          "pattern": "^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$",
+          "title": "Revision Id",
+          "type": "string"
+        },
+        "revision_number": {
+          "minimum": 1,
+          "title": "Revision Number",
+          "type": "integer"
+        },
+        "source": {
+          "$ref": "#/$defs/AuthorSource"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "revision_id",
+        "object_id",
+        "revision_number",
+        "binary_mask_hash",
+        "edit_operation",
+        "author",
+        "source",
+        "timestamp",
+        "quality_report",
+        "geometry_invalidation_status"
+      ],
+      "title": "MaskRevision",
+      "type": "object"
+    },
+    "OcclusionState": {
+      "enum": [
+        "visible",
+        "partially_occluded",
+        "fully_occluded",
+        "unknown"
+      ],
+      "title": "OcclusionState",
+      "type": "string"
+    },
+    "SemanticObject": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_status": {
+          "$ref": "#/$defs/ApprovalStatus"
+        },
+        "blender_object_identifier": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Blender Object Identifier"
+        },
+        "center": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Center",
+          "type": "array"
+        },
+        "dimensions": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Dimensions",
+          "type": "array"
+        },
+        "display_name": {
+          "maxLength": 192,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "geometry_confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Geometry Confidence",
+          "type": "number"
+        },
+        "mask_filename": {
+          "title": "Mask Filename",
+          "type": "string"
+        },
+        "mask_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Mask Hash",
+          "type": "string"
+        },
+        "mask_revision": {
+          "pattern": "^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$",
+          "title": "Mask Revision",
+          "type": "string"
+        },
+        "mask_url": {
+          "title": "Mask Url",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "object_id": {
+          "pattern": "^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$",
+          "title": "Object Id",
+          "type": "string"
+        },
+        "occlusion_state": {
+          "$ref": "#/$defs/OcclusionState"
+        },
+        "orientation_confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Orientation Confidence",
+          "type": "number"
+        },
+        "overlay_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Overlay Url"
+        },
+        "placement_confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Placement Confidence",
+          "type": "number"
+        },
+        "quality_warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Quality Warnings",
+          "type": "array"
+        },
+        "quaternion": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Quaternion",
+          "type": "array"
+        },
+        "selected_asset_identifier": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selected Asset Identifier"
+        },
+        "semantic_label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Semantic Label",
+          "type": "string"
+        },
+        "support_target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Support Target"
+        },
+        "support_type": {
+          "$ref": "#/$defs/SupportType"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "object_id",
+        "version",
+        "semantic_label",
+        "display_name",
+        "mask_filename",
+        "mask_url",
+        "mask_revision",
+        "mask_hash",
+        "approval_status",
+        "geometry_confidence",
+        "orientation_confidence",
+        "placement_confidence",
+        "center",
+        "dimensions",
+        "quaternion",
+        "support_type",
+        "occlusion_state"
+      ],
+      "title": "SemanticObject",
+      "type": "object"
+    },
+    "SourceImage": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "original_filename": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Filename"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "url"
+      ],
+      "title": "SourceImage",
+      "type": "object"
+    },
+    "StructuralRoomProxy": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "display_name": {
+          "title": "Display Name",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "proxy_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$",
+          "title": "Proxy Id",
+          "type": "string"
+        },
+        "semantic": {
+          "enum": [
+            "floor",
+            "wall",
+            "ceiling",
+            "room_boundary"
+          ],
+          "title": "Semantic",
+          "type": "string"
+        },
+        "transform": {
+          "$ref": "#/$defs/Transform"
+        }
+      },
+      "required": [
+        "proxy_id",
+        "semantic",
+        "display_name",
+        "transform",
+        "confidence"
+      ],
+      "title": "StructuralRoomProxy",
+      "type": "object"
+    },
+    "SupportType": {
+      "enum": [
+        "floor",
+        "wall",
+        "object",
+        "ceiling",
+        "unknown"
+      ],
+      "title": "SupportType",
+      "type": "string"
+    },
+    "Transform": {
+      "additionalProperties": false,
+      "properties": {
+        "center": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Center",
+          "type": "array"
+        },
+        "dimensions": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Dimensions",
+          "type": "array"
+        },
+        "quaternion": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Quaternion",
+          "type": "array"
+        }
+      },
+      "required": [
+        "center",
+        "dimensions",
+        "quaternion"
+      ],
+      "title": "Transform",
+      "type": "object"
+    }
+  },
+  "$id": "https://schemas.cyens.org/scene-package/1.0.0/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_urls": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ArtifactReference"
+      },
+      "title": "Artifact Urls",
+      "type": "object"
+    },
+    "camera_candidates": {
+      "items": {
+        "$ref": "#/$defs/CameraCandidate"
+      },
+      "minItems": 1,
+      "title": "Camera Candidates",
+      "type": "array"
+    },
+    "coordinate_systems": {
+      "items": {
+        "$ref": "#/$defs/CoordinateSystem"
+      },
+      "minItems": 2,
+      "title": "Coordinate Systems",
+      "type": "array"
+    },
+    "generation_status": {
+      "$ref": "#/$defs/GenerationStatus"
+    },
+    "image_dimensions": {
+      "$ref": "#/$defs/ImageDimensions"
+    },
+    "mask_revisions": {
+      "items": {
+        "$ref": "#/$defs/MaskRevision"
+      },
+      "title": "Mask Revisions",
+      "type": "array"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "title": "Metadata",
+      "type": "object"
+    },
+    "package_revision": {
+      "minimum": 1,
+      "title": "Package Revision",
+      "type": "integer"
+    },
+    "scene_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$",
+      "title": "Scene Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selected_camera": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$",
+      "title": "Selected Camera",
+      "type": "string"
+    },
+    "semantic_objects": {
+      "items": {
+        "$ref": "#/$defs/SemanticObject"
+      },
+      "title": "Semantic Objects",
+      "type": "array"
+    },
+    "source_image": {
+      "$ref": "#/$defs/SourceImage"
+    },
+    "structural_room_proxies": {
+      "items": {
+        "$ref": "#/$defs/StructuralRoomProxy"
+      },
+      "title": "Structural Room Proxies",
+      "type": "array"
+    }
+  },
+  "required": [
+    "package_revision",
+    "scene_id",
+    "source_image",
+    "image_dimensions",
+    "coordinate_systems",
+    "camera_candidates",
+    "selected_camera",
+    "structural_room_proxies",
+    "generation_status",
+    "artifact_urls",
+    "semantic_objects",
+    "mask_revisions"
+  ],
+  "title": "Shared Scene Package 1.0.0",
+  "type": "object"
+}

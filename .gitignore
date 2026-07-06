@@ -15,6 +15,7 @@ env/
 data/images/*
 data/masks/*
 data/exports/*
+data/scene_packages/
 !data/images/.gitkeep
 !data/masks/.gitkeep
 !data/exports/.gitkeep

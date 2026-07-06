@@ -1,0 +1,9 @@
+.blender-status{display:flex;align-items:center;gap:6px;padding-left:12px;border-left:1px solid var(--line);font-size:11px;color:var(--muted);white-space:nowrap}
+.blender-status span{width:7px;height:7px;border-radius:50%;background:#657080}
+.blender-status strong{color:var(--text)}
+.blender-status[data-status="synchronized"] span{background:var(--ok)}
+.blender-status[data-status="connecting"] span{background:var(--accent)}
+.blender-status[data-status="stale"] span,.blender-status[data-status="error"] span{background:var(--danger)}
+.sync-error-banner{display:flex;align-items:center;gap:12px;padding:9px 14px;margin-bottom:10px;border:1px solid #8d3f44;background:#321b20;border-radius:8px;color:#ffb7bd;font-size:12px}
+.sync-error-banner span{flex:1}
+.sync-error-banner button{padding:5px 10px}

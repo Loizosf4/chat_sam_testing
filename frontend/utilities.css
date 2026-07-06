@@ -1,0 +1,8 @@
+[hidden] {
+  display: none !important;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}

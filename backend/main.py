@@ -9,6 +9,7 @@ from PIL import Image
 from pydantic import BaseModel, Field
 
 from backend import mask_ops, sam_engine
+from backend.scene_package.api import artifact_router, router as scene_package_router
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -67,6 +68,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(scene_package_router)
+app.include_router(artifact_router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 app.mount("/images", StaticFiles(directory=IMAGE_DIR), name="images")

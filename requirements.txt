@@ -6,3 +6,4 @@ pillow
 numpy
 segment-anything
 mcp
+pydantic>=2.11,<3
