@@ -1,0 +1,13 @@
+{
+  "result": "pass",
+  "allowed_input_used": [
+    "i:\\Docs\\Images\\2d office.jpg"
+  ],
+  "existing_blend_files_read": false,
+  "existing_manifest_used": false,
+  "prior_transforms_used": false,
+  "prior_reconstruction_outputs_used": false,
+  "post_render_geometry_changes": false,
+  "one_object_one_primitive_rule_satisfied": true,
+  "external_vision_models_used": false
+}

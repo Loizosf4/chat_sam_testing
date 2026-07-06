@@ -1,0 +1,61 @@
+{
+  "collision_count": 4,
+  "collision_pairs": [
+    {
+      "a": "01_executive_desk",
+      "b": "03_high_back_office_chair",
+      "a_label": "large executive desk",
+      "b_label": "high-back office chair",
+      "a_index": 1,
+      "b_index": 3,
+      "overlap_xyz": [
+        0.684,
+        0.845,
+        0.755
+      ],
+      "notes": "AABB overlap in coarse primitive validation."
+    },
+    {
+      "a": "01_executive_desk",
+      "b": "04_left_visitor_chair",
+      "a_label": "large executive desk",
+      "b_label": "left visitor chair behind desk",
+      "a_index": 1,
+      "b_index": 4,
+      "overlap_xyz": [
+        0.608,
+        0.13,
+        0.73
+      ],
+      "notes": "AABB overlap in coarse primitive validation."
+    },
+    {
+      "a": "06_rear_left_armchair",
+      "b": "07_wood_coffee_table",
+      "a_label": "rear armchair by window",
+      "b_label": "small wooden coffee table",
+      "a_index": 6,
+      "b_index": 7,
+      "overlap_xyz": [
+        0.55,
+        0.283,
+        0.44
+      ],
+      "notes": "AABB overlap in coarse primitive validation."
+    },
+    {
+      "a": "07_wood_coffee_table",
+      "b": "08_center_lounge_armchair",
+      "a_label": "small wooden coffee table",
+      "b_label": "center white lounge armchair",
+      "a_index": 7,
+      "b_index": 8,
+      "overlap_xyz": [
+        0.213,
+        0.67,
+        0.44
+      ],
+      "notes": "AABB overlap in coarse primitive validation."
+    }
+  ]
+}
