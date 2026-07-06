@@ -1,0 +1,683 @@
+{
+  "semantic_objects": [
+    {
+      "object_index": 1,
+      "name": "OBJ_001_left_bulletin_board",
+      "semantic_label": "left wall bulletin board",
+      "primitive_type": "plane-like thin rectangular box",
+      "location_center": [
+        -2.92,
+        -1.0,
+        1.55
+      ],
+      "dimensions": [
+        0.07,
+        0.82,
+        0.62
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "left wall",
+      "collision_partners": [],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Notes/details on board intentionally not modeled."
+    },
+    {
+      "object_index": 2,
+      "name": "OBJ_002_left_low_filing_cabinet",
+      "semantic_label": "left low filing cabinet",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        -2.45,
+        -1.55,
+        0.38
+      ],
+      "dimensions": [
+        0.58,
+        0.54,
+        0.76
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Drawer fronts intentionally not modeled."
+    },
+    {
+      "object_index": 3,
+      "name": "OBJ_003_left_red_vertical_cabinet",
+      "semantic_label": "left red vertical cabinet or side panel",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        -2.88,
+        -1.55,
+        0.55
+      ],
+      "dimensions": [
+        0.16,
+        0.32,
+        1.1
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Ambiguous whether cabinet or freestanding panel; represented as one box."
+    },
+    {
+      "object_index": 4,
+      "name": "OBJ_004_tall_server_rack",
+      "semantic_label": "tall server rack cabinet",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        -1.72,
+        0.7,
+        0.98
+      ],
+      "dimensions": [
+        0.78,
+        0.56,
+        1.96
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Horizontal slats are visible but not modeled because the rack is one object."
+    },
+    {
+      "object_index": 5,
+      "name": "OBJ_005_narrow_wall_panel",
+      "semantic_label": "narrow wall panel near corner",
+      "primitive_type": "plane-like thin rectangular box",
+      "location_center": [
+        -0.82,
+        2.42,
+        1.65
+      ],
+      "dimensions": [
+        0.48,
+        0.07,
+        0.72
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "back wall",
+      "collision_partners": [],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Could be wall art or small cabinet face."
+    },
+    {
+      "object_index": 6,
+      "name": "OBJ_006_tall_blue_locker",
+      "semantic_label": "tall blue locker cabinet",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        -0.18,
+        1.72,
+        0.94
+      ],
+      "dimensions": [
+        0.48,
+        0.48,
+        1.88
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "No handle or panel details modeled."
+    },
+    {
+      "object_index": 7,
+      "name": "OBJ_007_center_blue_filing_cabinet",
+      "semantic_label": "center blue filing cabinet",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        -0.68,
+        0.78,
+        0.55
+      ],
+      "dimensions": [
+        0.58,
+        0.52,
+        1.1
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Drawer fronts intentionally not modeled."
+    },
+    {
+      "object_index": 8,
+      "name": "OBJ_008_desk_table",
+      "semantic_label": "desk table",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        0.28,
+        -0.42,
+        0.72
+      ],
+      "dimensions": [
+        1.78,
+        1.02,
+        0.16
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [
+        "OBJ_009_chair_behind_desk"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Table legs intentionally omitted; one tabletop-volume primitive approximates the object."
+    },
+    {
+      "object_index": 9,
+      "name": "OBJ_009_chair_behind_desk",
+      "semantic_label": "chair behind desk",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        0.38,
+        0.22,
+        0.49
+      ],
+      "dimensions": [
+        0.56,
+        0.48,
+        0.98
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [
+        "OBJ_008_desk_table"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Chair back/seat/legs not split into separate parts."
+    },
+    {
+      "object_index": 10,
+      "name": "OBJ_010_desktop_box_on_table",
+      "semantic_label": "small desktop box or monitor on table",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        0.44,
+        -0.44,
+        1.035
+      ],
+      "dimensions": [
+        0.42,
+        0.34,
+        0.47
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "desk table",
+      "collision_partners": [],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Ambiguous small computer/monitor block on tabletop."
+    },
+    {
+      "object_index": 11,
+      "name": "OBJ_011_back_wall_window_blinds",
+      "semantic_label": "back wall window with blinds",
+      "primitive_type": "plane-like thin rectangular box",
+      "location_center": [
+        1.35,
+        2.42,
+        1.55
+      ],
+      "dimensions": [
+        2.1,
+        0.07,
+        0.74
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "back wall",
+      "collision_partners": [
+        "OBJ_013_right_framed_wall_panel"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Slats not modeled separately."
+    },
+    {
+      "object_index": 12,
+      "name": "OBJ_012_wall_light_bar",
+      "semantic_label": "horizontal wall light bar",
+      "primitive_type": "cylinder",
+      "location_center": [
+        1.28,
+        2.38,
+        2.25
+      ],
+      "dimensions": [
+        0.09,
+        0.09,
+        1.25
+      ],
+      "rotation_degrees": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "support_target": "back wall",
+      "collision_partners": [],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Single cylinder approximates the glowing light fixture."
+    },
+    {
+      "object_index": 13,
+      "name": "OBJ_013_right_framed_wall_panel",
+      "semantic_label": "right framed wall panel",
+      "primitive_type": "plane-like thin rectangular box",
+      "location_center": [
+        2.62,
+        2.42,
+        1.55
+      ],
+      "dimensions": [
+        0.5,
+        0.07,
+        0.72
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "back wall",
+      "collision_partners": [
+        "OBJ_011_back_wall_window_blinds"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Frame/detail not modeled."
+    },
+    {
+      "object_index": 14,
+      "name": "OBJ_014_right_tall_blue_cabinet",
+      "semantic_label": "right tall blue cabinet",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        1.82,
+        0.55,
+        0.65
+      ],
+      "dimensions": [
+        0.58,
+        0.58,
+        1.3
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [
+        "OBJ_015_right_low_blue_cabinet"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "May be part of a storage cluster; kept as distinct visible cabinet block."
+    },
+    {
+      "object_index": 15,
+      "name": "OBJ_015_right_low_blue_cabinet",
+      "semantic_label": "right low blue cabinet",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        2.28,
+        0.05,
+        0.42
+      ],
+      "dimensions": [
+        0.7,
+        0.62,
+        0.84
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [
+        "OBJ_014_right_tall_blue_cabinet"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "May visually resemble an armchair; represented as one visible cabinet-like block."
+    },
+    {
+      "object_index": 16,
+      "name": "OBJ_016_coat_rack_stand",
+      "semantic_label": "coat rack stand",
+      "primitive_type": "cylinder",
+      "location_center": [
+        2.72,
+        -0.22,
+        0.84
+      ],
+      "dimensions": [
+        0.11,
+        0.11,
+        1.68
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [
+        "OBJ_017_round_hanging_item"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Hooks and tripod feet intentionally not modeled."
+    },
+    {
+      "object_index": 17,
+      "name": "OBJ_017_round_hanging_item",
+      "semantic_label": "round hanging item on rack",
+      "primitive_type": "sphere",
+      "location_center": [
+        2.53,
+        -0.12,
+        1.24
+      ],
+      "dimensions": [
+        0.44,
+        0.44,
+        0.44
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "coat rack stand",
+      "collision_partners": [
+        "OBJ_016_coat_rack_stand"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Ambiguous hat, lamp shade, or ball-like item; one sphere."
+    },
+    {
+      "object_index": 18,
+      "name": "OBJ_018_front_left_floor_box",
+      "semantic_label": "front left floor box",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        -0.82,
+        -1.75,
+        0.26
+      ],
+      "dimensions": [
+        0.58,
+        0.48,
+        0.52
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Top flaps/details not modeled."
+    },
+    {
+      "object_index": 19,
+      "name": "OBJ_019_front_center_floor_box",
+      "semantic_label": "front center floor box",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        0.05,
+        -2.05,
+        0.3
+      ],
+      "dimensions": [
+        0.58,
+        0.54,
+        0.6
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [
+        "OBJ_020_front_right_floor_box"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "One of the visible foreground box blocks."
+    },
+    {
+      "object_index": 20,
+      "name": "OBJ_020_front_right_floor_box",
+      "semantic_label": "front right floor box",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        0.58,
+        -1.84,
+        0.28
+      ],
+      "dimensions": [
+        0.58,
+        0.48,
+        0.56
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [
+        "OBJ_019_front_center_floor_box",
+        "OBJ_021_small_floor_box_or_parcel"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "One of the visible foreground box blocks."
+    },
+    {
+      "object_index": 21,
+      "name": "OBJ_021_small_floor_box_or_parcel",
+      "semantic_label": "small dark floor parcel",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        0.25,
+        -1.48,
+        0.42
+      ],
+      "dimensions": [
+        0.36,
+        0.32,
+        0.28
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform",
+      "collision_partners": [
+        "OBJ_020_front_right_floor_box"
+      ],
+      "one_object_one_primitive_followed": true,
+      "visible_uncertainty_notes": "Small ambiguous dark block in foreground cluster."
+    }
+  ],
+  "environment_objects": [
+    {
+      "name": "ENV_001_floor_platform",
+      "semantic_label": "floor platform",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        0.0,
+        0.0,
+        -0.06
+      ],
+      "dimensions": [
+        6.0,
+        5.0,
+        0.12
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": ""
+    },
+    {
+      "name": "ENV_002_left_wall",
+      "semantic_label": "left wall",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        -3.0,
+        0.0,
+        1.35
+      ],
+      "dimensions": [
+        0.12,
+        5.0,
+        2.7
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform"
+    },
+    {
+      "name": "ENV_003_back_wall",
+      "semantic_label": "back wall",
+      "primitive_type": "cube / rectangular box",
+      "location_center": [
+        0.0,
+        2.5,
+        1.35
+      ],
+      "dimensions": [
+        6.0,
+        0.12,
+        2.7
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "support_target": "floor platform"
+    }
+  ],
+  "cameras": [
+    {
+      "name": "CAM_perspective_input_view",
+      "type": "PERSP",
+      "location_center": [
+        4.25,
+        -5.35,
+        3.2
+      ],
+      "rotation_degrees": [
+        70.9187,
+        0.0,
+        38.7257
+      ],
+      "lens": 45.0,
+      "ortho_scale": null
+    },
+    {
+      "name": "CAM_top_debug",
+      "type": "ORTHO",
+      "location_center": [
+        0.0,
+        0.0,
+        7.5
+      ],
+      "rotation_degrees": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "lens": 50.0,
+      "ortho_scale": 6.2
+    },
+    {
+      "name": "CAM_front_debug",
+      "type": "ORTHO",
+      "location_center": [
+        0.0,
+        -7.2,
+        2.0
+      ],
+      "rotation_degrees": [
+        81.4309,
+        -0.0,
+        0.0
+      ],
+      "lens": 50.0,
+      "ortho_scale": 5.3
+    },
+    {
+      "name": "CAM_side_debug",
+      "type": "ORTHO",
+      "location_center": [
+        7.2,
+        0.0,
+        2.0
+      ],
+      "rotation_degrees": [
+        81.3136,
+        -0.0,
+        90.0
+      ],
+      "lens": 50.0,
+      "ortho_scale": 5.3
+    }
+  ]
+}

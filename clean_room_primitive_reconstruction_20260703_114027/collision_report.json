@@ -1,0 +1,60 @@
+{
+  "collision_scope": "semantic mesh AABB volume overlaps only; floor/wall support contacts are excluded from collision count",
+  "collision_count": 6,
+  "collision_pairs": [
+    {
+      "a": "OBJ_008_desk_table",
+      "b": "OBJ_009_chair_behind_desk",
+      "overlap_dimensions": {
+        "x": 0.56,
+        "y": 0.11,
+        "z": 0.16
+      }
+    },
+    {
+      "a": "OBJ_011_back_wall_window_blinds",
+      "b": "OBJ_013_right_framed_wall_panel",
+      "overlap_dimensions": {
+        "x": 0.03,
+        "y": 0.07,
+        "z": 0.72
+      }
+    },
+    {
+      "a": "OBJ_014_right_tall_blue_cabinet",
+      "b": "OBJ_015_right_low_blue_cabinet",
+      "overlap_dimensions": {
+        "x": 0.18,
+        "y": 0.1,
+        "z": 0.84
+      }
+    },
+    {
+      "a": "OBJ_016_coat_rack_stand",
+      "b": "OBJ_017_round_hanging_item",
+      "overlap_dimensions": {
+        "x": 0.085,
+        "y": 0.11,
+        "z": 0.44
+      }
+    },
+    {
+      "a": "OBJ_019_front_center_floor_box",
+      "b": "OBJ_020_front_right_floor_box",
+      "overlap_dimensions": {
+        "x": 0.05,
+        "y": 0.3,
+        "z": 0.56
+      }
+    },
+    {
+      "a": "OBJ_020_front_right_floor_box",
+      "b": "OBJ_021_small_floor_box_or_parcel",
+      "overlap_dimensions": {
+        "x": 0.14,
+        "y": 0.04,
+        "z": 0.28
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "input_image_path": "c:\\Users\\Loizos\\Downloads\\images.jpg",
+  "input_image_exists_at_preflight": true,
+  "only_input_image_used_as_visual_evidence": true,
+  "existing_blend_file_read": false,
+  "existing_manifest_used": false,
+  "prior_transforms_used": false,
+  "prior_reconstruction_outputs_used": false,
+  "external_vision_models_called": false,
+  "blender_operations_used_blender_mcp": true,
+  "shell_based_blender_automation_used": false,
+  "ui_automation_used": false,
+  "post_render_geometry_changes": false,
+  "one_batch_construction": true,
+  "one_object_one_primitive_rule_satisfied": true,
+  "unique_names": true,
+  "semantic_labels_preserved": true,
+  "compliance_result": "pass"
+}
