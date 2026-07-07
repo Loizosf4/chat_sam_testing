@@ -6,7 +6,7 @@ A local-first object mask editor scaffold.
 
 - Python FastAPI backend
 - Plain HTML, CSS, and JavaScript frontend
-- Local SAM model integration in a later phase
+- Local Meta Segment Anything Model 1 integration through `segment_anything`
 - No React
 - No database
 - No cloud APIs
@@ -42,6 +42,37 @@ python -m venv .venv
 The runner uses http://127.0.0.1:8000 when available. If port `8000` is occupied, it automatically tries the next free port through `8010` and prints the URL.
 
 Open the printed URL, or open `frontend/index.html` directly in your browser. When opened directly, the frontend probes local ports `8000` through `8010` to find the backend.
+
+## Local SAM 1 Configuration
+
+This project uses Meta's original SAM 1 Python package, `segment_anything`, through `backend/sam_engine.py`. It expects a SAM 1 checkpoint whose architecture matches `SAM_MODEL_TYPE`.
+
+For the local CPU ViT-B setup, create `.env` from `.env.example` or set these variables in PowerShell:
+
+```powershell
+$env:SAM_CHECKPOINT = 'I:\Models\SAM1_CPU\segment-anything\checkpoints\sam_vit_b_01ec64.pth'
+$env:SAM_MODEL_TYPE = 'vit_b'
+$env:SAM_DEVICE = 'cpu'
+```
+
+`SAM_CHECKPOINT_PATH` is still accepted as a backward-compatible alias, but `SAM_CHECKPOINT` is preferred.
+
+Do not commit `.env`; it is ignored by git. The checkpoint remains outside the repository.
+
+The repository `.venv` contains the app dependencies, but PyTorch is not pinned in `requirements.txt` because CPU and GPU builds are installed from different package indexes. For this machine, the existing SAM environment has CPU PyTorch and SAM installed, but it does not currently include the FastAPI/MCP app dependencies. The safer option is to use the project `.venv` for the app and install a CPU PyTorch build into it, or install the app requirements into the SAM environment after checking versions. Do not reinstall or upgrade PyTorch, TorchVision, NumPy, or OpenCV without reviewing the current versions first.
+
+Validate the configured checkpoint and load the model without processing a dataset:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\validate_sam_model.py
+```
+
+If you choose to run from the existing SAM environment instead, first ensure it contains the app dependencies from `requirements.txt`, then start the app with:
+
+```powershell
+I:\Models\SAM1_CPU\.venv\Scripts\Activate.ps1
+python run.py
+```
 
 ## Local Files
 
@@ -94,7 +125,3 @@ Use this workflow when an agent needs high-quality object masks:
 12. Inspect `previews/all_masks_overlay.png` before reporting that the mask set is done.
 
 Temporary component masks are fine during construction, but only final whole-object masks should be exported. Always report uncertain masks and explain what should be checked visually.
-
-## Phase 1
-
-The app can upload an image to `data/images/`, return its generated image ID and dimensions, and display it on the frontend canvas. SAM, points, boxes, masks, and MCP are not implemented yet.

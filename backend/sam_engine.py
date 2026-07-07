@@ -1,6 +1,7 @@
 import base64
 import io
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
@@ -15,6 +16,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 IMAGE_DIR = ROOT_DIR / "data" / "images"
 MASK_DIR = ROOT_DIR / "data" / "masks"
 DEFAULT_MODEL_TYPE = "vit_h"
+SUPPORTED_MODEL_TYPES = {"default", "vit_b", "vit_l", "vit_h"}
 VALID_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 
@@ -73,8 +75,10 @@ def load_model(
             from segment_anything import SamPredictor, sam_model_registry
         except ImportError as exc:
             raise SamEngineError(
-                "segment_anything or one of its dependencies is not installed. "
-                "Install project requirements and a PyTorch build compatible with your device.",
+                "segment_anything, torch, or another SAM dependency is not installed in the "
+                f"current Python environment ({sys.executable}). Install project requirements "
+                "and a PyTorch build compatible with your selected SAM_DEVICE, or start the "
+                "project from the environment that contains both the app dependencies and SAM.",
                 status_code=500,
             ) from exc
 
@@ -227,6 +231,24 @@ def get_mask_path(mask_id: str) -> Path:
     return mask_path
 
 
+def validate_model_config(
+    checkpoint_path: str | None = None,
+    model_type: str | None = None,
+    device: str | None = None,
+) -> dict[str, str]:
+    config = _read_config(
+        checkpoint_path_override=checkpoint_path,
+        model_type_override=model_type,
+        device_override=device,
+    )
+    return {
+        "checkpoint_path": str(config["checkpoint_path"]),
+        "model_type": str(config["model_type"]),
+        "device": str(config["device"]),
+        "python_executable": sys.executable,
+    }
+
+
 def _read_config(
     checkpoint_path_override: str | None = None,
     model_type_override: str | None = None,
@@ -234,28 +256,56 @@ def _read_config(
 ) -> dict[str, str | Path]:
     load_dotenv(ROOT_DIR / ".env")
 
-    checkpoint_path_raw = (checkpoint_path_override or os.getenv("SAM_CHECKPOINT_PATH", "")).strip()
+    checkpoint_path_raw = _first_config_value(
+        checkpoint_path_override,
+        os.getenv("SAM_CHECKPOINT"),
+        os.getenv("SAM_CHECKPOINT_PATH"),
+    )
     if not checkpoint_path_raw:
         raise SamEngineError(
-            "SAM_CHECKPOINT_PATH is missing. Set it in .env or the environment.",
+            "SAM_CHECKPOINT is missing. Set SAM_CHECKPOINT in .env or the environment. "
+            "SAM_CHECKPOINT_PATH is also accepted for backward compatibility.",
             status_code=400,
         )
 
     checkpoint_path = Path(checkpoint_path_raw).expanduser()
     if not checkpoint_path.is_file():
         raise SamEngineError(
-            f"SAM_CHECKPOINT_PATH does not point to a valid file: {checkpoint_path}",
+            f"SAM_CHECKPOINT does not point to a valid checkpoint file: {checkpoint_path}",
             status_code=400,
         )
 
-    model_type = (model_type_override or os.getenv("SAM_MODEL_TYPE", DEFAULT_MODEL_TYPE)).strip() or DEFAULT_MODEL_TYPE
-    device = (device_override or os.getenv("SAM_DEVICE", "")).strip() or _default_device()
+    model_type = (
+        _first_config_value(model_type_override, os.getenv("SAM_MODEL_TYPE"))
+        or DEFAULT_MODEL_TYPE
+    )
+    model_type = model_type.lower()
+    if model_type not in SUPPORTED_MODEL_TYPES:
+        supported = ", ".join(sorted(SUPPORTED_MODEL_TYPES))
+        raise SamEngineError(
+            f"Unsupported SAM_MODEL_TYPE '{model_type}'. Expected one of: {supported}. "
+            "For the local sam_vit_b_01ec64.pth checkpoint, set SAM_MODEL_TYPE=vit_b.",
+            status_code=400,
+        )
+
+    device = _first_config_value(device_override, os.getenv("SAM_DEVICE")) or _default_device()
+    device = _validate_device(device)
 
     return {
         "checkpoint_path": checkpoint_path,
         "model_type": model_type,
         "device": device,
     }
+
+
+def _first_config_value(*values: str | None) -> str:
+    for value in values:
+        if value is not None:
+            stripped = value.strip()
+            if stripped:
+                return stripped
+
+    return ""
 
 
 def _default_device() -> str:
@@ -265,6 +315,53 @@ def _default_device() -> str:
         return "cpu"
 
     return "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def _validate_device(device: str) -> str:
+    normalized = device.strip().lower()
+    if normalized == "cpu":
+        return "cpu"
+
+    if normalized == "cuda" or normalized.startswith("cuda:"):
+        try:
+            import torch
+        except ImportError as exc:
+            raise SamEngineError(
+                "SAM_DEVICE was set to CUDA, but torch is not installed in the current "
+                f"Python environment ({sys.executable}). Activate the correct environment "
+                "or install a PyTorch build compatible with CUDA.",
+                status_code=500,
+            ) from exc
+
+        if not torch.cuda.is_available():
+            raise SamEngineError(
+                "SAM_DEVICE was set to CUDA, but CUDA is not available to the installed "
+                f"PyTorch build in {sys.executable}. Set SAM_DEVICE=cpu for a CPU-only setup.",
+                status_code=400,
+            )
+
+        if ":" in normalized:
+            try:
+                index = int(normalized.split(":", 1)[1])
+            except ValueError as exc:
+                raise SamEngineError(
+                    f"Invalid SAM_DEVICE '{device}'. Use cpu, cuda, or cuda:<index>.",
+                    status_code=400,
+                ) from exc
+
+            if index < 0 or index >= torch.cuda.device_count():
+                raise SamEngineError(
+                    f"SAM_DEVICE '{device}' is not available. PyTorch reports "
+                    f"{torch.cuda.device_count()} CUDA device(s).",
+                    status_code=400,
+                )
+
+        return normalized
+
+    raise SamEngineError(
+        f"Invalid SAM_DEVICE '{device}'. Use cpu, cuda, or cuda:<index>.",
+        status_code=400,
+    )
 
 
 def _set_image_unlocked(image_id: str) -> dict[str, str | int | bool]:
