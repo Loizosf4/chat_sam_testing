@@ -8,7 +8,8 @@ The existing transports are retained:
 
 1. The website loads and edits scene packages through the FastAPI HTTP API.
 2. The Blender addon retains the reference addon's local HTTP server at `127.0.0.1:8765`.
-3. The website sends versioned JSON messages to `POST /command` and polls `GET /events?since=<sequence>` for Blender-originated events.
+3. The browser uses same-origin FastAPI routes under `/api/blender-sync/*`; the backend forwards them only to the fixed localhost Blender bridge. This avoids browser policies that block direct access to arbitrary local ports.
+4. The website sends versioned JSON messages through `/api/blender-sync/command` and polls `/api/blender-sync/events?since=<sequence>` for Blender-originated events.
 
 The addon owns only objects carrying `sam_semantic_id` and `sam_scene_id`. It creates them in `SAM Scene <scene_id>`. Objects without those properties are never deleted, moved, renamed, or relinked. The stable scene-package `object_id` is stored as `sam_semantic_id`; that same ID is used by the website mask and is reserved for a future replacement model.
 
@@ -18,9 +19,9 @@ Blender persists `sam_scene_id`, `sam_scene_revision`, `sam_sync_status`, and JS
 
 ## HTTP endpoints
 
-- `GET /health` returns addon availability and protocol version.
-- `POST /command` accepts one message envelope and returns `sync_ack` or `error`.
-- `GET /events?since=N` returns `{schema_version, latest_sequence, events}`. The bounded journal holds the latest 512 events.
+- Browser-facing: `GET /api/blender-sync/health`, `POST /api/blender-sync/command`, and `GET /api/blender-sync/events?since=N`.
+- Addon-local equivalents remain `GET /health`, `POST /command`, and `GET /events?since=N` on `127.0.0.1:8765`.
+- The proxy target is fixed to localhost, applies request/response size limits, preserves Blender status codes and JSON, and returns `503` when Blender is unavailable.
 
 The server binds only to `127.0.0.1`, accepts JSON, limits commands to 8 MiB, queues Blender mutations onto Blender's main thread, and supplies CORS headers for the local website.
 

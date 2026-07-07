@@ -4,7 +4,7 @@ import {MaskEditor} from "/static/brush.js";
 import {ReviewStore} from "/static/state.js";
 import {ScenePackageClient} from "/static/api.js";
 import {detailsHtml,objectListHtml} from "/static/components.js";
-import {BlenderSyncClient} from "/static/blender-sync.js";
+import {BlenderSyncClient} from "/static/blender-sync.js?v=1.0.2";
 
 const $=selector=>document.querySelector(selector);
 const canvas=$("#image-canvas"),stage=$("#canvas-stage"),ctx=canvas.getContext("2d"),store=new ReviewStore(),api=new ScenePackageClient(),bridge=new BlenderSyncClient(),view=new ViewportTransform(),cycle=new HitCycle();

@@ -21,7 +21,7 @@ def dispatch(request: dict[str, Any]) -> dict[str, Any]:
 def handshake(request: dict[str, Any]) -> dict[str, Any]:
     status = object_utils.sync_status()
     return response(request, "sync_ack", {
-        "addon_version": "1.0.0",
+        "addon_version": "1.0.1",
         "capabilities": ["scene_sync", "select_highlight", "selection_changed", "transform_update"],
         "sync_status": status,
     }, revision=status.get("revision"))

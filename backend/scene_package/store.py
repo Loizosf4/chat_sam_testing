@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid5
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 from .adapter import REVISION_NAMESPACE, SceneAdapterError, adapt_scene_package
 from .models import ArtifactReference, MaskQualityReport, MaskRevision, Scene, Transform
@@ -91,6 +91,40 @@ def inspect_image(path: Path, *, binary_mask: bool = False) -> tuple[int, int, s
                     metrics={"pixel_min": extrema[0], "pixel_max": extrema[1]},
                 )
             return width, height, media_type, report
+    except SceneStoreError:
+        raise
+    except Exception as exc:
+        raise SceneStoreError("invalid image artifact") from exc
+
+
+def normalize_uploaded_binary_mask(path: Path) -> None:
+    """Validate browser canvas PNG output and rewrite it as canonical grayscale.
+
+    Canvas ``toBlob('image/png')`` produces RGBA even when every displayed
+    pixel is grayscale.  Revision artifacts remain strict single-channel PNGs;
+    this function only accepts opaque RGB/RGBA input whose color channels are
+    identical and binary, then normalizes it before hashing and persistence.
+    """
+    try:
+        with Image.open(path) as image:
+            image.load()
+            if image.format != "PNG":
+                raise SceneStoreError("binary masks must be PNG images")
+            if image.mode in {"1", "L", "P"}:
+                return
+            if image.mode not in {"RGB", "RGBA"}:
+                raise SceneStoreError("binary masks must be grayscale or opaque grayscale RGBA PNG images")
+            rgba = image.convert("RGBA")
+            red, green, blue, alpha = rgba.split()
+            if alpha.getextrema() != (255, 255):
+                raise SceneStoreError("binary mask alpha must be fully opaque")
+            if ImageChops.difference(red, green).getbbox() or ImageChops.difference(red, blue).getbbox():
+                raise SceneStoreError("binary mask RGB channels must be identical")
+            histogram = red.histogram()
+            if any(histogram[1:255]):
+                raise SceneStoreError("mask pixels must contain only 0 and 255")
+            canonical = red.copy()
+        canonical.save(path, format="PNG", optimize=False)
     except SceneStoreError:
         raise
     except Exception as exc:
@@ -291,6 +325,7 @@ class SceneStore:
             current = next((obj for obj in scene.semantic_objects if obj.object_id == object_id), None)
             if current is None:
                 raise SceneStoreError("object not found", 404)
+            normalize_uploaded_binary_mask(mask_path)
             width, height, media, report = inspect_image(mask_path, binary_mask=True)
             if media != "image/png" or (width, height) != (scene.image_dimensions.width, scene.image_dimensions.height):
                 raise SceneStoreError("mask dimensions do not match the source image")

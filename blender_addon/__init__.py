@@ -5,7 +5,7 @@ from __future__ import annotations
 bl_info = {
     "name": "SAM Semantic Scene Bridge",
     "author": "CYENS SAM",
-    "version": (1, 0, 0),
+    "version": (1, 0, 1),
     "blender": (4, 0, 0),
     "category": "Object",
     "description": "Synchronize scene-package semantic objects with the mask review website.",

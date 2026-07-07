@@ -151,6 +151,36 @@ def test_transform_import_clears_object_geometry_staleness(client: TestClient) -
     assert item["object_id"] not in status.json()["stale_object_ids"]
 
 
+def test_canvas_rgba_binary_mask_is_normalized_to_grayscale(client: TestClient) -> None:
+    scene = _import(client)
+    item = scene["semantic_objects"][0]
+    current = Image.open(io.BytesIO(client.get(item["mask_url"]).content)).convert("RGBA")
+    red, green, blue, alpha = current.getpixel((0, 0))
+    value = 0 if red else 255
+    current.putpixel((0, 0), (value, value, value, alpha))
+    encoded = io.BytesIO()
+    current.save(encoded, format="PNG")
+
+    response = client.post(
+        f"/api/scenes/{scene['scene_id']}/objects/{item['object_id']}/mask-revisions",
+        data={
+            "expected_package_revision": scene["package_revision"],
+            "expected_object_version": item["version"],
+            "expected_mask_revision": item["mask_revision"],
+            "author": "canvas-regression-test",
+            "operation": "manual",
+        },
+        files={
+            "resulting_mask": ("mask.png", encoded.getvalue(), "image/png"),
+            "edit_delta": ("delta.json", b'{"strokes": []}', "application/json"),
+        },
+    )
+    assert response.status_code == 201, response.text
+    revised = next(obj for obj in response.json()["semantic_objects"] if obj["object_id"] == item["object_id"])
+    persisted = Image.open(io.BytesIO(client.get(revised["mask_url"]).content))
+    assert persisted.mode == "L"
+
+
 def test_import_rejects_zip_traversal(client: TestClient) -> None:
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w") as bundle:

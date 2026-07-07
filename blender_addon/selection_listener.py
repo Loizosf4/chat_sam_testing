@@ -13,6 +13,7 @@ from .protocol import SCHEMA_VERSION
 
 _last_selected: tuple[str | None, str | None] = (None, None)
 _transform_baseline: dict[str, str] = {}
+_baseline_timer_registered = False
 
 
 def _event(message_type: str, obj: bpy.types.Object) -> dict[str, Any]:
@@ -38,9 +39,20 @@ def refresh_baseline() -> None:
     }
 
 
+def _refresh_baseline_when_ready() -> float | None:
+    """Initialize object state after Blender leaves restricted registration mode."""
+    global _baseline_timer_registered
+    if not hasattr(bpy.data, "objects"):
+        return 0.1
+    refresh_baseline()
+    _baseline_timer_registered = False
+    return None
+
+
 def _on_depsgraph_update(_scene: bpy.types.Scene, depsgraph: Any) -> None:
     global _last_selected
-    active = bpy.context.view_layer.objects.active
+    view_layer = getattr(bpy.context, "view_layer", None)
+    active = view_layer.objects.active if view_layer is not None else None
     selected = (
         (str(active.get(object_utils.SCENE_PROPERTY)), str(active.get(object_utils.ID_PROPERTY)))
         if active and active.select_get() and active.get(object_utils.ID_PROPERTY)
@@ -64,11 +76,20 @@ def _on_depsgraph_update(_scene: bpy.types.Scene, depsgraph: Any) -> None:
 
 
 def install_selection_listener() -> None:
+    global _baseline_timer_registered
     if _on_depsgraph_update not in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(_on_depsgraph_update)
-    refresh_baseline()
+    # Blender exposes ``bpy.data`` as ``_RestrictData`` while add-ons register.
+    # Reading objects synchronously here therefore fails on a clean enable.
+    if not _baseline_timer_registered:
+        bpy.app.timers.register(_refresh_baseline_when_ready, first_interval=0.0)
+        _baseline_timer_registered = True
 
 
 def remove_selection_listener() -> None:
+    global _baseline_timer_registered
     if _on_depsgraph_update in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(_on_depsgraph_update)
+    if _baseline_timer_registered and bpy.app.timers.is_registered(_refresh_baseline_when_ready):
+        bpy.app.timers.unregister(_refresh_baseline_when_ready)
+    _baseline_timer_registered = False

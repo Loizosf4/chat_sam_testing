@@ -9,6 +9,7 @@ from PIL import Image
 from pydantic import BaseModel, Field
 
 from backend import mask_ops, sam_engine
+from backend.blender_sync_proxy import router as blender_sync_router
 from backend.scene_package.api import artifact_router, router as scene_package_router
 
 
@@ -71,6 +72,7 @@ app.add_middleware(
 
 app.include_router(scene_package_router)
 app.include_router(artifact_router)
+app.include_router(blender_sync_router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 app.mount("/images", StaticFiles(directory=IMAGE_DIR), name="images")
@@ -228,7 +230,7 @@ def export_masks(payload: ExportRequest) -> dict:
 
 @app.get("/")
 def index() -> FileResponse:
-    return FileResponse(FRONTEND_DIR / "index.html")
+    return FileResponse(FRONTEND_DIR / "index.html", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/style.css")
@@ -238,4 +240,4 @@ def stylesheet() -> FileResponse:
 
 @app.get("/app.js")
 def javascript() -> FileResponse:
-    return FileResponse(FRONTEND_DIR / "app.js")
+    return FileResponse(FRONTEND_DIR / "app.js", headers={"Cache-Control": "no-store"})
