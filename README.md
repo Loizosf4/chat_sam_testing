@@ -125,3 +125,49 @@ Use this workflow when an agent needs high-quality object masks:
 12. Inspect `previews/all_masks_overlay.png` before reporting that the mask set is done.
 
 Temporary component masks are fine during construction, but only final whole-object masks should be exported. Always report uncertain masks and explain what should be checked visually.
+
+## Local MoGe 2 Configuration
+
+MoGe runs out-of-process through the configured MoGe Python environment. The
+FastAPI/SAM process does not import `torch` or `moge`, so the Python 3.10 CPU
+SAM environment stays separate from the Python 3.12 AMD ROCm MoGe environment.
+
+Create or update your untracked `.env` with local values:
+
+```powershell
+$env:MOGE_PYTHON = '<path-to-moge-venv-python.exe>'
+$env:MOGE_REPOSITORY = '<path-to-local-moge-repository>'
+$env:MOGE_CHECKPOINT = '<path-to-moge-2-vitl-normal-model.pt>'
+$env:MOGE_VERSION = 'v2'
+$env:MOGE_DEVICE = 'cuda'
+$env:MOGE_MODEL = 'moge-2-vitl-normal'
+```
+
+Do not set `MOGE_DEVICE=rocm` or `hip`; ROCm PyTorch exposes the AMD GPU
+through the CUDA-facing API, so the device string remains `cuda` or `cuda:0`.
+CPU execution is disabled unless `MOGE_ALLOW_CPU=true` is set explicitly.
+
+Validate the configured worker, editable MoGe import, AMD compatibility fix,
+PyTorch/ROCm stack, GPU visibility, and checkpoint load:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\validate_moge_model.py
+```
+
+The MoGe worker receives a registered RGB source image path and writes numerical
+geometry under `data/exports/moge/{image_id}/` by default:
+
+- `geometry.npz`
+- `points.npy`
+- `depth.npy`
+- `normal.npy`
+- `valid_mask.npy`
+- `intrinsics.npy`
+- preview PNGs
+- `metadata.json`
+
+The existing reconstruction pipeline consumes MoGe points, depth, normals,
+validity mask, and normalized intrinsics. It does not require GLB or PLY output
+for the checked-in scene-package flow. SAM masks and MoGe geometry are produced
+independently from the same source image; downstream reconstruction filters the
+full-image MoGe maps with the final SAM object masks.
