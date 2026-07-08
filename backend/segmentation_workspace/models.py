@@ -45,6 +45,48 @@ class ImageDimensions(ContractModel):
     height: int = Field(gt=0, strict=True)
 
 
+class SamPromptPoint(ContractModel):
+    x: float
+    y: float
+    label: Literal[0, 1]
+
+
+class SamDraftCandidate(ContractModel):
+    candidate_index: int = Field(ge=0, strict=True)
+    score: float
+    area_pixels: int = Field(ge=0, strict=True)
+    bbox_xyxy: list[int] = Field(min_length=4, max_length=4)
+    mask_url: str
+
+    @field_validator("mask_url")
+    @classmethod
+    def application_url_only(cls, value: str) -> str:
+        if value.startswith("/api/segmentation-artifacts/sam-candidates/"):
+            return value
+        if value.startswith("file://") or _WINDOWS_PATH.match(value):
+            raise ValueError("mask_url must not be a filesystem path")
+        raise ValueError("mask_url must be an application-controlled SAM candidate URL")
+
+
+class SamDraftState(ContractModel):
+    prompt_revision: int = Field(default=0, ge=0, strict=True)
+    points: list[SamPromptPoint] = Field(default_factory=list)
+    box: list[float] | None = Field(default=None, min_length=4, max_length=4)
+    candidates: list[SamDraftCandidate] = Field(default_factory=list)
+    selected_candidate_index: int | None = Field(default=None, ge=0)
+    prepared_image_key: str | None = Field(default=None, min_length=1, max_length=256)
+    updated_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def validate_candidate_selection(self) -> "SamDraftState":
+        indexes = [candidate.candidate_index for candidate in self.candidates]
+        if len(indexes) != len(set(indexes)):
+            raise ValueError("duplicate candidate indexes are not allowed")
+        if self.selected_candidate_index is not None and self.selected_candidate_index not in set(indexes):
+            raise ValueError("selected_candidate_index must reference an available candidate")
+        return self
+
+
 class SourceImage(ContractModel):
     image_id: str = Field(pattern=UUID_PATTERN)
     url: str
@@ -86,6 +128,7 @@ class SegmentationObject(ContractModel):
     status: SegmentationObjectStatus = SegmentationObjectStatus.draft
     created_at: datetime
     updated_at: datetime
+    sam_draft: SamDraftState = Field(default_factory=SamDraftState)
 
     @field_validator("semantic_label", "display_name")
     @classmethod

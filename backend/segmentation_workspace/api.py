@@ -12,6 +12,10 @@ from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from backend import sam_engine
+
+from .models import SamPromptPoint
+from . import service
 from .store import SegmentationWorkspaceStore, SegmentationWorkspaceStoreError
 
 
@@ -39,11 +43,35 @@ class WorkspaceObjectUpdate(BaseModel):
     expected_object_version: int = Field(ge=1)
 
 
+class SamPredictRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prompt_revision: int = Field(ge=1)
+    points: list[SamPromptPoint] = Field(default_factory=list)
+    box: list[float] | None = Field(default=None, min_length=4, max_length=4)
+    base_prompt_revision: int | None = Field(default=None, ge=0)
+    base_candidate_index: int | None = Field(default=None, ge=0)
+    multimask_output: bool | None = None
+
+
+class SamCandidateSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prompt_revision: int = Field(ge=1)
+    candidate_index: int = Field(ge=0)
+    expected_workspace_revision: int = Field(ge=1)
+    expected_object_version: int = Field(ge=1)
+
+
 router = APIRouter(prefix="/api/segmentation-workspaces", tags=["segmentation-workspaces"])
 artifact_router = APIRouter(prefix="/api/segmentation-artifacts", tags=["segmentation-artifacts"])
 
 
 def _error(exc: SegmentationWorkspaceStoreError) -> HTTPException:
+    return HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+def _sam_error(exc: sam_engine.SamEngineError) -> HTTPException:
     return HTTPException(status_code=exc.status_code, detail=str(exc))
 
 
@@ -143,6 +171,71 @@ def delete_object(
     return workspace.model_dump(mode="json")
 
 
+@router.post("/{workspace_id}/prepare-sam")
+def prepare_sam(workspace_id: str) -> dict[str, Any]:
+    try:
+        return service.prepare_workspace_sam(STORE, workspace_id)
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+    except sam_engine.SamEngineError as exc:
+        raise _sam_error(exc) from exc
+
+
+@router.post("/{workspace_id}/objects/{object_id}/predict")
+def predict_candidates(workspace_id: str, object_id: str, payload: SamPredictRequest) -> dict[str, Any]:
+    try:
+        return service.predict_workspace_candidates(
+            STORE,
+            workspace_id,
+            object_id,
+            prompt_revision=payload.prompt_revision,
+            points=payload.points,
+            box=payload.box,
+            base_prompt_revision=payload.base_prompt_revision,
+            base_candidate_index=payload.base_candidate_index,
+            multimask_output=payload.multimask_output,
+        )
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+    except sam_engine.SamEngineError as exc:
+        raise _sam_error(exc) from exc
+
+
+@router.post("/{workspace_id}/objects/{object_id}/select-candidate")
+def select_candidate(workspace_id: str, object_id: str, payload: SamCandidateSelection) -> dict[str, Any]:
+    try:
+        return service.select_workspace_candidate(
+            STORE,
+            workspace_id,
+            object_id,
+            prompt_revision=payload.prompt_revision,
+            candidate_index=payload.candidate_index,
+            expected_workspace_revision=payload.expected_workspace_revision,
+            expected_object_version=payload.expected_object_version,
+        )
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+
+
+@router.delete("/{workspace_id}/objects/{object_id}/sam-draft")
+def clear_sam_draft(
+    workspace_id: str,
+    object_id: str,
+    expected_workspace_revision: int = Query(..., ge=1),
+    expected_object_version: int = Query(..., ge=1),
+) -> dict[str, Any]:
+    try:
+        return service.clear_workspace_sam_draft(
+            STORE,
+            workspace_id,
+            object_id,
+            expected_workspace_revision=expected_workspace_revision,
+            expected_object_version=expected_object_version,
+        )
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+
+
 @artifact_router.get("/{kind}/{identifier:path}")
 def get_segmentation_artifact(kind: str, identifier: str) -> FileResponse:
     try:
@@ -152,5 +245,8 @@ def get_segmentation_artifact(kind: str, identifier: str) -> FileResponse:
     return FileResponse(
         path,
         media_type=media_type,
-        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=3600"},
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store" if kind == "sam-candidates" else "private, max-age=3600",
+        },
     )

@@ -18,6 +18,9 @@ from PIL import Image
 from .models import (
     CURRENT_SCHEMA_VERSION,
     ImageDimensions,
+    SamDraftCandidate,
+    SamDraftState,
+    SamPromptPoint,
     SegmentationObject,
     SegmentationWorkspace,
     SourceImage,
@@ -89,6 +92,18 @@ def inspect_source_image(path: Path) -> tuple[int, int, str]:
         raise SegmentationWorkspaceStoreError("invalid image file", 400) from exc
 
 
+def save_binary_mask(path: Path, mask: Any) -> None:
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise SegmentationWorkspaceStoreError("numpy is not installed", 500) from exc
+
+    mask_array = np.asarray(mask).astype(bool)
+    image = Image.fromarray((mask_array.astype(np.uint8) * 255), mode="L")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    image.save(path, format="PNG")
+
+
 def _require_expected(current: int, expected: int, label: str) -> None:
     if current != expected:
         raise SegmentationWorkspaceStoreError(
@@ -148,6 +163,15 @@ class SegmentationWorkspaceStore:
         if not isinstance(value, dict):
             raise SegmentationWorkspaceStoreError("invalid artifact index", 500)
         return value
+
+    def _write_index(self, workspace_id: str, index: dict[str, dict[str, str]]) -> None:
+        atomic_json(self._workspace_dir(workspace_id) / "artifact-index.json", index)
+
+    def _find_object_document(self, document: dict[str, Any], object_id: str) -> dict[str, Any]:
+        item = next((obj for obj in document["objects"] if obj["object_id"] == object_id), None)
+        if item is None:
+            raise SegmentationWorkspaceStoreError("object not found", 404)
+        return item
 
     def create_workspace(
         self,
@@ -249,6 +273,7 @@ class SegmentationWorkspaceStore:
                     status="draft",
                     created_at=now,
                     updated_at=now,
+                    sam_draft=SamDraftState(),
                 ).model_dump(mode="json")
             )
             document["workspace_revision"] += 1
@@ -310,13 +335,205 @@ class SegmentationWorkspaceStore:
             document["workspace_revision"] += 1
             document["updated_at"] = datetime.now(timezone.utc).isoformat()
             updated = SegmentationWorkspace.model_validate(document)
+            index = {
+                key: value
+                for key, value in self._index(workspace_id).items()
+                if not key.startswith(f"sam-candidates/{workspace_id}/{object_id}/")
+            }
+            self._write_index(workspace_id, index)
+            self._remove_object_artifacts(workspace_id, object_id)
             self._save(updated)
             return updated
 
+    def persist_sam_prediction(
+        self,
+        workspace_id: str,
+        object_id: str,
+        *,
+        prompt_revision: int,
+        points: list[dict[str, Any]],
+        box: list[float] | None,
+        candidate_masks: list[Any],
+        candidate_scores: list[float],
+        candidate_areas: list[int],
+        candidate_bboxes: list[list[int]],
+        selected_candidate_index: int,
+        prepared_image_key: str,
+    ) -> SegmentationWorkspace:
+        with self._lock(workspace_id):
+            workspace = self._load(workspace_id)
+            if workspace.status == "finalized":
+                raise SegmentationWorkspaceStoreError("workspace is finalized", 409)
+            document = workspace.model_dump(mode="json")
+            item = self._find_object_document(document, object_id)
+            if item["status"] == "finalized":
+                raise SegmentationWorkspaceStoreError("object is finalized", 409)
+            current_revision = int(item.get("sam_draft", {}).get("prompt_revision", 0))
+            if prompt_revision <= current_revision:
+                raise SegmentationWorkspaceStoreError(
+                    f"stale prompt revision: incoming {prompt_revision}, current {current_revision}",
+                    409,
+                )
+
+            if not candidate_masks:
+                raise SegmentationWorkspaceStoreError("SAM returned no candidates", 500)
+            if not (
+                len(candidate_masks)
+                == len(candidate_scores)
+                == len(candidate_areas)
+                == len(candidate_bboxes)
+            ):
+                raise SegmentationWorkspaceStoreError("candidate metadata mismatch", 500)
+
+            base = self._workspace_dir(workspace_id)
+            sam_root = base / "objects" / object_id / "sam"
+            sam_root.mkdir(parents=True, exist_ok=True)
+            temporary = Path(tempfile.mkdtemp(prefix=f".{prompt_revision}.", dir=sam_root))
+            target = sam_root / str(prompt_revision)
+            candidates: list[dict[str, Any]] = []
+            index = self._index(workspace_id)
+            prefix = f"sam-candidates/{workspace_id}/{object_id}/"
+            try:
+                for index_value, mask in enumerate(candidate_masks):
+                    filename = f"candidate-{index_value}.png"
+                    destination = temporary / filename
+                    save_binary_mask(destination, mask)
+                    artifact_id = f"{prefix}{prompt_revision}/{index_value}"
+                    mask_hash = sha256_file(destination)
+                    index[artifact_id] = {
+                        "path": f"objects/{object_id}/sam/{prompt_revision}/{filename}",
+                        "media_type": "image/png",
+                        "sha256": mask_hash,
+                    }
+                    candidates.append(
+                        SamDraftCandidate(
+                            candidate_index=index_value,
+                            score=float(candidate_scores[index_value]),
+                            area_pixels=int(candidate_areas[index_value]),
+                            bbox_xyxy=candidate_bboxes[index_value],
+                            mask_url=f"/api/segmentation-artifacts/{artifact_id}",
+                        ).model_dump(mode="json")
+                    )
+
+                if selected_candidate_index not in {candidate["candidate_index"] for candidate in candidates}:
+                    raise SegmentationWorkspaceStoreError("selected candidate does not exist", 500)
+                if target.exists():
+                    shutil.rmtree(target)
+                os.replace(temporary, target)
+                index = {
+                    key: value
+                    for key, value in index.items()
+                    if not (key.startswith(prefix) and not key.startswith(f"{prefix}{prompt_revision}/"))
+                }
+                now = datetime.now(timezone.utc)
+                item["sam_draft"] = SamDraftState(
+                    prompt_revision=prompt_revision,
+                    points=[SamPromptPoint.model_validate(point).model_dump(mode="json") for point in points],
+                    box=box,
+                    candidates=candidates,
+                    selected_candidate_index=selected_candidate_index,
+                    prepared_image_key=prepared_image_key,
+                    updated_at=now,
+                ).model_dump(mode="json")
+                item["object_version"] += 1
+                item["updated_at"] = now.isoformat()
+                document["workspace_revision"] += 1
+                document["updated_at"] = now.isoformat()
+                updated = SegmentationWorkspace.model_validate(document)
+                self._write_index(workspace_id, index)
+                self._save(updated)
+                self._remove_old_sam_dirs(base, object_id, str(prompt_revision))
+                return updated
+            except Exception:
+                shutil.rmtree(temporary, ignore_errors=True)
+                raise
+
+    def select_sam_candidate(
+        self,
+        workspace_id: str,
+        object_id: str,
+        *,
+        prompt_revision: int,
+        candidate_index: int,
+        expected_workspace_revision: int,
+        expected_object_version: int,
+    ) -> SegmentationWorkspace:
+        with self._lock(workspace_id):
+            workspace = self._load(workspace_id)
+            _require_expected(workspace.workspace_revision, expected_workspace_revision, "workspace revision")
+            document = workspace.model_dump(mode="json")
+            item = self._find_object_document(document, object_id)
+            _require_expected(item["object_version"], expected_object_version, "object version")
+            draft = item.get("sam_draft") or {}
+            if draft.get("prompt_revision", 0) != prompt_revision:
+                raise SegmentationWorkspaceStoreError("prompt revision does not match current candidates", 409)
+            if candidate_index not in {candidate["candidate_index"] for candidate in draft.get("candidates", [])}:
+                raise SegmentationWorkspaceStoreError("candidate not found", 404)
+            now = datetime.now(timezone.utc)
+            draft["selected_candidate_index"] = candidate_index
+            draft["updated_at"] = now.isoformat()
+            item["sam_draft"] = draft
+            item["object_version"] += 1
+            item["updated_at"] = now.isoformat()
+            document["workspace_revision"] += 1
+            document["updated_at"] = now.isoformat()
+            updated = SegmentationWorkspace.model_validate(document)
+            self._save(updated)
+            return updated
+
+    def clear_sam_draft(
+        self,
+        workspace_id: str,
+        object_id: str,
+        *,
+        expected_workspace_revision: int,
+        expected_object_version: int,
+    ) -> SegmentationWorkspace:
+        with self._lock(workspace_id):
+            workspace = self._load(workspace_id)
+            _require_expected(workspace.workspace_revision, expected_workspace_revision, "workspace revision")
+            document = workspace.model_dump(mode="json")
+            item = self._find_object_document(document, object_id)
+            _require_expected(item["object_version"], expected_object_version, "object version")
+            now = datetime.now(timezone.utc)
+            item["sam_draft"] = SamDraftState(prompt_revision=0, updated_at=now).model_dump(mode="json")
+            item["object_version"] += 1
+            item["updated_at"] = now.isoformat()
+            document["workspace_revision"] += 1
+            document["updated_at"] = now.isoformat()
+            updated = SegmentationWorkspace.model_validate(document)
+            index = {
+                key: value
+                for key, value in self._index(workspace_id).items()
+                if not key.startswith(f"sam-candidates/{workspace_id}/{object_id}/")
+            }
+            self._write_index(workspace_id, index)
+            self._remove_object_artifacts(workspace_id, object_id)
+            self._save(updated)
+            return updated
+
+    def _remove_object_artifacts(self, workspace_id: str, object_id: str) -> None:
+        base = self._workspace_dir(workspace_id)
+        shutil.rmtree(base / "objects" / object_id, ignore_errors=True)
+
+    def _remove_old_sam_dirs(self, base: Path, object_id: str, keep_revision: str) -> None:
+        sam_root = base / "objects" / object_id / "sam"
+        if not sam_root.is_dir():
+            return
+        for child in sam_root.iterdir():
+            if child.name != keep_revision:
+                shutil.rmtree(child, ignore_errors=True)
+
     def resolve_artifact(self, kind: str, identifier: str) -> tuple[Path, str]:
-        if kind not in {"source-images"}:
+        if kind not in {"source-images", "sam-candidates"}:
             raise SegmentationWorkspaceStoreError("artifact not found", 404)
-        if not valid_id(identifier) or "/" in identifier or "\\" in identifier:
+        if kind == "source-images" and (not valid_id(identifier) or "/" in identifier or "\\" in identifier):
+            raise SegmentationWorkspaceStoreError("invalid artifact identifier")
+        if kind == "sam-candidates" and (
+            not identifier
+            or "\\" in identifier
+            or any(part in {"", ".", ".."} for part in identifier.split("/"))
+        ):
             raise SegmentationWorkspaceStoreError("invalid artifact identifier")
         key = f"{kind}/{identifier}"
         for workspace_dir in self.root.iterdir():
