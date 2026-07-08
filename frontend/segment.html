@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Segmentation workspace</title>
+    <link rel="stylesheet" href="/static/segment-style.css">
+  </head>
+  <body>
+    <main class="seg-shell">
+      <header class="seg-topbar">
+        <div class="brand-block">
+          <span class="brand-mark" aria-hidden="true">S</span>
+          <div><h1>Segmentation workspace</h1><p>Pre-MoGe semantic masks</p></div>
+        </div>
+        <form id="workspace-loader" class="workspace-loader">
+          <label for="workspace-id">Workspace ID</label>
+          <input id="workspace-id" autocomplete="off" placeholder="Workspace UUID">
+          <button type="submit">Load</button>
+        </form>
+        <div id="sam-status" class="sam-status" data-state="idle"><span></span><strong>SAM</strong><output>Not prepared</output></div>
+        <button id="retry-sam" type="button" class="secondary">Retry SAM</button>
+      </header>
+
+      <section id="empty-state" class="empty-state">
+        <form id="upload-form" class="upload-panel">
+          <h2>Start from a source image</h2>
+          <p>Upload a PNG, JPEG, or WebP image, or load an existing workspace ID above.</p>
+          <label class="drop-zone" for="source-image">
+            <span>Choose source image</span>
+            <input id="source-image" name="source_image" type="file" accept="image/png,image/jpeg,image/webp" required>
+          </label>
+          <button type="submit" class="primary">Create workspace</button>
+        </form>
+      </section>
+
+      <section id="workspace-app" class="workspace-app" hidden>
+        <aside class="objects-panel panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">Objects</p><h2>Semantic objects</h2></div>
+            <button id="new-object" type="button" class="primary">+ New object</button>
+          </div>
+          <form id="object-create-form" class="object-form" hidden>
+            <label>Display name <input id="new-display-name" autocomplete="off"></label>
+            <label>Semantic label <input id="new-semantic-label" autocomplete="off"></label>
+            <div class="form-actions"><button type="submit">Create</button><button type="button" id="cancel-create" class="secondary">Cancel</button></div>
+          </form>
+          <div id="object-list" class="object-list"></div>
+        </aside>
+
+        <section class="canvas-column">
+          <div class="canvas-toolbar panel" role="toolbar" aria-label="Segmentation tools">
+            <button class="tool-button is-active" type="button" data-tool="inspect">Inspect</button>
+            <button class="tool-button" type="button" data-tool="positive">+ Positive</button>
+            <button class="tool-button" type="button" data-tool="negative">- Negative</button>
+            <button class="tool-button" type="button" data-tool="pan">Pan</button>
+            <span class="toolbar-spacer"></span>
+            <button id="undo-point" type="button" class="secondary">Undo point</button>
+            <button id="reset-draft" type="button" class="secondary">Reset draft</button>
+            <button id="zoom-out" type="button" class="icon-button" aria-label="Zoom out">-</button>
+            <output id="zoom-level">100%</output>
+            <button id="zoom-in" type="button" class="icon-button" aria-label="Zoom in">+</button>
+            <button id="fit-view" type="button" class="secondary">Fit</button>
+          </div>
+          <div id="canvas-stage" class="canvas-stage">
+            <canvas id="segment-canvas" aria-label="Source image with selected candidate mask"></canvas>
+            <div id="canvas-message" class="canvas-message">Loading image...</div>
+            <div id="mask-updating" class="mask-updating" hidden>Updating mask...</div>
+          </div>
+          <div class="overlay-bar panel">
+            <label>Mask opacity <input id="overlay-opacity" type="range" min="0" max="1" step="0.05" value="0.55"><output id="opacity-output">55%</output></label>
+          </div>
+        </section>
+
+        <aside class="details-panel panel">
+          <div class="panel-heading"><div><p class="eyebrow">Selected</p><h2>Object details</h2></div></div>
+          <form id="rename-form" class="object-form">
+            <label>Display name <input id="display-name" autocomplete="off"></label>
+            <label>Semantic label <input id="semantic-label" autocomplete="off"></label>
+            <div class="form-actions"><button type="submit">Save rename</button><button id="delete-object" type="button" class="danger">Delete</button></div>
+          </form>
+          <section class="detail-section">
+            <h3>Prompt</h3>
+            <dl class="stats"><div><dt>Points</dt><dd id="point-count">0</dd></div><div><dt>Revision</dt><dd id="prompt-revision">0</dd></div><div><dt>Object version</dt><dd id="object-version">0</dd></div></dl>
+          </section>
+          <section class="detail-section">
+            <h3>Candidates</h3>
+            <div id="candidate-list" class="candidate-list"></div>
+          </section>
+        </aside>
+      </section>
+    </main>
+    <div id="status-region" class="status-region" aria-live="polite"></div>
+    <script type="module" src="/static/segment-app.js"></script>
+  </body>
+</html>

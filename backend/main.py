@@ -274,6 +274,11 @@ def index() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "index.html", headers={"Cache-Control": "no-store"})
 
 
+@app.get("/segment")
+def segment() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "segment.html", headers={"Cache-Control": "no-store"})
+
+
 @app.get("/style.css")
 def stylesheet() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "style.css")

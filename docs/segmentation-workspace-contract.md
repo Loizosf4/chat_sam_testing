@@ -98,6 +98,7 @@ are interactive drafts.
 ## API Endpoints
 
 ```text
+GET    /segment
 POST   /api/segmentation-workspaces
 GET    /api/segmentation-workspaces/{workspace_id}
 DELETE /api/segmentation-workspaces/{workspace_id}?expected_workspace_revision=...
@@ -110,6 +111,31 @@ POST   /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/select-ca
 DELETE /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/sam-draft?expected_workspace_revision=...&expected_object_version=...
 GET    /api/segmentation-artifacts/{kind}/{identifier}
 ```
+
+## Browser Workspace
+
+`/segment` is the first frontend for this pre-MoGe contract. It supports image
+upload, loading an existing workspace with `/segment?workspace={workspace_id}`,
+semantic object creation, object rename/delete, SAM preparation, positive and
+negative point tools, candidate-mask display, candidate selection, undo, draft
+reset, and pan/zoom.
+
+The browser keeps local prompt state separate from the persisted `sam_draft`.
+Point markers are added to local cumulative state immediately so the user sees
+feedback before SAM returns. Each local prompt change consumes a new
+monotonically increasing prompt revision; failed or stale revisions are not
+reused.
+
+The frontend uses a latest-state-wins prediction controller. If a point is added
+while a prediction is running, only the newest cumulative state is submitted when
+the active request finishes. Older responses cannot replace a newer applied
+mask, and stale `409` prediction responses are ignored when a newer local
+revision exists.
+
+Candidate selection is a structural mutation and is blocked while the selected
+object has an active or pending prediction. Candidate masks are displayed from
+their artifact URLs with a cache-busting query string; stored workspace URLs are
+not modified.
 
 ## Optimistic Concurrency
 
@@ -135,9 +161,6 @@ has already been stored.
 
 The following remain intentionally outside this contract:
 
-- Frontend segmentation UI.
-- Point-marker rendering.
-- Latest-state-wins frontend request queue.
 - Brush corrections.
 - Manual override layers.
 - Final-mask composition.
