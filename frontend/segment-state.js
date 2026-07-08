@@ -163,30 +163,110 @@ export function selectedCandidate(object){
 
 export function canSelectCandidate(promptState){return Boolean(promptState)&&!promptState.running&&!promptState.pending}
 
+export function predictionStatusVisible({controller=null,promptState=null}={}){
+  return Boolean(controller?.running||controller?.pending||promptState?.running||promptState?.pending);
+}
+
+export function controllerKey(workspaceId,objectId){return `${workspaceId}:${objectId}`}
+
+export function candidateCacheKey({workspaceId,objectId,promptRevision,candidateIndex,maskUrl}){
+  return `${workspaceId}:${objectId}:${promptRevision}:${candidateIndex}:${maskUrl}`;
+}
+
+export class CandidateMaskCache {
+  constructor(){this.items=new Map()}
+  get(key){return this.items.get(key)}
+  set(key,value){this.items.set(key,value);return value}
+  has(key){return this.items.has(key)}
+  clear(){this.items.clear()}
+  clearObject(workspaceId,objectId){
+    const prefix=`${workspaceId}:${objectId}:`;
+    for(const key of [...this.items.keys()])if(key.startsWith(prefix))this.items.delete(key);
+  }
+}
+
+export class WorkspaceLoadGate {
+  constructor(){this.generation=0}
+  begin(){this.generation+=1;return this.generation}
+  isCurrent(generation){return generation===this.generation}
+}
+
+export class RenderGate {
+  constructor(){this.generation=0}
+  request(){this.generation+=1;return this.generation}
+  snapshot(state){
+    return {
+      generation:this.generation,
+      workspaceId:state.workspaceId??null,
+      selectedObjectId:state.selectedObjectId??null,
+      promptRevision:state.promptRevision??0,
+      selectedCandidateIndex:state.selectedCandidateIndex??null,
+      maskUrl:state.maskUrl??null,
+      viewport:{...(state.viewport||{})},
+      sourceImageId:state.sourceImageId??null
+    };
+  }
+  isCurrent(snapshot,state){
+    return Boolean(snapshot)&&snapshot.generation===this.generation&&
+      snapshot.workspaceId===(state.workspaceId??null)&&
+      snapshot.selectedObjectId===(state.selectedObjectId??null)&&
+      snapshot.promptRevision===(state.promptRevision??0)&&
+      snapshot.selectedCandidateIndex===(state.selectedCandidateIndex??null)&&
+      snapshot.maskUrl===(state.maskUrl??null)&&
+      snapshot.sourceImageId===(state.sourceImageId??null)&&
+      JSON.stringify(snapshot.viewport)===JSON.stringify(state.viewport||{});
+  }
+}
+
+export class ControllerRegistry {
+  constructor(){this.controllers=new Map()}
+  key(workspaceId,objectId){return controllerKey(workspaceId,objectId)}
+  get(workspaceId,objectId){return this.controllers.get(this.key(workspaceId,objectId))}
+  set(workspaceId,objectId,controller){this.controllers.set(this.key(workspaceId,objectId),controller);return controller}
+  dispose(workspaceId,objectId){
+    const key=this.key(workspaceId,objectId);
+    const controller=this.controllers.get(key);
+    controller?.invalidate();
+    this.controllers.delete(key);
+  }
+  disposeWorkspace(workspaceId){
+    for(const [key,controller] of [...this.controllers.entries()]){
+      if(key.startsWith(`${workspaceId}:`)){controller.invalidate();this.controllers.delete(key)}
+    }
+  }
+  clear(){for(const controller of this.controllers.values())controller.invalidate();this.controllers.clear()}
+  has(workspaceId,objectId){return this.controllers.has(this.key(workspaceId,objectId))}
+}
+
 export class PredictionController {
-  constructor({objectId,submit,apply,onError=()=>{},isActive=()=>true}){
+  constructor({workspaceId=null,objectId,submit,apply,onError=()=>{},isActive=()=>true,onStateChange=()=>{}}){
+    this.workspaceId=workspaceId;
     this.objectId=objectId;
     this.submit=submit;
     this.apply=apply;
     this.onError=onError;
     this.isActive=isActive;
+    this.onStateChange=onStateChange;
     this.pending=null;
     this.running=false;
     this.invalidated=false;
     this.latestAppliedRevision=0;
     this.submitted=[];
   }
+  _notify(){this.onStateChange({workspaceId:this.workspaceId,objectId:this.objectId,running:this.running,pending:Boolean(this.pending),invalidated:this.invalidated})}
   enqueue(snapshot){
     if(this.invalidated)return;
-    this.pending={...snapshot,objectId:this.objectId};
+    this.pending={...snapshot,workspaceId:this.workspaceId,objectId:this.objectId};
+    this._notify();
     if(!this.running)this._drain();
   }
-  invalidate(){this.invalidated=true;this.pending=null}
+  invalidate(){this.invalidated=true;this.pending=null;this.running=false;this._notify()}
   async _drain(){
     if(this.running||!this.pending||this.invalidated)return;
     const snapshot=this.pending;
     this.pending=null;
     this.running=true;
+    this._notify();
     this.submitted.push(snapshot);
     try{
       const response=await this.submit(snapshot);
@@ -202,6 +282,7 @@ export class PredictionController {
       this.onError(error,snapshot);
     }finally{
       this.running=false;
+      this._notify();
       if(!this.invalidated&&this.pending)this._drain();
     }
   }

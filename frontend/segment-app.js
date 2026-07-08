@@ -4,12 +4,18 @@ import {SegmentationWorkspaceClient} from "/static/segment-api.js";
 import {canvasEventPoint,canvasPointToImage,fitViewport} from "/static/segment-coordinates.js";
 import {candidateListHtml,objectListHtml} from "/static/segment-components.js";
 import {
+  CandidateMaskCache,
+  ControllerRegistry,
   PredictionController,
+  RenderGate,
   SegmentStore,
+  WorkspaceLoadGate,
   canSelectCandidate,
+  candidateCacheKey,
   mergeCandidateSelectionResponse,
   mergeClearDraftResponse,
   mergePredictionResponse,
+  predictionStatusVisible,
   selectedCandidate,
   semanticLabelFromDisplayName
 } from "/static/segment-state.js";
@@ -21,36 +27,44 @@ const view=new ViewportTransform();
 const canvas=$("#segment-canvas");
 const stage=$("#canvas-stage");
 const ctx=canvas.getContext("2d");
-const controllers=new Map();
-const candidateImageCache=new Map();
-let sourceImage=null,renderQueued=false,pointer=null,panPointer=null;
+const controllers=new ControllerRegistry();
+const candidateImageCache=new CandidateMaskCache();
+const loadGate=new WorkspaceLoadGate();
+const renderGate=new RenderGate();
+const structuralBusyByObject=new Map();
+let sourceImage=null,sourceImageId=null,renderQueued=false,panPointer=null;
 
 function absoluteUrl(path){return new URL(path,location.origin).href}
 function toast(message,error=false){const el=document.createElement("div");el.className=`toast${error?" error":""}`;el.textContent=message;$("#status-region").append(el);setTimeout(()=>el.remove(),4200)}
 function setCanvasMessage(message){$("#canvas-message").textContent=message;$("#canvas-message").hidden=!message}
 function currentObject(){return store.selected}
 function currentPromptState(){return store.getPromptState(store.selectedObjectId)}
+function selectedWorkspaceId(){return store.workspace?.workspace_id??null}
+function selectedController(){return store.selectedObjectId&&selectedWorkspaceId()?controllers.get(selectedWorkspaceId(),store.selectedObjectId):null}
 
 function imageElement(url){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error(`Could not load ${url}`));img.src=absoluteUrl(url)})}
-async function maskBinary(candidate,draft){if(!candidate)return null;const key=`${candidate.mask_url}?prompt_revision=${draft.prompt_revision}&candidate=${candidate.candidate_index}`;if(candidateImageCache.has(key))return candidateImageCache.get(key);const img=await imageElement(key);const c=document.createElement("canvas");c.width=view.imageWidth;c.height=view.imageHeight;const cctx=c.getContext("2d",{willReadFrequently:true});cctx.drawImage(img,0,0,c.width,c.height);const binary=binaryFromImageData(cctx.getImageData(0,0,c.width,c.height));candidateImageCache.set(key,binary);return binary}
+async function maskBinary(candidate,draft,objectId,workspaceId){if(!candidate)return null;const key=candidateCacheKey({workspaceId,objectId,promptRevision:draft.prompt_revision,candidateIndex:candidate.candidate_index,maskUrl:candidate.mask_url});if(candidateImageCache.has(key))return candidateImageCache.get(key);const img=await imageElement(`${candidate.mask_url}?prompt_revision=${draft.prompt_revision}&candidate=${candidate.candidate_index}`);const c=document.createElement("canvas");c.width=view.imageWidth;c.height=view.imageHeight;const cctx=c.getContext("2d",{willReadFrequently:true});cctx.drawImage(img,0,0,c.width,c.height);const binary=binaryFromImageData(cctx.getImageData(0,0,c.width,c.height));candidateImageCache.set(key,binary);return binary}
 
-async function loadSourceImage(workspace){sourceImage=await imageElement(workspace.source_image.url);view.setImageSize(workspace.image_dimensions.width,workspace.image_dimensions.height).fit();resizeCanvas()}
-async function prepareSam(){if(!store.workspace)return;store.setSamStatus("preparing","Preparing...");try{const result=await api.prepareSam(store.workspace.workspace_id);store.setSamStatus("ready",`Ready (${result.model_type} ${result.device})`)}catch(error){store.setSamStatus("failed",error.message);toast(error.message,true)}}
-async function loadWorkspace(workspaceId){try{store.loadingState="Loading";store.setError("");setCanvasMessage("Loading workspace...");const workspace=await api.getWorkspace(workspaceId);await loadSourceImage(workspace);store.load(workspace);history.replaceState(null,"",`/segment?workspace=${encodeURIComponent(workspace.workspace_id)}`);$("#workspace-id").value=workspace.workspace_id;$("#empty-state").hidden=true;$("#workspace-app").hidden=false;setCanvasMessage("");await prepareSam()}catch(error){setCanvasMessage("");toast(error.message,true);store.setError(error.message)}}
-async function createWorkspace(file){const workspace=await api.createWorkspace(file);await loadSourceImage(workspace);store.load(workspace);history.replaceState(null,"",`/segment?workspace=${encodeURIComponent(workspace.workspace_id)}`);$("#workspace-id").value=workspace.workspace_id;$("#empty-state").hidden=true;$("#workspace-app").hidden=false;await prepareSam()}
+async function loadSourceImage(workspace,generation){const image=await imageElement(workspace.source_image.url);if(!loadGate.isCurrent(generation))return false;sourceImage=image;sourceImageId=workspace.source_image.image_id;view.setImageSize(workspace.image_dimensions.width,workspace.image_dimensions.height).fit();resizeCanvas();return true}
+async function prepareSam(generation=loadGate.generation,workspaceId=store.workspace?.workspace_id){if(!workspaceId||!loadGate.isCurrent(generation))return;store.setSamStatus("preparing","Preparing...");try{const result=await api.prepareSam(workspaceId);if(!loadGate.isCurrent(generation)||store.workspace?.workspace_id!==workspaceId)return;store.setSamStatus("ready",`Ready (${result.model_type} ${result.device})`)}catch(error){if(!loadGate.isCurrent(generation)||store.workspace?.workspace_id!==workspaceId)return;store.setSamStatus("failed",error.message);toast(error.message,true)}}
+function resetTransientForWorkspaceChange(){controllers.clear();structuralBusyByObject.clear();candidateImageCache.clear();renderGate.request();$("#mask-updating").hidden=true}
+async function activateWorkspace(workspace,generation){if(!loadGate.isCurrent(generation))return false;resetTransientForWorkspaceChange();store.load(workspace);history.replaceState(null,"",`/segment?workspace=${encodeURIComponent(workspace.workspace_id)}`);$("#workspace-id").value=workspace.workspace_id;$("#empty-state").hidden=true;$("#workspace-app").hidden=false;setCanvasMessage("");requestDraw();await prepareSam(generation,workspace.workspace_id);return loadGate.isCurrent(generation)}
+async function loadWorkspace(workspaceId){const generation=loadGate.begin();try{store.loadingState="Loading";store.setError("");setCanvasMessage("Loading workspace...");const workspace=await api.getWorkspace(workspaceId);if(!loadGate.isCurrent(generation))return;if(!await loadSourceImage(workspace,generation))return;await activateWorkspace(workspace,generation)}catch(error){if(!loadGate.isCurrent(generation))return;setCanvasMessage("");toast(error.message,true);store.setError(error.message)}}
+async function createWorkspace(file){const generation=loadGate.begin();try{const workspace=await api.createWorkspace(file);if(!loadGate.isCurrent(generation))return;if(!await loadSourceImage(workspace,generation))return;await activateWorkspace(workspace,generation)}catch(error){if(loadGate.isCurrent(generation))toast(error.message,true)}}
 
-function updateWorkspace(workspace,preserveId=store.selectedObjectId){store.load(workspace,preserveId);requestDraw()}
+function updateWorkspace(workspace,preserveId=store.selectedObjectId){const previousIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);store.load(workspace,preserveId);const currentIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);for(const id of previousIds)if(!currentIds.has(id)){controllers.dispose(workspace.workspace_id,id);structuralBusyByObject.delete(id);candidateImageCache.clearObject(workspace.workspace_id,id)}renderPredictionStatus();requestDraw()}
 function selectedObjectColor(){const index=Math.max(0,(store.workspace?.objects||[]).findIndex(o=>o.object_id===store.selectedObjectId));return colorForIndex(index)}
 
 function renderObjects(){if(!store.workspace)return;$("#object-list").innerHTML=objectListHtml(store.workspace.objects,store.selectedObjectId,store.localPromptStateByObject)}
 function renderDetails(){
   const object=currentObject();
+  const busy=object?Boolean(structuralBusyByObject.get(object.object_id)):false;
   $("#rename-form").hidden=!object;
-  $("#delete-object").disabled=!object;
+  $("#delete-object").disabled=!object||busy;
   const samReady=store.samStatus.state==="ready";
   document.querySelectorAll("[data-tool='positive'],[data-tool='negative']").forEach(button=>button.disabled=!samReady);
-  $("#undo-point").disabled=!object||!currentPromptState()?.localPoints.length;
-  $("#reset-draft").disabled=!object;
+  $("#undo-point").disabled=!object||busy||!currentPromptState()?.localPoints.length;
+  $("#reset-draft").disabled=!object||busy;
   if(!object){$("#candidate-list").innerHTML="<p class='muted-pad'>Select an object</p>";return}
   $("#display-name").value=object.display_name;
   $("#semantic-label").value=object.semantic_label;
@@ -61,7 +75,8 @@ function renderDetails(){
   $("#candidate-list").innerHTML=candidateListHtml(object,object.sam_draft?.selected_candidate_index);
 }
 function renderSamStatus(){const el=$("#sam-status");el.dataset.state=store.samStatus.state;el.querySelector("output").textContent=store.samStatus.message;$("#retry-sam").hidden=!store.workspace}
-function renderAll(){renderObjects();renderDetails();renderSamStatus();requestDraw()}
+function renderPredictionStatus(){const controller=selectedController();const state=currentPromptState();$("#mask-updating").hidden=!predictionStatusVisible({controller,promptState:state})}
+function renderAll(){renderObjects();renderDetails();renderSamStatus();renderPredictionStatus();requestDraw()}
 
 function drawPoint(point){
   const canvasPoint=view.imageToCanvas(point.x,point.y);
@@ -82,6 +97,28 @@ function drawPoint(point){
   ctx.restore();
 }
 
+function renderSnapshotState(){
+  const object=currentObject(),draft=object?.sam_draft||{},candidate=object?selectedCandidate(object):null;
+  return {
+    workspaceId:store.workspace?.workspace_id??null,
+    selectedObjectId:object?.object_id??null,
+    promptRevision:draft.prompt_revision||0,
+    selectedCandidateIndex:draft.selected_candidate_index??null,
+    maskUrl:candidate?.mask_url??null,
+    viewport:{zoom:view.zoom,panX:view.panX,panY:view.panY,width:view.viewportWidth,height:view.viewportHeight,scale:view.scale},
+    sourceImageId
+  };
+}
+
+function paintBase(width,height){
+  ctx.setTransform(Math.max(1,window.devicePixelRatio||1),0,0,Math.max(1,window.devicePixelRatio||1),0,0);
+  ctx.clearRect(0,0,width,height);
+  if(!sourceImage||!store.workspace)return false;
+  const origin=view.origin,scale=view.scale;
+  ctx.drawImage(sourceImage,origin.x,origin.y,view.imageWidth*scale,view.imageHeight*scale);
+  return true;
+}
+
 async function draw(){
   renderQueued=false;
   const width=stage.clientWidth,height=stage.clientHeight;
@@ -92,37 +129,45 @@ async function draw(){
     canvas.height=Math.round(height*dpr);
     view.setViewport(width,height,dpr);
   }
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.clearRect(0,0,width,height);
-  if(!sourceImage||!store.workspace)return;
-  const origin=view.origin,scale=view.scale;
-  ctx.drawImage(sourceImage,origin.x,origin.y,view.imageWidth*scale,view.imageHeight*scale);
-  const object=currentObject();
-  if(object){
-    const draft=object.sam_draft||{};
-    const candidate=selectedCandidate(object);
-    const mask=await maskBinary(candidate,draft).catch(error=>{toast(`Candidate artifact failed to load: ${error.message}`,true);return null});
-    if(mask){
-      const overlay=document.createElement("canvas");
-      overlay.width=view.imageWidth;
-      overlay.height=view.imageHeight;
-      overlay.getContext("2d").putImageData(rgbaForMask(mask,view.imageWidth,view.imageHeight,selectedObjectColor(),Number($("#overlay-opacity").value),true),0,0);
-      ctx.imageSmoothingEnabled=false;
-      ctx.drawImage(overlay,origin.x,origin.y,view.imageWidth*scale,view.imageHeight*scale);
-    }
-    for(const point of currentPromptState()?.localPoints||draft.points||[])drawPoint(point);
+  const snapshot=renderGate.snapshot(renderSnapshotState());
+  const object=currentObject(),draft=object?.sam_draft||{},candidate=object?selectedCandidate(object):null;
+  let mask=null;
+  if(object&&candidate){
+    mask=await maskBinary(candidate,draft,object.object_id,store.workspace.workspace_id).catch(error=>{if(renderGate.isCurrent(snapshot,renderSnapshotState()))toast(`Candidate artifact failed to load: ${error.message}`,true);return null});
+    if(!renderGate.isCurrent(snapshot,renderSnapshotState()))return;
   }
+  if(!paintBase(width,height))return;
+  if(object&&mask){
+    const origin=view.origin,scale=view.scale;
+    const overlay=document.createElement("canvas");
+    overlay.width=view.imageWidth;
+    overlay.height=view.imageHeight;
+    overlay.getContext("2d").putImageData(rgbaForMask(mask,view.imageWidth,view.imageHeight,selectedObjectColor(),Number($("#overlay-opacity").value),true),0,0);
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(overlay,origin.x,origin.y,view.imageWidth*scale,view.imageHeight*scale);
+  }
+  if(object)for(const point of currentPromptState()?.localPoints||draft.points||[])drawPoint(point);
 }
-function requestDraw(){if(!renderQueued){renderQueued=true;requestAnimationFrame(draw)}}
+function requestDraw(){renderGate.request();if(!renderQueued){renderQueued=true;requestAnimationFrame(draw)}}
 function resizeCanvas(){const rect=stage.getBoundingClientRect();fitViewport(view,rect.width,rect.height,window.devicePixelRatio||1);requestDraw();updateZoom()}
 function updateZoom(){$("#zoom-level").textContent=`${Math.round(view.zoom*100)}%`}
 
+function syncPromptStateFromController({workspaceId,objectId,running,pending,invalidated}){
+  if(store.workspace?.workspace_id!==workspaceId)return;
+  const state=store.getPromptState(objectId);
+  if(state){state.running=running;state.pending=pending;state.invalidated=invalidated}
+  renderPredictionStatus();
+  renderDetails();
+}
 function getController(objectId){
-  if(!controllers.has(objectId)){
-    controllers.set(objectId,new PredictionController({
+  const workspaceId=store.workspace?.workspace_id;
+  if(!workspaceId)return null;
+  if(!controllers.get(workspaceId,objectId)){
+    controllers.set(workspaceId,objectId,new PredictionController({
+      workspaceId,
       objectId,
-      isActive:id=>store.workspace?.objects.some(o=>o.object_id===id),
-      submit:snapshot=>api.predict(store.workspace.workspace_id,objectId,{
+      isActive:id=>store.workspace?.workspace_id===workspaceId&&store.workspace?.objects.some(o=>o.object_id===id),
+      submit:snapshot=>api.predict(workspaceId,objectId,{
         prompt_revision:snapshot.revision,
         points:snapshot.points,
         box:snapshot.box,
@@ -131,27 +176,25 @@ function getController(objectId){
         multimask_output:null
       }),
       apply:(response,snapshot)=>{
-        if(!store.workspace||!store.workspace.objects.some(o=>o.object_id===response.object_id))return;
+        if(!store.workspace||store.workspace.workspace_id!==workspaceId||!store.workspace.objects.some(o=>o.object_id===response.object_id))return;
         updateWorkspace(mergePredictionResponse(store.workspace,response),store.selectedObjectId);
         const state=store.getPromptState(response.object_id);
         state.latestAppliedRevision=response.prompt_revision;
         state.persistedRevision=response.prompt_revision;
         state.localPoints=[...snapshot.points];
-        state.running=false;
-        state.pending=false;
-        $("#mask-updating").hidden=true;
+        renderPredictionStatus();
       },
       onError:(error,snapshot)=>{
-        $("#mask-updating").hidden=true;
+        if(store.workspace?.workspace_id!==workspaceId)return;
         const state=store.getPromptState(snapshot.objectId);
-        if(state){state.running=false;state.pending=false}
         if(error.status===409&&state?.nextRevision>snapshot.revision+1)return;
         if(error.status===409)reloadAfterConflict("Prediction was stale. Reloaded workspace state.");
         else toast(error.message,true);
-      }
+      },
+      onStateChange:syncPromptStateFromController
     }));
   }
-  return controllers.get(objectId);
+  return controllers.get(workspaceId,objectId);
 }
 
 function submitPrompt(objectId,revision,points,box){
@@ -159,8 +202,8 @@ function submitPrompt(objectId,revision,points,box){
   const draft=object?.sam_draft||{};
   const hasBase=Number.isInteger(draft.prompt_revision)&&draft.prompt_revision>0&&draft.selected_candidate_index!==null&&draft.selected_candidate_index!==undefined;
   const controller=getController(objectId);
+  if(!controller)return;
   const promptState=store.getPromptState(objectId);
-  $("#mask-updating").hidden=false;
   controller.enqueue({
     objectId,
     revision,
@@ -169,21 +212,26 @@ function submitPrompt(objectId,revision,points,box){
     basePromptRevision:hasBase?draft.prompt_revision:null,
     baseCandidateIndex:hasBase?draft.selected_candidate_index:null
   });
-  promptState.running=controller.running;
-  promptState.pending=Boolean(controller.pending);
+  promptState.running=controller.running;promptState.pending=Boolean(controller.pending);
+  renderPredictionStatus();
 }
+
+function disposeController(objectId){const workspaceId=store.workspace?.workspace_id;if(workspaceId)controllers.dispose(workspaceId,objectId);const state=store.getPromptState(objectId);if(state){state.running=false;state.pending=false;state.invalidated=false}renderPredictionStatus()}
 
 async function clearDraft(objectId){
   const object=store.workspace.objects.find(o=>o.object_id===objectId);
-  if(!object)return;
-  controllers.get(objectId)?.invalidate();
+  if(!object||structuralBusyByObject.get(objectId))return;
+  structuralBusyByObject.set(objectId,"reset");
+  disposeController(objectId);
+  renderAll();
   try{
     const response=await api.clearDraft(store.workspace,object);
     updateWorkspace(mergeClearDraftResponse(store.workspace,response),objectId);
     store.resetPromptState(objectId);
-    candidateImageCache.clear();
+    candidateImageCache.clearObject(store.workspace.workspace_id,objectId);
     toast("SAM draft reset");
   }catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry reset.");else toast(error.message,true)}
+  finally{structuralBusyByObject.delete(objectId);renderAll()}
 }
 
 async function reloadAfterConflict(message){const id=store.workspace?.workspace_id;if(id){const workspace=await api.getWorkspace(id);updateWorkspace(workspace,store.selectedObjectId);toast(message,true)}}
@@ -197,6 +245,7 @@ stage.addEventListener("pointerdown",event=>{
   if(!imagePoint)return;
   if((store.activeTool==="positive"||store.activeTool==="negative")&&currentObject()){
     if(store.samStatus.state!=="ready"){toast("SAM is not ready yet.",true);return}
+    if(structuralBusyByObject.get(store.selectedObjectId)){toast("Wait for the current object action to finish.",true);return}
     const label=store.activeTool==="positive"?1:0;
     const result=store.addPoint(store.selectedObjectId,{x:imagePoint.x,y:imagePoint.y,label});
     requestDraw();
@@ -214,10 +263,10 @@ $("#new-object").addEventListener("click",()=>{$("#object-create-form").hidden=f
 $("#cancel-create").addEventListener("click",()=>{$("#object-create-form").hidden=true});
 $("#new-display-name").addEventListener("input",()=>{$("#new-semantic-label").value=semanticLabelFromDisplayName($("#new-display-name").value)});
 $("#object-create-form").addEventListener("submit",async event=>{event.preventDefault();try{const display=$("#new-display-name").value.trim();const label=$("#new-semantic-label").value.trim()||semanticLabelFromDisplayName(display);const workspace=await api.createObject(store.workspace,label,display);const created=workspace.objects.find(o=>!store.workspace.objects.some(existing=>existing.object_id===o.object_id));$("#object-create-form").hidden=true;$("#new-display-name").value="";$("#new-semantic-label").value="";updateWorkspace(workspace,created?.object_id);toast("Object created")}catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry create.");else toast(error.message,true)}});
-$("#object-list").addEventListener("click",event=>{const row=event.target.closest("[data-object-id]");if(row){store.select(row.dataset.objectId);requestDraw()}});
+$("#object-list").addEventListener("click",event=>{const row=event.target.closest("[data-object-id]");if(row){store.select(row.dataset.objectId);renderPredictionStatus();requestDraw()}});
 $("#rename-form").addEventListener("submit",async event=>{event.preventDefault();const object=currentObject();if(!object)return;try{const workspace=await api.updateObject(store.workspace,object,$("#semantic-label").value.trim(),$("#display-name").value.trim());updateWorkspace(workspace,object.object_id);toast("Object renamed")}catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry rename.");else toast(error.message,true)}});
-$("#delete-object").addEventListener("click",async()=>{const object=currentObject();if(!object||!confirm(`Delete ${object.display_name}?`))return;controllers.get(object.object_id)?.invalidate();try{const workspace=await api.deleteObject(store.workspace,object);const next=workspace.objects[0]?.object_id??null;updateWorkspace(workspace,next);toast("Object deleted")}catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry delete.");else toast(error.message,true)}});
-$("#candidate-list").addEventListener("click",async event=>{const button=event.target.closest("[data-candidate-index]");const object=currentObject();if(!button||!object)return;const state=currentPromptState();const controller=controllers.get(object.object_id);if(controller?.running||controller?.pending||!canSelectCandidate(state)){toast("Wait for the current prediction before selecting a candidate.",true);return}const index=Number(button.dataset.candidateIndex);const previous=object.sam_draft.selected_candidate_index;object.sam_draft.selected_candidate_index=index;renderDetails();requestDraw();try{const response=await api.selectCandidate(store.workspace,object,object.sam_draft.prompt_revision,index);updateWorkspace(mergeCandidateSelectionResponse(store.workspace,response),object.object_id)}catch(error){object.sam_draft.selected_candidate_index=previous;renderDetails();requestDraw();if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry candidate selection.");else toast(error.message,true)}});
+$("#delete-object").addEventListener("click",async()=>{const object=currentObject();if(!object||structuralBusyByObject.get(object.object_id)||!confirm(`Delete ${object.display_name}?`))return;structuralBusyByObject.set(object.object_id,"delete");disposeController(object.object_id);renderAll();try{const workspace=await api.deleteObject(store.workspace,object);candidateImageCache.clearObject(store.workspace.workspace_id,object.object_id);const next=workspace.objects[0]?.object_id??null;updateWorkspace(workspace,next);toast("Object deleted")}catch(error){structuralBusyByObject.delete(object.object_id);store.resetPromptState(object.object_id);if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry delete.");else toast(error.message,true);renderAll()}});
+$("#candidate-list").addEventListener("click",async event=>{const button=event.target.closest("[data-candidate-index]");const object=currentObject();if(!button||!object)return;const state=currentPromptState();const controller=selectedController();if(controller?.running||controller?.pending||!canSelectCandidate(state)){toast("Wait for the current prediction before selecting a candidate.",true);return}const index=Number(button.dataset.candidateIndex);const previous=object.sam_draft.selected_candidate_index;object.sam_draft.selected_candidate_index=index;renderDetails();requestDraw();try{const response=await api.selectCandidate(store.workspace,object,object.sam_draft.prompt_revision,index);updateWorkspace(mergeCandidateSelectionResponse(store.workspace,response),object.object_id)}catch(error){object.sam_draft.selected_candidate_index=previous;renderDetails();requestDraw();if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry candidate selection.");else toast(error.message,true)}});
 $("#undo-point").addEventListener("click",async()=>{const object=currentObject();if(!object)return;const result=store.undoPoint(object.object_id);if(!result)return;if(!result.points.length&&!result.box){await clearDraft(object.object_id);return}requestDraw();submitPrompt(object.object_id,result.revision,result.points,result.box)});
 $("#reset-draft").addEventListener("click",()=>{if(currentObject())clearDraft(currentObject().object_id)});
 document.querySelectorAll("[data-tool]").forEach(button=>button.addEventListener("click",()=>{store.setTool(button.dataset.tool);document.querySelectorAll("[data-tool]").forEach(item=>item.classList.toggle("is-active",item===button));stage.dataset.tool=button.dataset.tool}));
