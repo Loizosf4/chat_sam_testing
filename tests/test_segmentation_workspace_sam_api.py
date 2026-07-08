@@ -167,3 +167,55 @@ def test_api_missing_invalid_and_stale_prompt_behaviour(client: TestClient) -> N
         },
     )
     assert bad_select.status_code == 404
+
+
+def test_deleting_object_clears_only_that_object_logits(client: TestClient) -> None:
+    workspace, item = _workspace_with_object(client)
+    workspace_id = workspace["workspace_id"]
+    other = client.post(
+        f"/api/segmentation-workspaces/{workspace_id}/objects",
+        json={
+            "semantic_label": "desk",
+            "display_name": "Desk",
+            "expected_workspace_revision": workspace["workspace_revision"],
+        },
+    ).json()["objects"][1]
+    current = client.get(f"/api/segmentation-workspaces/{workspace_id}").json()
+    service.LOGITS_CACHE.replace_object_revision(workspace_id, item["object_id"], 1, ["item-logits"])
+    service.LOGITS_CACHE.replace_object_revision(workspace_id, other["object_id"], 1, ["other-logits"])
+
+    deleted = client.delete(
+        f"/api/segmentation-workspaces/{workspace_id}/objects/{item['object_id']}",
+        params={
+            "expected_workspace_revision": current["workspace_revision"],
+            "expected_object_version": item["object_version"],
+        },
+    )
+
+    assert deleted.status_code == 200, deleted.text
+    assert service.LOGITS_CACHE.get(workspace_id, item["object_id"], 1, 0) is None
+    assert service.LOGITS_CACHE.get(workspace_id, other["object_id"], 1, 0) == "other-logits"
+
+
+def test_deleting_workspace_clears_workspace_logits_only(client: TestClient) -> None:
+    workspace, item = _workspace_with_object(client)
+    other_workspace, other_item = _workspace_with_object(client)
+    service.LOGITS_CACHE.replace_object_revision(workspace["workspace_id"], item["object_id"], 1, ["item-logits"])
+    service.LOGITS_CACHE.replace_object_revision(
+        other_workspace["workspace_id"],
+        other_item["object_id"],
+        1,
+        ["other-workspace-logits"],
+    )
+
+    deleted = client.delete(
+        f"/api/segmentation-workspaces/{workspace['workspace_id']}",
+        params={"expected_workspace_revision": workspace["workspace_revision"]},
+    )
+
+    assert deleted.status_code == 200, deleted.text
+    assert service.LOGITS_CACHE.get(workspace["workspace_id"], item["object_id"], 1, 0) is None
+    assert (
+        service.LOGITS_CACHE.get(other_workspace["workspace_id"], other_item["object_id"], 1, 0)
+        == "other-workspace-logits"
+    )

@@ -93,12 +93,49 @@ def inspect_source_image(path: Path) -> tuple[int, int, str]:
 
 
 def save_binary_mask(path: Path, mask: Any) -> None:
+    mask_array, _area, _bbox = validate_candidate_mask(mask, expected_height=None, expected_width=None)
+    _save_binary_mask_array(path, mask_array)
+
+
+def validate_candidate_mask(
+    mask: Any,
+    *,
+    expected_height: int | None,
+    expected_width: int | None,
+) -> tuple[Any, int, list[int]]:
     try:
         import numpy as np
     except ImportError as exc:
         raise SegmentationWorkspaceStoreError("numpy is not installed", 500) from exc
 
-    mask_array = np.asarray(mask).astype(bool)
+    raw = np.asarray(mask)
+    if raw.ndim != 2:
+        raise SegmentationWorkspaceStoreError("candidate mask must be a two-dimensional array")
+    if expected_height is not None and expected_width is not None and raw.shape != (expected_height, expected_width):
+        raise SegmentationWorkspaceStoreError(
+            "candidate mask dimensions do not match the source image"
+        )
+    mask_array = raw.astype(bool)
+    y_values, x_values = np.where(mask_array)
+    area = int(mask_array.sum())
+    if area == 0:
+        bbox = [0, 0, 0, 0]
+    else:
+        bbox = [
+            int(x_values.min()),
+            int(y_values.min()),
+            int(x_values.max()),
+            int(y_values.max()),
+        ]
+    return mask_array, area, bbox
+
+
+def _save_binary_mask_array(path: Path, mask_array: Any) -> None:
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise SegmentationWorkspaceStoreError("numpy is not installed", 500) from exc
+
     image = Image.fromarray((mask_array.astype(np.uint8) * 255), mode="L")
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path, format="PNG")
@@ -377,12 +414,7 @@ class SegmentationWorkspaceStore:
 
             if not candidate_masks:
                 raise SegmentationWorkspaceStoreError("SAM returned no candidates", 500)
-            if not (
-                len(candidate_masks)
-                == len(candidate_scores)
-                == len(candidate_areas)
-                == len(candidate_bboxes)
-            ):
+            if len(candidate_masks) != len(candidate_scores):
                 raise SegmentationWorkspaceStoreError("candidate metadata mismatch", 500)
 
             base = self._workspace_dir(workspace_id)
@@ -390,14 +422,26 @@ class SegmentationWorkspaceStore:
             sam_root.mkdir(parents=True, exist_ok=True)
             temporary = Path(tempfile.mkdtemp(prefix=f".{prompt_revision}.", dir=sam_root))
             target = sam_root / str(prompt_revision)
+            if target.exists():
+                shutil.rmtree(temporary, ignore_errors=True)
+                raise SegmentationWorkspaceStoreError("candidate revision artifacts already exist", 409)
             candidates: list[dict[str, Any]] = []
-            index = self._index(workspace_id)
+            original_index = self._index(workspace_id)
+            index = {key: dict(value) for key, value in original_index.items()}
             prefix = f"sam-candidates/{workspace_id}/{object_id}/"
+            target_published = False
+            index_written = False
+            workspace_written = False
             try:
                 for index_value, mask in enumerate(candidate_masks):
                     filename = f"candidate-{index_value}.png"
                     destination = temporary / filename
-                    save_binary_mask(destination, mask)
+                    mask_array, area_pixels, bbox_xyxy = validate_candidate_mask(
+                        mask,
+                        expected_height=workspace.image_dimensions.height,
+                        expected_width=workspace.image_dimensions.width,
+                    )
+                    _save_binary_mask_array(destination, mask_array)
                     artifact_id = f"{prefix}{prompt_revision}/{index_value}"
                     mask_hash = sha256_file(destination)
                     index[artifact_id] = {
@@ -409,17 +453,16 @@ class SegmentationWorkspaceStore:
                         SamDraftCandidate(
                             candidate_index=index_value,
                             score=float(candidate_scores[index_value]),
-                            area_pixels=int(candidate_areas[index_value]),
-                            bbox_xyxy=candidate_bboxes[index_value],
+                            area_pixels=area_pixels,
+                            bbox_xyxy=bbox_xyxy,
                             mask_url=f"/api/segmentation-artifacts/{artifact_id}",
                         ).model_dump(mode="json")
                     )
 
                 if selected_candidate_index not in {candidate["candidate_index"] for candidate in candidates}:
                     raise SegmentationWorkspaceStoreError("selected candidate does not exist", 500)
-                if target.exists():
-                    shutil.rmtree(target)
                 os.replace(temporary, target)
+                target_published = True
                 index = {
                     key: value
                     for key, value in index.items()
@@ -441,11 +484,20 @@ class SegmentationWorkspaceStore:
                 document["updated_at"] = now.isoformat()
                 updated = SegmentationWorkspace.model_validate(document)
                 self._write_index(workspace_id, index)
+                index_written = True
                 self._save(updated)
+                workspace_written = True
                 self._remove_old_sam_dirs(base, object_id, str(prompt_revision))
                 return updated
             except Exception:
                 shutil.rmtree(temporary, ignore_errors=True)
+                if target_published:
+                    shutil.rmtree(target, ignore_errors=True)
+                if index_written and not workspace_written:
+                    try:
+                        self._write_index(workspace_id, original_index)
+                    except Exception:
+                        pass
                 raise
 
     def select_sam_candidate(

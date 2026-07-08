@@ -50,6 +50,12 @@ class SamLogitsCache:
                 if key[0] == workspace_id and key[1] == object_id:
                     self._items.pop(key, None)
 
+    def clear_workspace(self, workspace_id: str) -> None:
+        with self._lock:
+            for key in list(self._items):
+                if key[0] == workspace_id:
+                    self._items.pop(key, None)
+
 
 LOGITS_CACHE = SamLogitsCache()
 
@@ -100,7 +106,6 @@ def predict_workspace_candidates(
     source_path, _media_type = store.resolve_artifact("source-images", workspace.source_image.image_id)
     image_key = _image_key(workspace)
     sam_engine.load_model()
-    sam_engine.prepare_image_from_path(image_key, source_path)
 
     mask_input = None
     if base_prompt_revision is not None and base_candidate_index is not None:
@@ -109,6 +114,7 @@ def predict_workspace_candidates(
     resolved_multimask = multimask_output if multimask_output is not None else mask_input is None
     prediction = sam_engine.predict_candidates(
         image_key,
+        image_path=source_path,
         points=[[point.x, point.y] for point in clean_points],
         point_labels=[point.label for point in clean_points],
         box=box,

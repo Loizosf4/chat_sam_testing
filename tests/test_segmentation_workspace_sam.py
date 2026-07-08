@@ -106,6 +106,9 @@ def test_prediction_persists_candidates_and_cache_then_replaces_old_revision(tmp
     persisted = Image.open(first_path)
     assert persisted.mode == "L"
     assert persisted.size == (10, 8)
+    assert sorted(np.unique(np.array(persisted)).tolist()) == [0, 255]
+    assert first["candidates"][0]["area_pixels"] == 6
+    assert first["candidates"][0]["bbox_xyxy"] == [0, 0, 2, 1]
 
     second = service.predict_workspace_candidates(
         store,
@@ -124,6 +127,135 @@ def test_prediction_persists_candidates_and_cache_then_replaces_old_revision(tmp
     assert calls[-1]["multimask_output"] is False
     with pytest.raises(SegmentationWorkspaceStoreError, match="artifact not found"):
         store.resolve_artifact("sam-candidates", first_identifier)
+
+
+def test_store_derives_candidate_metadata_from_pixels(tmp_path: Path) -> None:
+    store, workspace_id, object_id = _store_with_object(tmp_path)
+    mask = np.zeros((8, 10), dtype=bool)
+    mask[2:5, 3:7] = True
+
+    workspace = store.persist_sam_prediction(
+        workspace_id,
+        object_id,
+        prompt_revision=1,
+        points=[{"x": 1, "y": 1, "label": 1}],
+        box=None,
+        candidate_masks=[mask],
+        candidate_scores=[0.1],
+        candidate_areas=[999],
+        candidate_bboxes=[[9, 9, 9, 9]],
+        selected_candidate_index=0,
+        prepared_image_key="workspace",
+    )
+
+    candidate = workspace.objects[0].sam_draft.candidates[0]
+    assert candidate.area_pixels == 12
+    assert candidate.bbox_xyxy == [3, 2, 6, 4]
+    identifier = candidate.mask_url.split("/api/segmentation-artifacts/sam-candidates/", 1)[1]
+    path, _media_type = store.resolve_artifact("sam-candidates", identifier)
+    persisted = Image.open(path)
+    assert persisted.size == (10, 8)
+    assert sorted(np.unique(np.array(persisted)).tolist()) == [0, 255]
+
+
+@pytest.mark.parametrize(
+    ("mask", "message"),
+    [
+        (np.zeros((7, 10), dtype=bool), "dimensions"),
+        (np.zeros((8, 9), dtype=bool), "dimensions"),
+        (np.zeros((8, 10, 1), dtype=bool), "two-dimensional"),
+    ],
+)
+def test_store_rejects_malformed_candidate_without_state_change(
+    tmp_path: Path,
+    mask: np.ndarray,
+    message: str,
+) -> None:
+    store, workspace_id, object_id = _store_with_object(tmp_path)
+    before = store.get_workspace(workspace_id).model_dump(mode="json")
+    index_before = json.loads((store.root / workspace_id / "artifact-index.json").read_text(encoding="utf-8"))
+
+    with pytest.raises(SegmentationWorkspaceStoreError, match=message):
+        store.persist_sam_prediction(
+            workspace_id,
+            object_id,
+            prompt_revision=1,
+            points=[{"x": 1, "y": 1, "label": 1}],
+            box=None,
+            candidate_masks=[mask],
+            candidate_scores=[0.1],
+            candidate_areas=[0],
+            candidate_bboxes=[[0, 0, 0, 0]],
+            selected_candidate_index=0,
+            prepared_image_key="workspace",
+        )
+
+    after = store.get_workspace(workspace_id).model_dump(mode="json")
+    index_after = json.loads((store.root / workspace_id / "artifact-index.json").read_text(encoding="utf-8"))
+    assert after == before
+    assert index_after == index_before
+    sam_root = store.root / workspace_id / "objects" / object_id / "sam"
+    assert not sam_root.exists() or not list(sam_root.iterdir())
+
+
+def test_persist_failure_restores_old_index_and_removes_new_candidate_dir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store, workspace_id, object_id = _store_with_object(tmp_path)
+    first_mask = np.zeros((8, 10), dtype=bool)
+    first_mask[1:3, 1:4] = True
+    workspace = store.persist_sam_prediction(
+        workspace_id,
+        object_id,
+        prompt_revision=1,
+        points=[{"x": 1, "y": 1, "label": 1}],
+        box=None,
+        candidate_masks=[first_mask],
+        candidate_scores=[0.5],
+        candidate_areas=[0],
+        candidate_bboxes=[[0, 0, 0, 0]],
+        selected_candidate_index=0,
+        prepared_image_key="workspace",
+    )
+    old_candidate = workspace.objects[0].sam_draft.candidates[0]
+    old_identifier = old_candidate.mask_url.split("/api/segmentation-artifacts/sam-candidates/", 1)[1]
+    old_path, _media_type = store.resolve_artifact("sam-candidates", old_identifier)
+    index_before = json.loads((store.root / workspace_id / "artifact-index.json").read_text(encoding="utf-8"))
+
+    def fail_save(_workspace) -> None:
+        raise RuntimeError("simulated workspace write failure")
+
+    monkeypatch.setattr(store, "_save", fail_save)
+    second_mask = np.zeros((8, 10), dtype=bool)
+    second_mask[4:6, 4:8] = True
+
+    with pytest.raises(RuntimeError, match="simulated workspace write failure"):
+        store.persist_sam_prediction(
+            workspace_id,
+            object_id,
+            prompt_revision=2,
+            points=[{"x": 2, "y": 2, "label": 1}],
+            box=None,
+            candidate_masks=[second_mask],
+            candidate_scores=[0.9],
+            candidate_areas=[0],
+            candidate_bboxes=[[0, 0, 0, 0]],
+            selected_candidate_index=0,
+            prepared_image_key="workspace",
+        )
+
+    reloaded = store.get_workspace(workspace_id)
+    assert reloaded.workspace_revision == workspace.workspace_revision
+    assert reloaded.objects[0].object_version == workspace.objects[0].object_version
+    assert reloaded.objects[0].sam_draft.prompt_revision == 1
+    assert store.resolve_artifact("sam-candidates", old_identifier)[0] == old_path
+    index_after = json.loads((store.root / workspace_id / "artifact-index.json").read_text(encoding="utf-8"))
+    assert index_after == index_before
+    sam_root = store.root / workspace_id / "objects" / object_id / "sam"
+    assert (sam_root / "1").is_dir()
+    assert not (sam_root / "2").exists()
+    assert [path for path in sam_root.iterdir() if path.name.startswith(".")] == []
 
 
 def test_missing_logits_falls_back_to_point_only_prediction(tmp_path: Path, monkeypatch) -> None:

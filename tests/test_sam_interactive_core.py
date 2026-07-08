@@ -77,6 +77,33 @@ def test_trusted_image_preparation_caches_by_image_key(tmp_path: Path, monkeypat
     assert predictor.set_image_calls == 2
 
 
+def test_predict_candidates_reprepares_trusted_path_after_workspace_switch(tmp_path: Path, monkeypatch) -> None:
+    predictor = _install_fake_predictor(monkeypatch)
+    image_a = _image(tmp_path / "a.png", size=(7, 5))
+    image_b = _image(tmp_path / "b.png", size=(4, 3))
+
+    sam_engine.prepare_image_from_path("workspace-a", image_a)
+    sam_engine.prepare_image_from_path("workspace-b", image_b)
+    prediction = sam_engine.predict_candidates(
+        "workspace-a",
+        image_path=image_a,
+        points=[[1, 1]],
+        point_labels=[1],
+        multimask_output=False,
+    )
+    repeated = sam_engine.predict_candidates(
+        "workspace-a",
+        image_path=image_a,
+        points=[[1, 1]],
+        point_labels=[1],
+        multimask_output=False,
+    )
+
+    assert prediction.masks.shape == (1, 5, 7)
+    assert repeated.masks.shape == (1, 5, 7)
+    assert predictor.set_image_calls == 3
+
+
 def test_legacy_predict_still_persists_masks_and_response_shape(tmp_path: Path, monkeypatch) -> None:
     _install_fake_predictor(monkeypatch)
     image_dir = tmp_path / "images"

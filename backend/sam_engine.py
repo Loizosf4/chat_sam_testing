@@ -170,7 +170,7 @@ def predict_candidates(
         if _state.predictor is None:
             raise SamEngineError("SAM is not loaded. Call /load_model first.", status_code=400)
 
-        if image_path is not None and _state.image_id != clean_image_key:
+        if image_path is not None:
             _prepare_image_path_unlocked(clean_image_key, image_path)
         elif _state.image_id != clean_image_key:
             raise SamEngineError("SAM image is not prepared for this prediction.", status_code=400)

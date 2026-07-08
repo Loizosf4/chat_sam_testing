@@ -119,6 +119,7 @@ def delete_workspace(
         STORE.delete_workspace(workspace_id, expected_workspace_revision)
     except SegmentationWorkspaceStoreError as exc:
         raise _error(exc) from exc
+    service.LOGITS_CACHE.clear_workspace(workspace_id)
     return {"workspace_id": workspace_id, "status": "deleted"}
 
 
@@ -168,6 +169,7 @@ def delete_object(
         )
     except SegmentationWorkspaceStoreError as exc:
         raise _error(exc) from exc
+    service.LOGITS_CACHE.clear_object(workspace_id, object_id)
     return workspace.model_dump(mode="json")
 
 
