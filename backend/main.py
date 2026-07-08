@@ -11,6 +11,10 @@ from pydantic import BaseModel, Field
 from backend import mask_ops, moge_engine, sam_engine
 from backend.blender_sync_proxy import router as blender_sync_router
 from backend.scene_package.api import artifact_router, router as scene_package_router
+from backend.segmentation_workspace.api import (
+    artifact_router as segmentation_artifact_router,
+    router as segmentation_workspace_router,
+)
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -80,6 +84,8 @@ app.add_middleware(
 
 app.include_router(scene_package_router)
 app.include_router(artifact_router)
+app.include_router(segmentation_workspace_router)
+app.include_router(segmentation_artifact_router)
 app.include_router(blender_sync_router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
