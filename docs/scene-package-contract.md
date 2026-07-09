@@ -102,6 +102,12 @@ unified_manifest=@unified_scene_plan.json;type=application/json
 source_image=@office.jpg;type=image/jpeg
 ```
 
+Segmentation workspace export snapshots use the same final-SAM `metadata.json`
+shape and ZIP member layout. Their `mask_id` values are the stable segmentation
+workspace `object_id` values, so the adapter can consume an extracted workspace
+export alongside a matching Unified clean-reconstruction manifest without a
+separate adapter path.
+
 The server validates the archive boundary, IDs, one-to-one SAM/Unified object
 mapping, actual image types and dimensions, binary mask pixels, and hashes. It
 copies accepted inputs into managed storage and returns the new scene package

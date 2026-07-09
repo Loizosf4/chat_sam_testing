@@ -10,7 +10,7 @@ from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend import sam_engine
 
@@ -62,6 +62,28 @@ class SamCandidateSelection(BaseModel):
     candidate_index: int = Field(ge=0)
     expected_workspace_revision: int = Field(ge=1)
     expected_object_version: int = Field(ge=1)
+
+
+class ExpectedExportObject(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    object_id: str = Field(min_length=1, max_length=64)
+    expected_object_version: int = Field(ge=1)
+
+
+class CreateWorkspaceExportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_workspace_revision: int = Field(ge=1)
+    expected_objects: list[ExpectedExportObject] = Field(min_length=1)
+    include_previews: bool = True
+
+    @model_validator(mode="after")
+    def validate_unique_objects(self) -> "CreateWorkspaceExportRequest":
+        object_ids = [item.object_id for item in self.expected_objects]
+        if len(object_ids) != len(set(object_ids)):
+            raise ValueError("duplicate expected object IDs are not allowed")
+        return self
 
 
 router = APIRouter(prefix="/api/segmentation-workspaces", tags=["segmentation-workspaces"])
@@ -122,6 +144,43 @@ def delete_workspace(
         raise _error(exc) from exc
     service.LOGITS_CACHE.clear_workspace(workspace_id)
     return {"workspace_id": workspace_id, "status": "deleted"}
+
+
+def _export_response(workspace_id: str, export_id: str) -> dict[str, Any]:
+    record = STORE.get_export(workspace_id, export_id)
+    response = record.model_dump(mode="json")
+    response["is_stale"] = STORE.export_is_stale(workspace_id, export_id)
+    return response
+
+
+@router.post("/{workspace_id}/exports", status_code=201)
+def create_export(workspace_id: str, payload: CreateWorkspaceExportRequest) -> dict[str, Any]:
+    try:
+        record = STORE.create_export(
+            workspace_id,
+            expected_workspace_revision=payload.expected_workspace_revision,
+            expected_objects=[item.model_dump() for item in payload.expected_objects],
+            include_previews=payload.include_previews,
+        )
+        return _export_response(workspace_id, record.export_id)
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+
+
+@router.get("/{workspace_id}/exports")
+def list_exports(workspace_id: str) -> list[dict[str, Any]]:
+    try:
+        return [_export_response(workspace_id, record.export_id) for record in STORE.list_exports(workspace_id)]
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+
+
+@router.get("/{workspace_id}/exports/{export_id}")
+def get_export(workspace_id: str, export_id: str) -> dict[str, Any]:
+    try:
+        return _export_response(workspace_id, export_id)
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
 
 
 @router.post("/{workspace_id}/objects", status_code=201)
@@ -308,6 +367,12 @@ def get_segmentation_artifact(kind: str, identifier: str) -> FileResponse:
         media_type=media_type,
         headers={
             "X-Content-Type-Options": "nosniff",
-            "Cache-Control": "no-store" if kind in {"sam-candidates", "manual-masks"} else "private, max-age=3600",
+            "Cache-Control": (
+                "no-store"
+                if kind in {"sam-candidates", "manual-masks"}
+                else "private, max-age=31536000, immutable"
+                if kind == "workspace-exports"
+                else "private, max-age=3600"
+            ),
         },
     )

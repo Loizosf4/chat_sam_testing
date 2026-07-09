@@ -15,6 +15,7 @@ from uuid import uuid4
 
 from PIL import Image
 
+from . import exports as export_service
 from .models import (
     CURRENT_SCHEMA_VERSION,
     ImageDimensions,
@@ -23,6 +24,7 @@ from .models import (
     SamDraftState,
     SamPromptPoint,
     SegmentationObject,
+    SegmentationExportRecord,
     SegmentationWorkspace,
     SourceImage,
 )
@@ -903,6 +905,110 @@ class SegmentationWorkspaceStore:
             self._remove_old_manual_dirs(workspace_id, object_id)
             return updated
 
+    def create_export(
+        self,
+        workspace_id: str,
+        *,
+        expected_workspace_revision: int,
+        expected_objects: list[dict[str, Any]],
+        include_previews: bool = True,
+    ) -> SegmentationExportRecord:
+        del include_previews  # Previews are part of every immutable export snapshot.
+        with self._lock(workspace_id):
+            workspace = self._load(workspace_id)
+            _require_expected(workspace.workspace_revision, expected_workspace_revision, "workspace revision")
+            if not workspace.objects:
+                raise SegmentationWorkspaceStoreError("at least one semantic object is required for export")
+            expected_by_id: dict[str, int] = {}
+            for item in expected_objects:
+                object_id = str(item.get("object_id", ""))
+                if not valid_id(object_id):
+                    raise SegmentationWorkspaceStoreError("invalid expected object ID")
+                if object_id in expected_by_id:
+                    raise SegmentationWorkspaceStoreError("duplicate expected object IDs are not allowed")
+                expected_by_id[object_id] = int(item.get("expected_object_version", 0))
+            current_by_id = {item.object_id: item.object_version for item in workspace.objects}
+            if set(expected_by_id) != set(current_by_id):
+                raise SegmentationWorkspaceStoreError("expected_objects must match the current object set", 409)
+            for object_id, current_version in current_by_id.items():
+                _require_expected(current_version, expected_by_id[object_id], "object version")
+
+            source_key = workspace.source_image.url[len("/api/segmentation-artifacts/") :]
+            source_path, _source_media_type = self._resolve_workspace_artifact(workspace_id, source_key)
+            export_id = uuid4().hex
+            base = self._workspace_dir(workspace_id)
+            exports_root = base / "exports"
+            exports_root.mkdir(parents=True, exist_ok=True)
+            staging = Path(tempfile.mkdtemp(prefix=f".{export_id}.", dir=exports_root))
+            target = exports_root / export_id
+            original_index = self._index(workspace_id)
+            target_published = False
+            index_written = False
+            workspace_written = False
+            try:
+                if target.exists():
+                    raise SegmentationWorkspaceStoreError("export already exists", 409)
+                now = datetime.now(timezone.utc)
+                record, entries = export_service.build_export_snapshot(
+                    workspace=workspace,
+                    source_image_path=source_path,
+                    resolve_artifact=lambda key: self._resolve_workspace_artifact(workspace_id, key),
+                    export_dir=staging,
+                    export_id=export_id,
+                    created_at=now,
+                    published_workspace_revision=workspace.workspace_revision + 1,
+                )
+                os.replace(staging, target)
+                target_published = True
+                index = {key: dict(value) for key, value in original_index.items()}
+                index.update(entries)
+                document = workspace.model_dump(mode="json")
+                document.setdefault("exports", []).append(record.model_dump(mode="json"))
+                document["workspace_revision"] += 1
+                document["updated_at"] = now.isoformat()
+                updated = SegmentationWorkspace.model_validate(document)
+                self._write_index(workspace_id, index)
+                index_written = True
+                self._save(updated)
+                workspace_written = True
+                return record
+            except export_service.SegmentationExportError as exc:
+                raise SegmentationWorkspaceStoreError(str(exc), exc.status_code) from exc
+            except Exception:
+                if index_written and not workspace_written:
+                    try:
+                        self._write_index(workspace_id, original_index)
+                    except Exception:
+                        pass
+                raise
+            finally:
+                shutil.rmtree(staging, ignore_errors=True)
+                if (not workspace_written) and target_published:
+                    shutil.rmtree(target, ignore_errors=True)
+
+    def list_exports(self, workspace_id: str) -> list[SegmentationExportRecord]:
+        return list(self._load(workspace_id).exports)
+
+    def get_export(self, workspace_id: str, export_id: str) -> SegmentationExportRecord:
+        if not valid_id(export_id):
+            raise SegmentationWorkspaceStoreError("unsafe export ID")
+        workspace = self._load(workspace_id)
+        record = next((item for item in workspace.exports if item.export_id == export_id), None)
+        if record is None:
+            raise SegmentationWorkspaceStoreError("export not found", 404)
+        return record
+
+    def export_is_stale(self, workspace_id: str, export_id: str) -> bool:
+        workspace = self._load(workspace_id)
+        record = next((item for item in workspace.exports if item.export_id == export_id), None)
+        if record is None:
+            raise SegmentationWorkspaceStoreError("export not found", 404)
+        return export_service.export_is_stale(
+            workspace,
+            record,
+            lambda key: self._resolve_workspace_artifact(workspace_id, key),
+        )
+
     def _remove_object_artifacts(self, workspace_id: str, object_id: str) -> None:
         base = self._workspace_dir(workspace_id)
         shutil.rmtree(base / "objects" / object_id, ignore_errors=True)
@@ -916,11 +1022,11 @@ class SegmentationWorkspaceStore:
                 shutil.rmtree(child, ignore_errors=True)
 
     def resolve_artifact(self, kind: str, identifier: str) -> tuple[Path, str]:
-        if kind not in {"source-images", "sam-candidates", "manual-masks"}:
+        if kind not in {"source-images", "sam-candidates", "manual-masks", "workspace-exports"}:
             raise SegmentationWorkspaceStoreError("artifact not found", 404)
         if kind == "source-images" and (not valid_id(identifier) or "/" in identifier or "\\" in identifier):
             raise SegmentationWorkspaceStoreError("invalid artifact identifier")
-        if kind in {"sam-candidates", "manual-masks"} and (
+        if kind in {"sam-candidates", "manual-masks", "workspace-exports"} and (
             not identifier
             or "\\" in identifier
             or any(part in {"", ".", ".."} for part in identifier.split("/"))

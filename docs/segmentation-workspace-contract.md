@@ -109,6 +109,54 @@ composite     = (base OR manual_add) AND NOT manual_remove
 The composite must exactly match the uploaded edited mask. The add, remove, and
 composite artifacts are full-resolution single-channel binary PNG files.
 
+## Immutable Export Snapshots
+
+A segmentation export is an immutable, revisioned snapshot of the currently
+persisted effective masks. The workspace remains editable after export; later
+SAM prompts, candidate changes, manual saves, renames, or object deletion do not
+modify or delete older export directories, artifact-index entries, hashes, or
+records. A user can create a newer export after making corrections.
+
+For each object, the exported effective mask is selected in this order:
+
+```text
+1. Saved manual composite, when manual_revision > 0
+2. Selected SAM candidate
+```
+
+Unsaved browser brush pixels are not visible to the backend. The future export
+UI must save local brush edits before requesting an export.
+
+Each export record stores:
+
+```text
+export_id
+created_at
+created_from_workspace_revision
+published_workspace_revision
+masks
+metadata_url
+quality_report_url
+quality_markdown_url
+combined_preview_url
+archive_url
+archive_sha256
+warning_count
+mask_count
+total_mask_area
+```
+
+Each exported mask snapshot stores the stable `object_id`, current object
+version, label/display name, effective source kind and anchors, exported mask
+filename, mask and preview URLs, SHA-256, area, and bbox. The stable
+segmentation `object_id` is written byte-for-byte as the final SAM `mask_id` in
+`metadata.json`.
+
+`created_from_workspace_revision` is the workspace revision that was snapshotted.
+`published_workspace_revision` is the revision after appending the export record,
+so a successful export increments `workspace_revision` exactly once without
+incrementing object versions or changing SAM/manual state.
+
 ## Storage Layout
 
 By default, workspaces are stored under `data/segmentation_workspaces/`. The root
@@ -131,6 +179,16 @@ data/segmentation_workspaces/{workspace_id}/
                     add.png
                     remove.png
                     composite.png
+    exports/
+        {export_id}/
+            metadata.json
+            mask_quality_report.json
+            mask_quality_report.md
+            {safe_mask_filename}.png
+            previews/
+                {safe_mask_filename_stem}_overlay.png
+                all_masks_overlay.png
+            segmentation-export.zip
     artifact-index.json
 ```
 
@@ -152,6 +210,37 @@ manual revision is retained after a successful replacement. Manual artifact
 responses are served with `Cache-Control: no-store` and
 `X-Content-Type-Options: nosniff`.
 
+Export artifacts use immutable keys such as:
+
+```text
+workspace-exports/{workspace_id}/{export_id}/archive
+workspace-exports/{workspace_id}/{export_id}/metadata
+workspace-exports/{workspace_id}/{export_id}/quality-json
+workspace-exports/{workspace_id}/{export_id}/quality-markdown
+workspace-exports/{workspace_id}/{export_id}/combined-preview
+workspace-exports/{workspace_id}/{export_id}/masks/{object_id}
+workspace-exports/{workspace_id}/{export_id}/previews/{object_id}
+```
+
+All export artifact paths are managed relative paths under the owning workspace,
+hash-verified on retrieval, and served through
+`/api/segmentation-artifacts/workspace-exports/...` with
+`X-Content-Type-Options: nosniff`. The ZIP media type is `application/zip`;
+Markdown is served as text/Markdown.
+
+`segmentation-export.zip` contains only safe relative members:
+
+```text
+metadata.json
+mask_quality_report.json
+mask_quality_report.md
+final mask PNG files
+previews/
+```
+
+It never contains itself, workspace JSON, the artifact index, temporary files, or
+filesystem paths.
+
 ## API Endpoints
 
 ```text
@@ -168,6 +257,9 @@ POST   /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/select-ca
 PUT    /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/manual-mask
 DELETE /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/manual-mask?expected_workspace_revision=...&expected_object_version=...&expected_manual_revision=...
 DELETE /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/sam-draft?expected_workspace_revision=...&expected_object_version=...
+POST   /api/segmentation-workspaces/{workspace_id}/exports
+GET    /api/segmentation-workspaces/{workspace_id}/exports
+GET    /api/segmentation-workspaces/{workspace_id}/exports/{export_id}
 GET    /api/segmentation-artifacts/{kind}/{identifier}
 ```
 
@@ -176,6 +268,26 @@ Manual mask save uses `multipart/form-data` with `edited_mask`,
 `expected_object_version`, and `expected_manual_revision`. `edited_mask` must be
 a grayscale binary PNG with the exact source-image dimensions. The backend does
 not accept a client-provided base mask path or base mask file.
+
+Export creation uses `application/json`:
+
+```json
+{
+  "expected_workspace_revision": 12,
+  "expected_objects": [
+    {"object_id": "stable-object-id", "expected_object_version": 5}
+  ],
+  "include_previews": true
+}
+```
+
+`expected_objects` must contain the exact current object set, with no missing,
+unknown, or duplicate IDs, and every object version must match. Stale workspace
+or object versions return `409 Conflict`. A valid export requires at least one
+object and one non-empty binary effective mask per object.
+
+Export GET responses include computed `is_stale`. The persisted immutable export
+record is not modified when staleness changes.
 
 ## Browser Workspace
 
@@ -264,6 +376,41 @@ an explicit destructive reset and clears manual corrections and their artifacts
 in the same successful mutation. Object deletion removes manual artifact-index
 entries and the object artifact directory.
 
+Export publication is transactional under the workspace lock. The backend
+validates optimistic concurrency, resolves and hash-verifies effective masks,
+writes metadata, mask PNGs, quality reports, previews, and ZIP into a staging
+directory, then atomically publishes the export directory, artifact-index entries,
+and workspace record. If publication fails, the workspace revision and artifact
+index are restored and partial export directories are removed.
+
+An export is stale when the current workspace no longer has the same object IDs,
+object versions, labels, effective source kind, SAM prompt revision, selected
+candidate index, manual revision, or effective mask SHA-256. Adding a newer
+export record alone does not make an older export stale.
+
+## Export Compatibility
+
+Export `metadata.json` follows the existing final-SAM adapter format:
+
+```text
+image_id
+original_filename
+width
+height
+exported_at
+masks[]
+```
+
+Each mask entry includes `label`, `mask_id`, `filename`, `area`, and `bbox`;
+preview-enabled entries also include `color` and `preview_path`. `mask_id` is
+the stable workspace `object_id`, allowing `backend.scene_package.adapter` to
+map it directly to the future scene-package `object_id`. The backend derives
+area and bbox from exported pixels and never trusts stale client metadata.
+
+The export quality report is written as both JSON and Markdown and includes
+per-mask metrics, connected components, border-touch diagnostics, pairwise
+overlaps, bbox comparisons, and warnings. Warnings do not fail export creation.
+
 ## Deferred Features
 
 The following remain intentionally outside this contract:
@@ -273,7 +420,8 @@ The following remain intentionally outside this contract:
 - Candidate-mask quality reports.
 - Final-mask finalization.
 - Mask finalization.
-- Quality reports.
-- Export to the MoGe stage.
+- Frontend export UI.
+- Export import through `/api/scenes/import`.
 - MoGe pipeline integration.
+- MoGe execution.
 - Blender integration.

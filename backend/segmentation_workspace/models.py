@@ -143,6 +143,91 @@ class ManualMaskState(ContractModel):
         return self
 
 
+class SegmentationExportMask(ContractModel):
+    object_id: str = Field(pattern=UUID_PATTERN)
+    object_version: int = Field(ge=1, strict=True)
+    semantic_label: str = Field(min_length=1, max_length=128)
+    display_name: str = Field(min_length=1, max_length=192)
+    source_kind: Literal["sam_candidate", "manual_composite"]
+    source_prompt_revision: int = Field(ge=0, strict=True)
+    source_candidate_index: int = Field(ge=0, strict=True)
+    source_manual_revision: int = Field(ge=0, strict=True)
+    filename: str = Field(min_length=5, max_length=255)
+    mask_url: str
+    preview_url: str
+    mask_sha256: str = Field(pattern=SHA256_PATTERN)
+    area_pixels: int = Field(gt=0, strict=True)
+    bbox_xyxy: list[int] = Field(min_length=4, max_length=4)
+
+    @field_validator("semantic_label", "display_name")
+    @classmethod
+    def non_empty_text(cls, value: str) -> str:
+        return _non_empty_text(value)
+
+    @field_validator("filename")
+    @classmethod
+    def filename_only(cls, value: str) -> str:
+        if "/" in value or "\\" in value or value in {"", ".", ".."}:
+            raise ValueError("filename must be a safe basename")
+        if not value.lower().endswith(".png"):
+            raise ValueError("filename must be a PNG filename")
+        return value
+
+    @field_validator("mask_url", "preview_url")
+    @classmethod
+    def export_artifact_url(cls, value: str) -> str:
+        if value.startswith("/api/segmentation-artifacts/workspace-exports/"):
+            return value
+        if value.startswith("file://") or _WINDOWS_PATH.match(value):
+            raise ValueError("export URLs must not be filesystem paths")
+        raise ValueError("export URLs must be application-controlled workspace export URLs")
+
+
+class SegmentationExportRecord(ContractModel):
+    export_id: str = Field(pattern=UUID_PATTERN)
+    created_at: datetime
+    created_from_workspace_revision: int = Field(ge=1, strict=True)
+    published_workspace_revision: int = Field(ge=1, strict=True)
+    masks: list[SegmentationExportMask] = Field(min_length=1)
+    metadata_url: str
+    quality_report_url: str
+    quality_markdown_url: str
+    combined_preview_url: str
+    archive_url: str
+    archive_sha256: str = Field(pattern=SHA256_PATTERN)
+    warning_count: int = Field(ge=0, strict=True)
+    mask_count: int = Field(ge=1, strict=True)
+    total_mask_area: int = Field(gt=0, strict=True)
+
+    @field_validator(
+        "metadata_url",
+        "quality_report_url",
+        "quality_markdown_url",
+        "combined_preview_url",
+        "archive_url",
+    )
+    @classmethod
+    def export_artifact_url(cls, value: str) -> str:
+        if value.startswith("/api/segmentation-artifacts/workspace-exports/"):
+            return value
+        if value.startswith("file://") or _WINDOWS_PATH.match(value):
+            raise ValueError("export URLs must not be filesystem paths")
+        raise ValueError("export URLs must be application-controlled workspace export URLs")
+
+    @model_validator(mode="after")
+    def validate_record(self) -> "SegmentationExportRecord":
+        if self.published_workspace_revision <= self.created_from_workspace_revision:
+            raise ValueError("published_workspace_revision must be after created_from_workspace_revision")
+        if self.mask_count != len(self.masks):
+            raise ValueError("mask_count must equal the number of masks")
+        if self.total_mask_area != sum(mask.area_pixels for mask in self.masks):
+            raise ValueError("total_mask_area must equal the sum of exported mask areas")
+        object_ids = [mask.object_id for mask in self.masks]
+        if len(object_ids) != len(set(object_ids)):
+            raise ValueError("duplicate export mask object IDs are not allowed")
+        return self
+
+
 class SourceImage(ContractModel):
     image_id: str = Field(pattern=UUID_PATTERN)
     url: str
@@ -203,10 +288,14 @@ class SegmentationWorkspace(ContractModel):
     image_dimensions: ImageDimensions
     status: WorkspaceStatus = WorkspaceStatus.draft
     objects: list[SegmentationObject] = Field(default_factory=list)
+    exports: list[SegmentationExportRecord] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_unique_object_ids(self) -> "SegmentationWorkspace":
         object_ids = [item.object_id for item in self.objects]
         if len(object_ids) != len(set(object_ids)):
             raise ValueError("duplicate object IDs are not allowed")
+        export_ids = [item.export_id for item in self.exports]
+        if len(export_ids) != len(set(export_ids)):
+            raise ValueError("duplicate export IDs are not allowed")
         return self
