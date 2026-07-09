@@ -3,9 +3,13 @@ import assert from "node:assert/strict";
 import {
   SegmentStore,
   createPromptState,
+  emptyManualMask,
+  manualMaskActive,
   mergeCandidateSelectionResponse,
   mergeClearDraftResponse,
+  mergeManualMaskResponse,
   mergePredictionResponse,
+  normalizeWorkspace,
   semanticLabelFromDisplayName
 } from "../../frontend/segment-state.js";
 
@@ -24,9 +28,20 @@ test("state load, selection, and semantic label suggestion",()=>{
   const store=new SegmentStore();
   store.load(workspace());
   assert.equal(store.selectedObjectId,"one");
+  assert.deepEqual(store.selected.manual_mask,emptyManualMask());
   store.select("two");
   assert.equal(store.selected.object_id,"two");
   assert.equal(semanticLabelFromDisplayName("Office Chair!"),"office_chair");
+});
+
+test("old workspace objects receive empty manual state while active state is preserved",()=>{
+  const source=workspace();
+  const active={...source,objects:[{...source.objects[0],manual_mask:{manual_revision:2,base_prompt_revision:1,base_candidate_index:0,add_mask_url:"/a",remove_mask_url:"/r",composite_mask_url:"/c",area_pixels:5,bbox_xyxy:[1,2,3,4],updated_at:"now"}},source.objects[1]]};
+  const normalized=normalizeWorkspace(active);
+  assert.equal(normalized.objects[0].manual_mask.manual_revision,2);
+  assert.equal(normalized.objects[1].manual_mask.manual_revision,0);
+  assert.equal(manualMaskActive(normalized.objects[0]),true);
+  assert.equal(manualMaskActive(normalized.objects[1]),false);
 });
 
 test("prediction response updates only the matching object and preserves IDs",()=>{
@@ -54,7 +69,23 @@ test("candidate selection and clear-draft focused responses merge safely",()=>{
   assert.equal(selected.objects[1].sam_draft.points.length,1);
   const cleared=mergeClearDraftResponse(selected,{workspace_revision:7,object_version:6,object_id:"two",sam_draft:{prompt_revision:0,points:[],box:null,candidates:[],selected_candidate_index:null}});
   assert.equal(cleared.objects[1].sam_draft.prompt_revision,0);
+  assert.equal(cleared.objects[1].manual_mask.manual_revision,0);
   assert.equal(cleared.objects[0].object_id,"one");
+});
+
+test("manual mask focused responses preserve SAM state and stable IDs",()=>{
+  const base=workspace();
+  const manual={manual_revision:1,base_prompt_revision:3,base_candidate_index:0,add_mask_url:"/api/segmentation-artifacts/manual-masks/w/two/1/add",remove_mask_url:"/api/segmentation-artifacts/manual-masks/w/two/1/remove",composite_mask_url:"/api/segmentation-artifacts/manual-masks/w/two/1/composite",area_pixels:12,bbox_xyxy:[0,0,2,3],updated_at:"now"};
+  const merged=mergeManualMaskResponse(base,{workspace_revision:8,object_version:5,object_id:"two",manual_mask:manual});
+  assert.equal(merged.workspace_revision,8);
+  assert.equal(merged.objects[1].object_id,"two");
+  assert.equal(merged.objects[1].object_version,5);
+  assert.deepEqual(merged.objects[1].manual_mask,manual);
+  assert.equal(merged.objects[1].sam_draft.prompt_revision,3);
+  assert.equal(merged.objects[0].object_version,1);
+  const cleared=mergeManualMaskResponse(merged,{workspace_revision:9,object_version:6,object_id:"two",manual_mask:emptyManualMask()});
+  assert.equal(cleared.objects[1].manual_mask.manual_revision,0);
+  assert.equal(cleared.objects[1].sam_draft.candidates.length,1);
 });
 
 test("prompt revisions advance and failed revisions are not reused",()=>{

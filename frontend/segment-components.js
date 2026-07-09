@@ -6,9 +6,10 @@ export function objectListHtml(objects,selectedId,localPromptStates=new Map()){
     const draft=object.sam_draft||{};
     const points=localPromptStates.get(object.object_id)?.localPoints?.length??draft.points?.length??0;
     const hasMask=(draft.candidates||[]).length>0;
+    const hasManual=Number(object.manual_mask?.manual_revision||0)>0;
     return `<button type="button" class="seg-object ${object.object_id===selectedId?"is-selected":""}" data-object-id="${esc(object.object_id)}">
       <span><strong>${esc(object.display_name)}</strong><small>${esc(object.semantic_label)}</small></span>
-      <span class="object-badges"><em>${points} pts</em><em>${hasMask?"mask":"draft"}</em></span>
+      <span class="object-badges"><em>${points} pts</em><em>${hasManual?"manual":hasMask?"mask":"draft"}</em></span>
     </button>`;
   }).join("");
 }

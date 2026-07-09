@@ -1,6 +1,15 @@
 import {ViewportTransform} from "/static/transform.js";
 import {binaryFromImageData,colorForIndex,rgbaForMask} from "/static/mask-utils.js";
 import {SegmentationWorkspaceClient} from "/static/segment-api.js";
+import {
+  NO_SAM_MASK_MESSAGE,
+  binaryMaskToPngBlob,
+  brushBaseDescriptor,
+  brushSaveState,
+  brushSessionMatches,
+  createBrushSession,
+  markBrushEdited
+} from "/static/segment-brush.js";
 import {canvasEventPoint,canvasPointToImage,fitViewport} from "/static/segment-coordinates.js";
 import {candidateListHtml,objectListHtml} from "/static/segment-components.js";
 import {
@@ -11,10 +20,15 @@ import {
   SegmentStore,
   WorkspaceLoadGate,
   canSelectCandidate,
+  canSelectCandidateForObject,
+  canUseSamPrompting,
   candidateCacheKey,
+  effectiveMaskCacheKey,
   mergeCandidateSelectionResponse,
   mergeClearDraftResponse,
+  mergeManualMaskResponse,
   mergePredictionResponse,
+  manualMaskActive,
   predictionStatusVisible,
   selectedCandidate,
   semanticLabelFromDisplayName
@@ -32,7 +46,7 @@ const candidateImageCache=new CandidateMaskCache();
 const loadGate=new WorkspaceLoadGate();
 const renderGate=new RenderGate();
 const structuralBusyByObject=new Map();
-let sourceImage=null,sourceImageId=null,renderQueued=false,panPointer=null;
+let sourceImage=null,sourceImageId=null,renderQueued=false,panPointer=null,brushSession=null,brushGeneration=0,brushPointer=null,brushCursor=null;
 
 function absoluteUrl(path){return new URL(path,location.origin).href}
 function toast(message,error=false){const el=document.createElement("div");el.className=`toast${error?" error":""}`;el.textContent=message;$("#status-region").append(el);setTimeout(()=>el.remove(),4200)}
@@ -41,38 +55,101 @@ function currentObject(){return store.selected}
 function currentPromptState(){return store.getPromptState(store.selectedObjectId)}
 function selectedWorkspaceId(){return store.workspace?.workspace_id??null}
 function selectedController(){return store.selectedObjectId&&selectedWorkspaceId()?controllers.get(selectedWorkspaceId(),store.selectedObjectId):null}
+function brushDirty(){return Boolean(brushSession?.editor?.dirty)}
+function selectedBrushSession(){return brushSession?.workspaceId===selectedWorkspaceId()&&brushSession?.objectId===store.selectedObjectId?brushSession:null}
+function selectedBrushBusy(){const session=selectedBrushSession();return Boolean(session?.loading||session?.saving||session?.clearing)}
+function clearObjectMaskCache(workspaceId,objectId){candidateImageCache.clearObject(workspaceId,objectId)}
 
 function imageElement(url){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error(`Could not load ${url}`));img.src=absoluteUrl(url)})}
 async function maskBinary(candidate,draft,objectId,workspaceId){if(!candidate)return null;const key=candidateCacheKey({workspaceId,objectId,promptRevision:draft.prompt_revision,candidateIndex:candidate.candidate_index,maskUrl:candidate.mask_url});if(candidateImageCache.has(key))return candidateImageCache.get(key);const img=await imageElement(`${candidate.mask_url}?prompt_revision=${draft.prompt_revision}&candidate=${candidate.candidate_index}`);const c=document.createElement("canvas");c.width=view.imageWidth;c.height=view.imageHeight;const cctx=c.getContext("2d",{willReadFrequently:true});cctx.drawImage(img,0,0,c.width,c.height);const binary=binaryFromImageData(cctx.getImageData(0,0,c.width,c.height));candidateImageCache.set(key,binary);return binary}
+async function maskBinaryFromUrl(url,key){if(!url)return null;if(candidateImageCache.has(key))return candidateImageCache.get(key);const img=await imageElement(url);const c=document.createElement("canvas");c.width=view.imageWidth;c.height=view.imageHeight;const cctx=c.getContext("2d",{willReadFrequently:true});cctx.drawImage(img,0,0,c.width,c.height);const binary=binaryFromImageData(cctx.getImageData(0,0,c.width,c.height));candidateImageCache.set(key,binary);return binary}
+
+function disposeBrushSession(){brushGeneration+=1;brushSession=null;brushPointer=null;brushCursor=null;requestDraw()}
+function brushDescriptorFor(object=currentObject()){return brushBaseDescriptor(store.workspace,object)}
+function brushSessionStillCompatible(session=brushSession,object=currentObject()){
+  if(!session||!store.workspace||!object)return false;
+  const descriptor=brushDescriptorFor(object);
+  return Boolean(descriptor.available)&&session.workspaceId===store.workspace.workspace_id&&session.objectId===object.object_id&&session.basePromptRevision===descriptor.basePromptRevision&&session.baseCandidateIndex===descriptor.baseCandidateIndex&&session.manualRevision===descriptor.manualRevision&&session.sourceMaskUrl===descriptor.sourceMaskUrl;
+}
+async function prepareBrushForSelection(){
+  const workspace=store.workspace,object=currentObject();
+  const generation=++brushGeneration;
+  brushPointer=null;brushCursor=null;
+  if(!workspace||!object){brushSession=null;renderAll();return}
+  const descriptor=brushDescriptorFor(object);
+  brushSession={...descriptor,workspaceId:workspace.workspace_id,objectId:object.object_id,sourceWidth:workspace.image_dimensions.width,sourceHeight:workspace.image_dimensions.height,generation,editor:null,editRevision:0,loading:Boolean(descriptor.available),saving:false,clearing:false,error:descriptor.error||""};
+  renderAll();
+  if(!descriptor.available)return;
+  const key=effectiveMaskCacheKey({workspaceId:workspace.workspace_id,objectId:object.object_id,maskType:descriptor.maskType,promptRevision:descriptor.basePromptRevision,candidateIndex:descriptor.baseCandidateIndex,manualRevision:descriptor.manualRevision,maskUrl:descriptor.sourceMaskUrl});
+  try{
+    const mask=await maskBinaryFromUrl(descriptor.sourceMaskUrl,key);
+    if(generation!==brushGeneration||store.workspace?.workspace_id!==workspace.workspace_id||store.selectedObjectId!==object.object_id)return;
+    const current=currentObject();
+    const session=createBrushSession({workspace:store.workspace,object:current,sourceWidth:workspace.image_dimensions.width,sourceHeight:workspace.image_dimensions.height,mask,generation});
+    if(!brushSessionMatches(session,store.workspace,current,generation))return;
+    brushSession=session;
+  }catch(error){
+    if(generation===brushGeneration&&store.selectedObjectId===object.object_id)brushSession={...brushSession,loading:false,error:error.message||"Could not load mask for manual corrections"};
+  }
+  renderAll();
+}
 
 async function loadSourceImage(workspace,generation){const image=await imageElement(workspace.source_image.url);if(!loadGate.isCurrent(generation))return false;sourceImage=image;sourceImageId=workspace.source_image.image_id;view.setImageSize(workspace.image_dimensions.width,workspace.image_dimensions.height).fit();resizeCanvas();return true}
 async function prepareSam(generation=loadGate.generation,workspaceId=store.workspace?.workspace_id){if(!workspaceId||!loadGate.isCurrent(generation))return;store.setSamStatus("preparing","Preparing...");try{const result=await api.prepareSam(workspaceId);if(!loadGate.isCurrent(generation)||store.workspace?.workspace_id!==workspaceId)return;store.setSamStatus("ready",`Ready (${result.model_type} ${result.device})`)}catch(error){if(!loadGate.isCurrent(generation)||store.workspace?.workspace_id!==workspaceId)return;store.setSamStatus("failed",error.message);toast(error.message,true)}}
-function resetTransientForWorkspaceChange(){controllers.clear();structuralBusyByObject.clear();candidateImageCache.clear();renderGate.request();$("#mask-updating").hidden=true}
-async function activateWorkspace(workspace,generation){if(!loadGate.isCurrent(generation))return false;resetTransientForWorkspaceChange();store.load(workspace);history.replaceState(null,"",`/segment?workspace=${encodeURIComponent(workspace.workspace_id)}`);$("#workspace-id").value=workspace.workspace_id;$("#empty-state").hidden=true;$("#workspace-app").hidden=false;setCanvasMessage("");requestDraw();await prepareSam(generation,workspace.workspace_id);return loadGate.isCurrent(generation)}
+function resetTransientForWorkspaceChange(){controllers.clear();structuralBusyByObject.clear();candidateImageCache.clear();disposeBrushSession();renderGate.request();$("#mask-updating").hidden=true}
+async function activateWorkspace(workspace,generation){if(!loadGate.isCurrent(generation))return false;resetTransientForWorkspaceChange();store.load(workspace);history.replaceState(null,"",`/segment?workspace=${encodeURIComponent(workspace.workspace_id)}`);$("#workspace-id").value=workspace.workspace_id;$("#empty-state").hidden=true;$("#workspace-app").hidden=false;setCanvasMessage("");prepareBrushForSelection();requestDraw();await prepareSam(generation,workspace.workspace_id);return loadGate.isCurrent(generation)}
 async function loadWorkspace(workspaceId){const generation=loadGate.begin();try{store.loadingState="Loading";store.setError("");setCanvasMessage("Loading workspace...");const workspace=await api.getWorkspace(workspaceId);if(!loadGate.isCurrent(generation))return;if(!await loadSourceImage(workspace,generation))return;await activateWorkspace(workspace,generation)}catch(error){if(!loadGate.isCurrent(generation))return;setCanvasMessage("");toast(error.message,true);store.setError(error.message)}}
 async function createWorkspace(file){const generation=loadGate.begin();try{const workspace=await api.createWorkspace(file);if(!loadGate.isCurrent(generation))return;if(!await loadSourceImage(workspace,generation))return;await activateWorkspace(workspace,generation)}catch(error){if(loadGate.isCurrent(generation))toast(error.message,true)}}
 
-function updateWorkspace(workspace,preserveId=store.selectedObjectId){const previousIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);store.load(workspace,preserveId);const currentIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);for(const id of previousIds)if(!currentIds.has(id)){controllers.dispose(workspace.workspace_id,id);structuralBusyByObject.delete(id);candidateImageCache.clearObject(workspace.workspace_id,id)}renderPredictionStatus();requestDraw()}
+function updateWorkspace(workspace,preserveId=store.selectedObjectId){const previousIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);const previousBrush=brushSession;store.load(workspace,preserveId);const currentIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);for(const id of previousIds)if(!currentIds.has(id)){controllers.dispose(workspace.workspace_id,id);structuralBusyByObject.delete(id);clearObjectMaskCache(workspace.workspace_id,id);if(previousBrush?.objectId===id)disposeBrushSession()}if(!brushSessionStillCompatible(previousBrush,currentObject())){if(previousBrush?.editor?.dirty&&previousBrush.objectId===store.selectedObjectId)brushSession={...previousBrush,error:"Workspace state changed. Save is disabled until you reload or discard local brush edits."};else prepareBrushForSelection()}else brushSession=previousBrush;renderPredictionStatus();requestDraw()}
 function selectedObjectColor(){const index=Math.max(0,(store.workspace?.objects||[]).findIndex(o=>o.object_id===store.selectedObjectId));return colorForIndex(index)}
 
 function renderObjects(){if(!store.workspace)return;$("#object-list").innerHTML=objectListHtml(store.workspace.objects,store.selectedObjectId,store.localPromptStateByObject)}
 function renderDetails(){
   const object=currentObject();
   const busy=object?Boolean(structuralBusyByObject.get(object.object_id)):false;
+  const prompt=currentPromptState();
+  const session=selectedBrushSession();
+  const dirty=brushDirty();
+  const manual=object?.manual_mask||{};
+  const manualActive=object?manualMaskActive(object):false;
   $("#rename-form").hidden=!object;
   $("#delete-object").disabled=!object||busy;
   const samReady=store.samStatus.state==="ready";
-  document.querySelectorAll("[data-tool='positive'],[data-tool='negative']").forEach(button=>button.disabled=!samReady);
-  $("#undo-point").disabled=!object||busy||!currentPromptState()?.localPoints.length;
+  const samPromptAllowed=canUseSamPrompting({object,promptState:prompt,brushDirty:dirty,structuralBusy:busy,samReady});
+  document.querySelectorAll("[data-tool='positive'],[data-tool='negative']").forEach(button=>{button.disabled=!samPromptAllowed;button.title=!samReady?"SAM is not ready":manualActive?"Clear saved manual corrections before changing the SAM mask.":dirty?"Save or reset your brush edits before changing the SAM base.":""});
+  $("#undo-point").disabled=!object||busy||manualActive||dirty||!prompt?.localPoints.length;
   $("#reset-draft").disabled=!object||busy;
-  if(!object){$("#candidate-list").innerHTML="<p class='muted-pad'>Select an object</p>";return}
+  $("#undo-brush").disabled=!session?.editor?.undoStack.length||selectedBrushBusy();
+  $("#redo-brush").disabled=!session?.editor?.redoStack.length||selectedBrushBusy();
+  $("#reset-brush").disabled=!dirty||selectedBrushBusy();
+  const anchorOk=brushSessionStillCompatible(session,object);
+  $("#save-manual").disabled=!object||!session?.editor||!dirty||selectedBrushBusy()||busy||Boolean(selectedController()?.running||selectedController()?.pending)||!anchorOk;
+  $("#clear-manual").disabled=!object||!manualActive||selectedBrushBusy()||busy;
+  $("#brush-state").textContent=session?.loading?"Loading mask...":brushSaveState(session);
+  if(!object){
+    $("#candidate-list").innerHTML="<p class='muted-pad'>Select an object</p>";
+    $("#manual-message").textContent="Select an object";
+    return;
+  }
   $("#display-name").value=object.display_name;
   $("#semantic-label").value=object.semantic_label;
-  const prompt=currentPromptState();
   $("#point-count").textContent=prompt?.localPoints.length??0;
   $("#prompt-revision").textContent=object.sam_draft?.prompt_revision??0;
   $("#object-version").textContent=object.object_version;
+  $("#manual-revision").textContent=manual.manual_revision??0;
+  $("#manual-base-revision").textContent=manual.base_prompt_revision??"-";
+  $("#manual-base-candidate").textContent=manual.base_candidate_index!==null&&manual.base_candidate_index!==undefined?Number(manual.base_candidate_index)+1:"-";
+  $("#manual-area").textContent=manual.area_pixels??0;
+  $("#manual-bbox").textContent=`[${(manual.bbox_xyxy||[0,0,0,0]).join(", ")}]`;
+  $("#manual-message").textContent=session?.error||(
+    manualActive?"Saved manual corrections are active. Clear them before changing the SAM mask.":"No saved manual corrections"
+  );
   $("#candidate-list").innerHTML=candidateListHtml(object,object.sam_draft?.selected_candidate_index);
+  for(const button of document.querySelectorAll("[data-candidate-index]")){
+    button.disabled=!canSelectCandidateForObject({object,promptState:prompt,brushDirty:dirty,structuralBusy:busy});
+    if(button.disabled)button.title=manualActive?"Clear saved manual corrections before changing the SAM mask.":dirty?"Save or reset your brush edits before changing the SAM base.":"Wait for the current prediction.";
+  }
 }
 function renderSamStatus(){const el=$("#sam-status");el.dataset.state=store.samStatus.state;el.querySelector("output").textContent=store.samStatus.message;$("#retry-sam").hidden=!store.workspace}
 function renderPredictionStatus(){const controller=selectedController();const state=currentPromptState();$("#mask-updating").hidden=!predictionStatusVisible({controller,promptState:state})}
@@ -97,14 +174,38 @@ function drawPoint(point){
   ctx.restore();
 }
 
+function drawBrushCursor(){
+  const radius=Number($("#brush-size").value)*view.scale;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(brushCursor.x,brushCursor.y,radius,0,Math.PI*2);
+  ctx.strokeStyle=store.activeTool==="manual-add"?"#9ff0c1":"#ffb2b8";
+  ctx.lineWidth=1.5;
+  ctx.setLineDash([5,4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=ctx.strokeStyle;
+  ctx.font="16px system-ui";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.fillText(store.activeTool==="manual-add"?"+":"-",brushCursor.x,brushCursor.y);
+  ctx.restore();
+}
+
 function renderSnapshotState(){
   const object=currentObject(),draft=object?.sam_draft||{},candidate=object?selectedCandidate(object):null;
+  const descriptor=object?brushDescriptorFor(object):null;
+  const session=selectedBrushSession();
   return {
     workspaceId:store.workspace?.workspace_id??null,
     selectedObjectId:object?.object_id??null,
     promptRevision:draft.prompt_revision||0,
     selectedCandidateIndex:draft.selected_candidate_index??null,
-    maskUrl:candidate?.mask_url??null,
+    maskUrl:descriptor?.sourceMaskUrl??candidate?.mask_url??null,
+    manualRevision:object?.manual_mask?.manual_revision??0,
+    brushGeneration:session?.generation??brushGeneration,
+    brushEditRevision:session?.editRevision??0,
+    effectiveMaskIdentity:session?.identity??(descriptor?.sourceMaskUrl??candidate?.mask_url??null),
     viewport:{zoom:view.zoom,panX:view.panX,panY:view.panY,width:view.viewportWidth,height:view.viewportHeight,scale:view.scale},
     sourceImageId
   };
@@ -130,11 +231,18 @@ async function draw(){
     view.setViewport(width,height,dpr);
   }
   const snapshot=renderGate.snapshot(renderSnapshotState());
-  const object=currentObject(),draft=object?.sam_draft||{},candidate=object?selectedCandidate(object):null;
-  let mask=null;
-  if(object&&candidate){
-    mask=await maskBinary(candidate,draft,object.object_id,store.workspace.workspace_id).catch(error=>{if(renderGate.isCurrent(snapshot,renderSnapshotState()))toast(`Candidate artifact failed to load: ${error.message}`,true);return null});
-    if(!renderGate.isCurrent(snapshot,renderSnapshotState()))return;
+  const object=currentObject(),draft=object?.sam_draft||{},candidate=object?selectedCandidate(object):null,session=selectedBrushSession();
+  let mask=session?.editor?.mask??null;
+  if(!mask&&object){
+    const descriptor=brushDescriptorFor(object);
+    if(descriptor.available){
+      const key=effectiveMaskCacheKey({workspaceId:store.workspace.workspace_id,objectId:object.object_id,maskType:descriptor.maskType,promptRevision:descriptor.basePromptRevision,candidateIndex:descriptor.baseCandidateIndex,manualRevision:descriptor.manualRevision,maskUrl:descriptor.sourceMaskUrl});
+      mask=await maskBinaryFromUrl(descriptor.sourceMaskUrl,key).catch(error=>{if(renderGate.isCurrent(snapshot,renderSnapshotState()))toast(`Mask artifact failed to load: ${error.message}`,true);return null});
+      if(!renderGate.isCurrent(snapshot,renderSnapshotState()))return;
+    }else if(candidate){
+      mask=await maskBinary(candidate,draft,object.object_id,store.workspace.workspace_id).catch(error=>{if(renderGate.isCurrent(snapshot,renderSnapshotState()))toast(`Candidate artifact failed to load: ${error.message}`,true);return null});
+      if(!renderGate.isCurrent(snapshot,renderSnapshotState()))return;
+    }
   }
   if(!paintBase(width,height))return;
   if(object&&mask){
@@ -147,6 +255,7 @@ async function draw(){
     ctx.drawImage(overlay,origin.x,origin.y,view.imageWidth*scale,view.imageHeight*scale);
   }
   if(object)for(const point of currentPromptState()?.localPoints||draft.points||[])drawPoint(point);
+  if(brushCursor&&(store.activeTool==="manual-add"||store.activeTool==="manual-remove"))drawBrushCursor();
 }
 function requestDraw(){renderGate.request();if(!renderQueued){renderQueued=true;requestAnimationFrame(draw)}}
 function resizeCanvas(){const rect=stage.getBoundingClientRect();fitViewport(view,rect.width,rect.height,window.devicePixelRatio||1);requestDraw();updateZoom()}
@@ -177,11 +286,14 @@ function getController(objectId){
       }),
       apply:(response,snapshot)=>{
         if(!store.workspace||store.workspace.workspace_id!==workspaceId||!store.workspace.objects.some(o=>o.object_id===response.object_id))return;
+        clearObjectMaskCache(workspaceId,response.object_id);
+        if(brushSession?.objectId===response.object_id)disposeBrushSession();
         updateWorkspace(mergePredictionResponse(store.workspace,response),store.selectedObjectId);
         const state=store.getPromptState(response.object_id);
         state.latestAppliedRevision=response.prompt_revision;
         state.persistedRevision=response.prompt_revision;
         state.localPoints=[...snapshot.points];
+        prepareBrushForSelection();
         renderPredictionStatus();
       },
       onError:(error,snapshot)=>{
@@ -199,6 +311,8 @@ function getController(objectId){
 
 function submitPrompt(objectId,revision,points,box){
   const object=store.workspace.objects.find(o=>o.object_id===objectId);
+  if(manualMaskActive(object)){toast("Clear saved manual corrections before changing the SAM mask.",true);return}
+  if(brushDirty()){toast("Save or reset your brush edits before changing the SAM base.",true);return}
   const draft=object?.sam_draft||{};
   const hasBase=Number.isInteger(draft.prompt_revision)&&draft.prompt_revision>0&&draft.selected_candidate_index!==null&&draft.selected_candidate_index!==undefined;
   const controller=getController(objectId);
@@ -221,14 +335,16 @@ function disposeController(objectId){const workspaceId=store.workspace?.workspac
 async function clearDraft(objectId){
   const object=store.workspace.objects.find(o=>o.object_id===objectId);
   if(!object||structuralBusyByObject.get(objectId))return;
+  if((manualMaskActive(object)||brushDirty())&&!confirm("Resetting the SAM draft will remove SAM points, SAM candidates, saved manual corrections, and unsaved brush edits. Continue?"))return;
   structuralBusyByObject.set(objectId,"reset");
   disposeController(objectId);
+  disposeBrushSession();
   renderAll();
   try{
     const response=await api.clearDraft(store.workspace,object);
     updateWorkspace(mergeClearDraftResponse(store.workspace,response),objectId);
     store.resetPromptState(objectId);
-    candidateImageCache.clearObject(store.workspace.workspace_id,objectId);
+    clearObjectMaskCache(store.workspace.workspace_id,objectId);
     toast("SAM draft reset");
   }catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry reset.");else toast(error.message,true)}
   finally{structuralBusyByObject.delete(objectId);renderAll()}
@@ -236,44 +352,152 @@ async function clearDraft(objectId){
 
 async function reloadAfterConflict(message){const id=store.workspace?.workspace_id;if(id){const workspace=await api.getWorkspace(id);updateWorkspace(workspace,store.selectedObjectId);toast(message,true)}}
 
+async function saveManualMask(){
+  const object=currentObject(),session=selectedBrushSession();
+  if(!object||!session?.editor||!session.editor.dirty||selectedBrushBusy())return;
+  session.saving=true;session.error="";renderAll();
+  try{
+    const blob=await binaryMaskToPngBlob(session.editor.mask,session.sourceWidth,session.sourceHeight);
+    const response=await api.saveManualMask(store.workspace,object,session,blob);
+    const edited=new Uint8Array(session.editor.mask);
+    const merged=mergeManualMaskResponse(store.workspace,response);
+    updateWorkspace(merged,object.object_id);
+    const updated=currentObject();
+    const updatedSession=createBrushSession({workspace:store.workspace,object:updated,sourceWidth:session.sourceWidth,sourceHeight:session.sourceHeight,mask:edited,generation:++brushGeneration});
+    brushSession=updatedSession;
+    const key=effectiveMaskCacheKey({workspaceId:store.workspace.workspace_id,objectId:object.object_id,maskType:"manual-composite",promptRevision:updatedSession.basePromptRevision,candidateIndex:updatedSession.baseCandidateIndex,manualRevision:updatedSession.manualRevision,maskUrl:updatedSession.sourceMaskUrl});
+    candidateImageCache.set(key,new Uint8Array(edited));
+    toast("Manual corrections saved");
+  }catch(error){
+    if(error.status===409){await reloadAfterConflict("Manual corrections conflicted. Review the current workspace before retrying.");if(brushSession)brushSession.error="Save conflict. Your local edits are preserved; retry only if the SAM base and manual revision still match."}
+    else if(brushSession)brushSession.error=error.message;
+    toast(error.message,true);
+  }finally{
+    if(brushSession)brushSession.saving=false;
+    renderAll();
+  }
+}
+
+async function clearManualMask(){
+  const object=currentObject(),session=selectedBrushSession();
+  if(!object||!manualMaskActive(object)||selectedBrushBusy())return;
+  if(session?.editor?.dirty&&!confirm("Clear saved corrections and discard unsaved brush edits?"))return;
+  if(session)session.clearing=true;renderAll();
+  try{
+    const response=await api.clearManualMask(store.workspace,object);
+    const merged=mergeManualMaskResponse(store.workspace,response);
+    clearObjectMaskCache(store.workspace.workspace_id,object.object_id);
+    updateWorkspace(merged,object.object_id);
+    await prepareBrushForSelection();
+    toast("Manual corrections cleared");
+  }catch(error){
+    if(session)session.error=error.message;
+    if(error.status===409)await reloadAfterConflict("Manual corrections changed. Reloaded; retry clear.");
+    else toast(error.message,true);
+  }finally{
+    if(brushSession)brushSession.clearing=false;
+    renderAll();
+  }
+}
+
+function confirmDiscardBrushEdits(message){return !brushDirty()||confirm(message)}
+
+function updateBrushDirty(){markBrushEdited(brushSession);renderDetails();requestDraw()}
+function beginBrushStroke(event,point,imagePoint){
+  const session=selectedBrushSession();
+  if(!session?.editor||selectedBrushBusy()){toast(session?.error||NO_SAM_MASK_MESSAGE,true);return false}
+  if(!brushSessionStillCompatible(session,currentObject())){toast("Brush base changed. Reload or reset local edits before painting.",true);return false}
+  const mode=store.activeTool==="manual-add"?"add":"remove";
+  session.editor.begin(mode);
+  session.editor.paint(imagePoint,imagePoint,Number($("#brush-size").value));
+  brushPointer={pointerId:event.pointerId,last:imagePoint};
+  stage.setPointerCapture(event.pointerId);
+  updateBrushDirty();
+  return true;
+}
+
 stage.addEventListener("pointerdown",event=>{
   if(!store.workspace||!sourceImage)return;
   const point=canvasEventPoint(canvas,event);
-  stage.setPointerCapture(event.pointerId);
-  if(store.activeTool==="pan"||event.button===1||event.altKey||event.shiftKey){panPointer=point;return}
+  if(store.activeTool==="pan"||event.button===1||event.altKey||event.shiftKey){stage.setPointerCapture(event.pointerId);panPointer=point;return}
   const imagePoint=canvasPointToImage(view,point.x,point.y);
   if(!imagePoint)return;
+  if((store.activeTool==="manual-add"||store.activeTool==="manual-remove")&&currentObject()){
+    beginBrushStroke(event,point,imagePoint);
+    return;
+  }
   if((store.activeTool==="positive"||store.activeTool==="negative")&&currentObject()){
     if(store.samStatus.state!=="ready"){toast("SAM is not ready yet.",true);return}
     if(structuralBusyByObject.get(store.selectedObjectId)){toast("Wait for the current object action to finish.",true);return}
+    if(manualMaskActive(currentObject())){toast("Clear saved manual corrections before changing the SAM mask.",true);return}
+    if(brushDirty()){toast("Save or reset your brush edits before changing the SAM base.",true);return}
+    stage.setPointerCapture(event.pointerId);
     const label=store.activeTool==="positive"?1:0;
     const result=store.addPoint(store.selectedObjectId,{x:imagePoint.x,y:imagePoint.y,label});
     requestDraw();
     submitPrompt(store.selectedObjectId,result.revision,result.points,result.box);
   }
 });
-stage.addEventListener("pointermove",event=>{if(!panPointer)return;const point=canvasEventPoint(canvas,event);view.panBy(point.x-panPointer.x,point.y-panPointer.y);panPointer=point;requestDraw()});
-stage.addEventListener("pointerup",()=>{panPointer=null});
+stage.addEventListener("pointermove",event=>{
+  const point=canvasEventPoint(canvas,event);
+  const imagePoint=canvasPointToImage(view,point.x,point.y);
+  brushCursor=(store.activeTool==="manual-add"||store.activeTool==="manual-remove")&&imagePoint?point:null;
+  if(panPointer){view.panBy(point.x-panPointer.x,point.y-panPointer.y);panPointer=point;requestDraw();return}
+  if(brushPointer&&selectedBrushSession()?.editor){
+    if(imagePoint){
+      selectedBrushSession().editor.paint(brushPointer.last||imagePoint,imagePoint,Number($("#brush-size").value));
+      brushPointer.last=imagePoint;
+      updateBrushDirty();
+    }else brushPointer.last=null;
+    return;
+  }
+  requestDraw();
+});
+function finishBrushPointer(){
+  if(brushPointer&&selectedBrushSession()?.editor&&selectedBrushSession().editor.commit())updateBrushDirty();
+  brushPointer=null;panPointer=null;
+}
+stage.addEventListener("pointerup",finishBrushPointer);
+stage.addEventListener("pointercancel",finishBrushPointer);
+stage.addEventListener("pointerleave",()=>{brushCursor=null;requestDraw()});
 stage.addEventListener("wheel",event=>{if(!store.workspace)return;event.preventDefault();const point=canvasEventPoint(canvas,event);view.zoomAt(event.deltaY<0?1.12:.89,point.x,point.y);updateZoom();requestDraw()},{passive:false});
 
-$("#workspace-loader").addEventListener("submit",event=>{event.preventDefault();const id=$("#workspace-id").value.trim();if(id)loadWorkspace(id)});
-$("#upload-form").addEventListener("submit",async event=>{event.preventDefault();const file=$("#source-image").files[0];if(!file)return;try{await createWorkspace(file)}catch(error){toast(error.message,true)}});
+$("#workspace-loader").addEventListener("submit",event=>{event.preventDefault();const id=$("#workspace-id").value.trim();if(id&&confirmDiscardBrushEdits("Discard unsaved brush edits and load another workspace?"))loadWorkspace(id)});
+$("#upload-form").addEventListener("submit",async event=>{event.preventDefault();const file=$("#source-image").files[0];if(!file||!confirmDiscardBrushEdits("Discard unsaved brush edits and create another workspace?"))return;try{await createWorkspace(file)}catch(error){toast(error.message,true)}});
 $("#retry-sam").addEventListener("click",prepareSam);
 $("#new-object").addEventListener("click",()=>{$("#object-create-form").hidden=false;$("#new-display-name").focus()});
 $("#cancel-create").addEventListener("click",()=>{$("#object-create-form").hidden=true});
 $("#new-display-name").addEventListener("input",()=>{$("#new-semantic-label").value=semanticLabelFromDisplayName($("#new-display-name").value)});
 $("#object-create-form").addEventListener("submit",async event=>{event.preventDefault();try{const display=$("#new-display-name").value.trim();const label=$("#new-semantic-label").value.trim()||semanticLabelFromDisplayName(display);const workspace=await api.createObject(store.workspace,label,display);const created=workspace.objects.find(o=>!store.workspace.objects.some(existing=>existing.object_id===o.object_id));$("#object-create-form").hidden=true;$("#new-display-name").value="";$("#new-semantic-label").value="";updateWorkspace(workspace,created?.object_id);toast("Object created")}catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry create.");else toast(error.message,true)}});
-$("#object-list").addEventListener("click",event=>{const row=event.target.closest("[data-object-id]");if(row){store.select(row.dataset.objectId);renderPredictionStatus();requestDraw()}});
+$("#object-list").addEventListener("click",event=>{const row=event.target.closest("[data-object-id]");if(row){if(row.dataset.objectId!==store.selectedObjectId&&!confirmDiscardBrushEdits("Discard unsaved brush edits and select another object?"))return;store.select(row.dataset.objectId);prepareBrushForSelection();renderPredictionStatus();requestDraw()}});
 $("#rename-form").addEventListener("submit",async event=>{event.preventDefault();const object=currentObject();if(!object)return;try{const workspace=await api.updateObject(store.workspace,object,$("#semantic-label").value.trim(),$("#display-name").value.trim());updateWorkspace(workspace,object.object_id);toast("Object renamed")}catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry rename.");else toast(error.message,true)}});
-$("#delete-object").addEventListener("click",async()=>{const object=currentObject();if(!object||structuralBusyByObject.get(object.object_id)||!confirm(`Delete ${object.display_name}?`))return;structuralBusyByObject.set(object.object_id,"delete");disposeController(object.object_id);renderAll();try{const workspace=await api.deleteObject(store.workspace,object);candidateImageCache.clearObject(store.workspace.workspace_id,object.object_id);const next=workspace.objects[0]?.object_id??null;updateWorkspace(workspace,next);toast("Object deleted")}catch(error){structuralBusyByObject.delete(object.object_id);store.resetPromptState(object.object_id);if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry delete.");else toast(error.message,true);renderAll()}});
-$("#candidate-list").addEventListener("click",async event=>{const button=event.target.closest("[data-candidate-index]");const object=currentObject();if(!button||!object)return;const state=currentPromptState();const controller=selectedController();if(controller?.running||controller?.pending||!canSelectCandidate(state)){toast("Wait for the current prediction before selecting a candidate.",true);return}const index=Number(button.dataset.candidateIndex);const previous=object.sam_draft.selected_candidate_index;object.sam_draft.selected_candidate_index=index;renderDetails();requestDraw();try{const response=await api.selectCandidate(store.workspace,object,object.sam_draft.prompt_revision,index);updateWorkspace(mergeCandidateSelectionResponse(store.workspace,response),object.object_id)}catch(error){object.sam_draft.selected_candidate_index=previous;renderDetails();requestDraw();if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry candidate selection.");else toast(error.message,true)}});
-$("#undo-point").addEventListener("click",async()=>{const object=currentObject();if(!object)return;const result=store.undoPoint(object.object_id);if(!result)return;if(!result.points.length&&!result.box){await clearDraft(object.object_id);return}requestDraw();submitPrompt(object.object_id,result.revision,result.points,result.box)});
+$("#delete-object").addEventListener("click",async()=>{const object=currentObject();if(!object||structuralBusyByObject.get(object.object_id))return;const extra=brushDirty()?" This will also discard unsaved brush edits.":"";if(!confirm(`Delete ${object.display_name}?${extra}`))return;structuralBusyByObject.set(object.object_id,"delete");disposeController(object.object_id);disposeBrushSession();renderAll();try{const workspace=await api.deleteObject(store.workspace,object);clearObjectMaskCache(store.workspace.workspace_id,object.object_id);const next=workspace.objects[0]?.object_id??null;updateWorkspace(workspace,next);toast("Object deleted")}catch(error){structuralBusyByObject.delete(object.object_id);store.resetPromptState(object.object_id);if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry delete.");else toast(error.message,true);renderAll()}});
+$("#candidate-list").addEventListener("click",async event=>{const button=event.target.closest("[data-candidate-index]");const object=currentObject();if(!button||!object)return;const state=currentPromptState();const controller=selectedController();if(manualMaskActive(object)){toast("Clear saved manual corrections before changing the SAM mask.",true);return}if(brushDirty()){toast("Save or reset your brush edits before changing the SAM base.",true);return}if(controller?.running||controller?.pending||!canSelectCandidate(state)){toast("Wait for the current prediction before selecting a candidate.",true);return}const index=Number(button.dataset.candidateIndex);const previous=object.sam_draft.selected_candidate_index;object.sam_draft.selected_candidate_index=index;disposeBrushSession();renderDetails();requestDraw();try{const response=await api.selectCandidate(store.workspace,object,object.sam_draft.prompt_revision,index);updateWorkspace(mergeCandidateSelectionResponse(store.workspace,response),object.object_id);prepareBrushForSelection()}catch(error){object.sam_draft.selected_candidate_index=previous;renderDetails();requestDraw();prepareBrushForSelection();if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry candidate selection.");else toast(error.message,true)}});
+$("#undo-point").addEventListener("click",async()=>{const object=currentObject();if(!object)return;if(manualMaskActive(object)){toast("Clear saved manual corrections before changing the SAM mask.",true);return}if(brushDirty()){toast("Save or reset your brush edits before changing the SAM base.",true);return}const result=store.undoPoint(object.object_id);if(!result)return;if(!result.points.length&&!result.box){await clearDraft(object.object_id);return}requestDraw();submitPrompt(object.object_id,result.revision,result.points,result.box)});
 $("#reset-draft").addEventListener("click",()=>{if(currentObject())clearDraft(currentObject().object_id)});
+$("#undo-brush").addEventListener("click",()=>{if(selectedBrushSession()?.editor?.undo()){updateBrushDirty()}});
+$("#redo-brush").addEventListener("click",()=>{if(selectedBrushSession()?.editor?.redo()){updateBrushDirty()}});
+$("#reset-brush").addEventListener("click",()=>{selectedBrushSession()?.editor?.reset();updateBrushDirty()});
+$("#save-manual").addEventListener("click",saveManualMask);
+$("#clear-manual").addEventListener("click",clearManualMask);
 document.querySelectorAll("[data-tool]").forEach(button=>button.addEventListener("click",()=>{store.setTool(button.dataset.tool);document.querySelectorAll("[data-tool]").forEach(item=>item.classList.toggle("is-active",item===button));stage.dataset.tool=button.dataset.tool}));
+$("#brush-size").addEventListener("input",()=>{$("#brush-size-output").textContent=`${$("#brush-size").value} px`;requestDraw()});
 $("#overlay-opacity").addEventListener("input",()=>{$("#opacity-output").textContent=`${Math.round(Number($("#overlay-opacity").value)*100)}%`;requestDraw()});
 $("#zoom-in").addEventListener("click",()=>{view.zoomAt(1.2,view.viewportWidth/2,view.viewportHeight/2);updateZoom();requestDraw()});
 $("#zoom-out").addEventListener("click",()=>{view.zoomAt(.8,view.viewportWidth/2,view.viewportHeight/2);updateZoom();requestDraw()});
 $("#fit-view").addEventListener("click",()=>{view.fit();updateZoom();requestDraw()});
+window.addEventListener("keydown",event=>{
+  const target=event.target;
+  if(target&&["INPUT","TEXTAREA"].includes(target.tagName))return;
+  if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="z"&&!event.shiftKey){
+    event.preventDefault();
+    if(selectedBrushSession()?.editor?.undo())updateBrushDirty();
+  }else if((event.ctrlKey||event.metaKey)&&((event.key.toLowerCase()==="z"&&event.shiftKey)||event.key.toLowerCase()==="y")){
+    event.preventDefault();
+    if(selectedBrushSession()?.editor?.redo())updateBrushDirty();
+  }
+});
+window.addEventListener("beforeunload",event=>{if(brushDirty()){event.preventDefault();event.returnValue=""}});
 
 store.subscribe(renderAll);
 new ResizeObserver(resizeCanvas).observe(stage);

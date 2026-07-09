@@ -53,10 +53,18 @@
             <button class="tool-button is-active" type="button" data-tool="inspect">Inspect</button>
             <button class="tool-button" type="button" data-tool="positive">+ Positive</button>
             <button class="tool-button" type="button" data-tool="negative">- Negative</button>
+            <button class="tool-button" type="button" data-tool="manual-add">Manual add</button>
+            <button class="tool-button" type="button" data-tool="manual-remove">Manual remove</button>
             <button class="tool-button" type="button" data-tool="pan">Pan</button>
             <span class="toolbar-spacer"></span>
             <button id="undo-point" type="button" class="secondary">Undo point</button>
             <button id="reset-draft" type="button" class="secondary">Reset draft</button>
+            <label class="brush-size-control">Brush radius <input id="brush-size" type="range" min="1" max="200" value="12"><output id="brush-size-output">12 px</output></label>
+            <button id="undo-brush" type="button" class="secondary">Undo brush</button>
+            <button id="redo-brush" type="button" class="secondary">Redo brush</button>
+            <button id="reset-brush" type="button" class="secondary">Reset local edits</button>
+            <button id="save-manual" type="button" class="primary">Save corrections</button>
+            <button id="clear-manual" type="button" class="secondary">Clear saved corrections</button>
             <button id="zoom-out" type="button" class="icon-button" aria-label="Zoom out">-</button>
             <output id="zoom-level">100%</output>
             <button id="zoom-in" type="button" class="icon-button" aria-label="Zoom in">+</button>
@@ -82,6 +90,18 @@
           <section class="detail-section">
             <h3>Prompt</h3>
             <dl class="stats"><div><dt>Points</dt><dd id="point-count">0</dd></div><div><dt>Revision</dt><dd id="prompt-revision">0</dd></div><div><dt>Object version</dt><dd id="object-version">0</dd></div></dl>
+          </section>
+          <section class="detail-section">
+            <h3>Manual corrections</h3>
+            <p id="manual-message" class="manual-message">No saved manual corrections</p>
+            <dl class="stats manual-stats">
+              <div><dt>Manual rev</dt><dd id="manual-revision">0</dd></div>
+              <div><dt>Base SAM</dt><dd id="manual-base-revision">-</dd></div>
+              <div><dt>Base cand</dt><dd id="manual-base-candidate">-</dd></div>
+              <div><dt>Area</dt><dd id="manual-area">0</dd></div>
+              <div><dt>Bounds</dt><dd id="manual-bbox">[0, 0, 0, 0]</dd></div>
+              <div><dt>Status</dt><dd id="brush-state">No mask</dd></div>
+            </dl>
           </section>
           <section class="detail-section">
             <h3>Candidates</h3>

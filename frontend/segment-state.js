@@ -6,8 +6,12 @@ export function emptyDraft(){
   return {prompt_revision:0,points:[],box:null,candidates:[],selected_candidate_index:null,prepared_image_key:null,updated_at:null};
 }
 
+export function emptyManualMask(){
+  return {manual_revision:0,base_prompt_revision:null,base_candidate_index:null,add_mask_url:null,remove_mask_url:null,composite_mask_url:null,area_pixels:0,bbox_xyxy:[0,0,0,0],updated_at:null};
+}
+
 export function normalizeObject(object){
-  return {...object,sam_draft:{...emptyDraft(),...(object.sam_draft||{})}};
+  return {...object,sam_draft:{...emptyDraft(),...(object.sam_draft||{})},manual_mask:{...emptyManualMask(),...(object.manual_mask||{})}};
 }
 
 export function normalizeWorkspace(workspace){
@@ -152,7 +156,24 @@ export function mergeClearDraftResponse(workspace,response){
   return {
     ...normalized,
     workspace_revision:response.workspace_revision,
-    objects:normalized.objects.map(object=>object.object_id===response.object_id?normalizeObject({...object,object_version:response.object_version,sam_draft:response.sam_draft||emptyDraft()}):object)
+    objects:normalized.objects.map(object=>object.object_id===response.object_id?normalizeObject({...object,object_version:response.object_version,sam_draft:response.sam_draft||emptyDraft(),manual_mask:emptyManualMask()}):object)
+  };
+}
+
+export function manualMaskActive(object){
+  return Number(normalizeObject(object).manual_mask.manual_revision)>0;
+}
+
+export function mergeManualMaskResponse(workspace,response){
+  const normalized=normalizeWorkspace(workspace);
+  return {
+    ...normalized,
+    workspace_revision:response.workspace_revision,
+    objects:normalized.objects.map(object=>object.object_id===response.object_id?normalizeObject({
+      ...object,
+      object_version:response.object_version,
+      manual_mask:response.manual_mask||emptyManualMask()
+    }):object)
   };
 }
 
@@ -163,6 +184,14 @@ export function selectedCandidate(object){
 
 export function canSelectCandidate(promptState){return Boolean(promptState)&&!promptState.running&&!promptState.pending}
 
+export function canUseSamPrompting({object,promptState,brushDirty=false,structuralBusy=false,samReady=true}={}){
+  return Boolean(object)&&samReady&&!structuralBusy&&!brushDirty&&!manualMaskActive(object)&&!promptState?.running&&!promptState?.pending;
+}
+
+export function canSelectCandidateForObject({object,promptState,brushDirty=false,structuralBusy=false}={}){
+  return Boolean(object)&&!structuralBusy&&!brushDirty&&!manualMaskActive(object)&&canSelectCandidate(promptState);
+}
+
 export function predictionStatusVisible({controller=null,promptState=null}={}){
   return Boolean(controller?.running||controller?.pending||promptState?.running||promptState?.pending);
 }
@@ -171,6 +200,10 @@ export function controllerKey(workspaceId,objectId){return `${workspaceId}:${obj
 
 export function candidateCacheKey({workspaceId,objectId,promptRevision,candidateIndex,maskUrl}){
   return `${workspaceId}:${objectId}:${promptRevision}:${candidateIndex}:${maskUrl}`;
+}
+
+export function effectiveMaskCacheKey({workspaceId,objectId,maskType,promptRevision,candidateIndex,manualRevision,maskUrl}){
+  return `${workspaceId}:${objectId}:${maskType}:${promptRevision??0}:${candidateIndex??"none"}:${manualRevision??0}:${maskUrl}`;
 }
 
 export class CandidateMaskCache {
@@ -202,6 +235,10 @@ export class RenderGate {
       promptRevision:state.promptRevision??0,
       selectedCandidateIndex:state.selectedCandidateIndex??null,
       maskUrl:state.maskUrl??null,
+      manualRevision:state.manualRevision??0,
+      brushGeneration:state.brushGeneration??0,
+      brushEditRevision:state.brushEditRevision??0,
+      effectiveMaskIdentity:state.effectiveMaskIdentity??null,
       viewport:{...(state.viewport||{})},
       sourceImageId:state.sourceImageId??null
     };
@@ -213,6 +250,10 @@ export class RenderGate {
       snapshot.promptRevision===(state.promptRevision??0)&&
       snapshot.selectedCandidateIndex===(state.selectedCandidateIndex??null)&&
       snapshot.maskUrl===(state.maskUrl??null)&&
+      snapshot.manualRevision===(state.manualRevision??0)&&
+      snapshot.brushGeneration===(state.brushGeneration??0)&&
+      snapshot.brushEditRevision===(state.brushEditRevision??0)&&
+      snapshot.effectiveMaskIdentity===(state.effectiveMaskIdentity??null)&&
       snapshot.sourceImageId===(state.sourceImageId??null)&&
       JSON.stringify(snapshot.viewport)===JSON.stringify(state.viewport||{});
   }

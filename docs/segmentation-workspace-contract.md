@@ -183,7 +183,7 @@ not accept a client-provided base mask path or base mask file.
 upload, loading an existing workspace with `/segment?workspace={workspace_id}`,
 semantic object creation, object rename/delete, SAM preparation, positive and
 negative point tools, candidate-mask display, candidate selection, undo, draft
-reset, and pan/zoom.
+reset, manual add/remove brush corrections, and pan/zoom.
 
 The browser keeps local prompt state separate from the persisted `sam_draft`.
 Point markers are added to local cumulative state immediately so the user sees
@@ -201,6 +201,35 @@ Candidate selection is a structural mutation and is blocked while the selected
 object has an active or pending prediction. Candidate masks are displayed from
 their artifact URLs with a cache-busting query string; stored workspace URLs are
 not modified.
+
+Manual brush tools in `/segment` edit a local complete binary composite mask in
+source-image pixels. The displayed selected-object mask uses this priority:
+
+```text
+1. Current local brush editor mask
+2. Saved manual composite mask
+3. Selected SAM candidate mask
+4. No mask
+```
+
+Local brush edits are not persisted until the user saves corrections through the
+manual-mask endpoint. Saving sends a full-resolution binary PNG of the edited
+mask, the current base SAM prompt revision and candidate index, and expected
+workspace/object/manual revisions. A successful save rebases the local editor to
+the saved composite, clears local undo/redo history, and preserves SAM points and
+candidates.
+
+Clearing saved manual corrections calls the manual clear endpoint, removes the
+persisted manual state, and reloads the selected SAM candidate as the brush base.
+It does not clear SAM points or candidates. Resetting the SAM draft is separate:
+that destructive action clears SAM points, SAM candidates, saved manual
+corrections, and unsaved local brush edits.
+
+While saved manual corrections exist, `/segment` disables positive/negative SAM
+point prompting and different-candidate selection until the manual corrections
+are cleared. While unsaved local brush edits exist, `/segment` also blocks SAM
+base changes and warns before object/workspace switches, object deletion, SAM
+draft reset, or browser navigation would discard those local edits.
 
 ## Optimistic Concurrency
 
