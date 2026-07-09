@@ -77,5 +77,5 @@ def test_v3_1_integrated_support_occlusion_and_room_gates(unified_pair):
     assert by_label["desktop_box"]["placement_classification"]=="placement_high_confidence"
     assert by_label["desk_chair"]["placement_classification"]=="placement_with_occlusion"
     assert by_label["desk_chair"]["occlusion"]["partially_occluded"]
-    assert placement["quality_gates"]["joint_room_fit_passed"]
+    assert placement["quality_gates"]["room_fit_completed"]
     assert all(compilation["quality_gates"].values())

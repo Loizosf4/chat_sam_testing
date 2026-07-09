@@ -10,10 +10,13 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import shutil
+import tempfile
 from pathlib import Path
 from typing import Any
 
+import jsonschema
 import numpy as np
 from PIL import Image, ImageDraw
 
@@ -44,6 +47,25 @@ DEFAULT_MOGE = ROOT / "outputs" / "office_test" / "moge"
 DEFAULT_OUTPUT = ROOT / "outputs" / "office_test" / "unified_v3_clean"
 HANDOFF = ROOT / "clean_room_v3"
 FORBIDDEN_TOKENS = (".blend", "approved", "candidate_c", "room_corrected", "blender_execution", "primitive_plan", "pose_refinement_v2", "pose_refinement_v3")
+REQUIRED_MOGE_ARRAYS = ("points", "depth", "valid_mask", "intrinsics", "normal")
+SUPPORTED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
+REQUIRED_OUTPUT_FILES = {
+    "unified_scene_plan.json", "unified_scene_plan.md", "room_plan.json",
+    "camera_candidates.json", "object_pose_report.json", "object_pose_report.md",
+    "placement_report.json", "support_graph.json", "collision_report.json",
+    "confidence_report.json", "ambiguity_report.md", "clean_input_audit.json",
+    "forbidden_input_audit.json", "compilation_report.json",
+    "compilation_report.md", "blender_one_batch_manifest.json",
+    "allowed_inputs_manifest.json", "numbered_object_overlay.png",
+    "normal_frames_overlay.png", "projected_primitives_overlay.png",
+    "support_graph_overlay.png", "room_and_camera_overlay.png",
+    "room_projection_overlay.png", "confidence_overview.png",
+    "ambiguity_overview.png", "clean_scene_plan_overview.png",
+}
+
+
+class CompilerValidationError(ValueError):
+    """A concise, expected validation failure suitable for CLI display."""
 
 
 def sha256(path: Path) -> str:
@@ -73,10 +95,124 @@ class CleanReadGuard:
         with np.load(checked,allow_pickle=False) as data: return {key:np.asarray(data[key]) for key in data.files}
 
 
-def allowed_input_manifest(sam_dir:Path=DEFAULT_SAM_DIR,source:Path=DEFAULT_SOURCE,moge_dir:Path=DEFAULT_MOGE)->dict[str,Any]:
-    metadata_path=sam_dir/"metadata.json"; metadata=json.loads(metadata_path.read_text(encoding="utf-8"))
+def allowed_input_manifest(sam_dir:Path=DEFAULT_SAM_DIR,source:Path=DEFAULT_SOURCE,moge_dir:Path=DEFAULT_MOGE,metadata:dict[str,Any]|None=None)->dict[str,Any]:
+    metadata_path=sam_dir/"metadata.json"
+    metadata=metadata if metadata is not None else json.loads(metadata_path.read_text(encoding="utf-8"))
     paths=[source,metadata_path,moge_dir/"geometry.npz",moge_dir/"metadata.json"]+[sam_dir/x["filename"] for x in metadata["masks"]]
     return {"schema_version":"1.0","mode":"clean_reconstruction","inputs":[{"path":str(p.resolve()),"sha256":sha256(p),"role":"source_image" if p==source else "sam_metadata" if p==metadata_path else "moge_geometry" if p.name=="geometry.npz" else "moge_metadata" if p.name=="metadata.json" else "semantic_mask"} for p in paths],"input_count":len(paths),"forbidden_categories":["Blender checkpoints","approved transforms","manual candidate decisions","corrected room/camera reports","historical final scene plans"]}
+
+
+def _read_json_object(path: Path, name: str) -> dict[str, Any]:
+    if not path.is_file():
+        raise CompilerValidationError(f"{name} is missing: {path}")
+    try:
+        value=json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise CompilerValidationError(f"{name} is not valid JSON: {path}") from exc
+    if not isinstance(value,dict):
+        raise CompilerValidationError(f"{name} must be a JSON object: {path}")
+    return value
+
+
+def _fallback_color(object_id: str, index: int) -> str:
+    digest=hashlib.sha256(f"{index}:{object_id}".encode("utf-8")).digest()
+    rgb=[64+(component%160) for component in digest[:3]]
+    return "#"+"".join(f"{component:02x}" for component in rgb)
+
+
+def _normalize_color(value: Any, object_id: str, index: int) -> tuple[str, bool]:
+    if isinstance(value,str) and len(value)==7 and value.startswith("#"):
+        try:
+            int(value[1:],16)
+            return value.lower(),False
+        except ValueError:
+            pass
+    if isinstance(value,(list,tuple)) and len(value)==3 and all(isinstance(x,(int,float)) and 0<=x<=255 for x in value):
+        return "#"+"".join(f"{int(x):02x}" for x in value),False
+    return _fallback_color(object_id,index),True
+
+
+def validate_compiler_inputs(*,sam_dir:Path,source_path:Path,moge_dir:Path)->dict[str,Any]:
+    """Validate the complete protected input set before creating staging output."""
+    sam_dir=Path(sam_dir).expanduser().resolve();source_path=Path(source_path).expanduser().resolve();moge_dir=Path(moge_dir).expanduser().resolve()
+    if not sam_dir.is_dir():raise CompilerValidationError(f"SAM export directory is missing: {sam_dir}")
+    if not moge_dir.is_dir():raise CompilerValidationError(f"MoGe directory is missing: {moge_dir}")
+    metadata=_read_json_object(sam_dir/"metadata.json","SAM metadata")
+    missing=[key for key in ("image_id","width","height","masks") if key not in metadata]
+    if missing:raise CompilerValidationError(f"SAM metadata is missing required fields: {', '.join(missing)}")
+    if not isinstance(metadata["width"],int) or not isinstance(metadata["height"],int) or metadata["width"]<=0 or metadata["height"]<=0:
+        raise CompilerValidationError("SAM metadata width and height must be positive integers")
+    if not isinstance(metadata["masks"],list) or not metadata["masks"]:
+        raise CompilerValidationError("SAM metadata must contain at least one mask")
+    seen:set[str]=set();masks:dict[str,np.ndarray]={};fallback_ids:list[str]=[]
+    for index,item in enumerate(metadata["masks"]):
+        if not isinstance(item,dict):raise CompilerValidationError(f"SAM mask entry {index} must be an object")
+        absent=[key for key in ("mask_id","label","filename") if key not in item]
+        if absent:raise CompilerValidationError(f"SAM mask entry {index} is missing: {', '.join(absent)}")
+        mask_id=item["mask_id"]
+        if not isinstance(mask_id,str) or not mask_id or Path(mask_id).name!=mask_id or "/" in mask_id or "\\" in mask_id:
+            raise CompilerValidationError(f"SAM mask entry {index} has an invalid path-unsafe mask_id")
+        if mask_id in seen:raise CompilerValidationError(f"duplicate SAM mask_id: {mask_id}")
+        seen.add(mask_id)
+        if not isinstance(item["label"],str):raise CompilerValidationError(f"SAM mask {mask_id} label must be a string")
+        filename=item["filename"]
+        if not isinstance(filename,str) or not filename or Path(filename).name!=filename or Path(filename).is_absolute() or "/" in filename or "\\" in filename:
+            raise CompilerValidationError(f"SAM mask {mask_id} has an unsafe filename: {filename!r}")
+        mask_path=sam_dir/filename
+        if not mask_path.is_file():raise CompilerValidationError(f"SAM mask file is missing for {mask_id}: {mask_path}")
+        try:
+            with Image.open(mask_path) as image:
+                raw=np.asarray(image.convert("L"))
+        except (OSError,ValueError) as exc:
+            raise CompilerValidationError(f"SAM mask is not a readable image for {mask_id}: {mask_path}") from exc
+        if raw.shape!=(metadata["height"],metadata["width"]):
+            raise CompilerValidationError(f"SAM mask {mask_id} dimensions {raw.shape[::-1]} do not match metadata {(metadata['width'],metadata['height'])}")
+        values=set(np.unique(raw).tolist())
+        if not values.issubset({0,255}):raise CompilerValidationError(f"SAM mask {mask_id} is not binary; values={sorted(values)[:8]}")
+        if not np.any(raw==255):raise CompilerValidationError(f"SAM mask {mask_id} is empty")
+        masks[mask_id]=raw==255
+        color,fallback=_normalize_color(item.get("color"),mask_id,index);item["color"]=color
+        item["color_source"]="deterministic_fallback" if fallback else "export_metadata"
+        if fallback:fallback_ids.append(mask_id)
+    if not source_path.is_file():raise CompilerValidationError(f"source image is missing: {source_path}")
+    if source_path.suffix.lower() not in SUPPORTED_IMAGE_SUFFIXES:raise CompilerValidationError(f"unsupported source image format: {source_path.suffix}")
+    try:
+        with Image.open(source_path) as image:
+            image.verify()
+        with Image.open(source_path) as image:
+            source_size=image.size
+    except (OSError,ValueError) as exc:
+        raise CompilerValidationError(f"source image is not readable: {source_path}") from exc
+    expected_size=(metadata["width"],metadata["height"])
+    if source_size!=expected_size:raise CompilerValidationError(f"source image dimensions {source_size} do not match SAM metadata {expected_size}")
+    moge_meta=_read_json_object(moge_dir/"metadata.json","MoGe metadata")
+    dimensions=moge_meta.get("source_image_dimensions")
+    if not isinstance(dimensions,dict) or dimensions.get("width")!=expected_size[0] or dimensions.get("height")!=expected_size[1]:
+        raise CompilerValidationError(f"MoGe metadata source dimensions do not match {expected_size}")
+    geometry_path=moge_dir/"geometry.npz"
+    if not geometry_path.is_file():raise CompilerValidationError(f"MoGe geometry archive is missing: {geometry_path}")
+    try:
+        with np.load(geometry_path,allow_pickle=False) as archive:
+            absent=[key for key in REQUIRED_MOGE_ARRAYS if key not in archive.files]
+            if absent:raise CompilerValidationError(f"MoGe geometry is missing arrays: {', '.join(absent)}")
+            arrays={key:np.asarray(archive[key]) for key in REQUIRED_MOGE_ARRAYS}
+    except CompilerValidationError:raise
+    except (OSError,ValueError) as exc:
+        raise CompilerValidationError(f"MoGe geometry archive is invalid or contains unsupported arrays: {geometry_path}") from exc
+    height,width=metadata["height"],metadata["width"]
+    expected_2d=(height,width)
+    if arrays["points"].shape!=(height,width,3):raise CompilerValidationError(f"MoGe points shape must be {(height,width,3)}, got {arrays['points'].shape}")
+    if arrays["normal"].shape!=(height,width,3):raise CompilerValidationError(f"MoGe normal shape must be {(height,width,3)}, got {arrays['normal'].shape}")
+    for name in ("depth","valid_mask"):
+        if arrays[name].shape!=expected_2d:raise CompilerValidationError(f"MoGe {name} shape must be {expected_2d}, got {arrays[name].shape}")
+    if arrays["intrinsics"].shape!=(3,3):raise CompilerValidationError(f"MoGe intrinsics shape must be (3, 3), got {arrays['intrinsics'].shape}")
+    valid=np.asarray(arrays["valid_mask"],bool)
+    if not valid.any():raise CompilerValidationError("MoGe valid_mask contains no valid samples")
+    for name in ("points","normal","depth"):
+        values=arrays[name][valid]
+        if values.size==0 or not np.isfinite(values).any():raise CompilerValidationError(f"MoGe {name} contains no usable finite values")
+    if not np.isfinite(arrays["intrinsics"]).all():raise CompilerValidationError("MoGe intrinsics contains non-finite values")
+    return {"sam_dir":sam_dir,"source_path":source_path,"moge_dir":moge_dir,"metadata":metadata,"moge_metadata":moge_meta,"masks":masks,"fallback_color_object_ids":fallback_ids}
 
 
 def _hull(points:np.ndarray)->np.ndarray:
@@ -136,17 +272,18 @@ def _support_assignments(records:list[dict[str,Any]],planes:list[dict[str,Any]])
         points=item["points"];lo,hi=np.percentile(points,[2,98],axis=0);label=item["semantic_label"].lower();wall_scores=[]
         for wall in walls:
             n=np.asarray(wall["plane_equation"]["normal"]);d=wall["plane_equation"]["offset"];wall_scores.append((float(np.median(np.abs(points@n+d))),wall))
-        wall_distance,wall=min(wall_scores,key=lambda x:x[0])
+        wall_distance,wall=min(wall_scores,key=lambda x:x[0]) if wall_scores else (math.inf,None)
         wall_semantic=any(token in label for token in ("wall","frame","bulletin","radiator","light"))
-        if wall_semantic or (wall_distance<.10 and lo[2]>.08): result[item["object_id"]]={"target":wall["plane_id"],"type":"wall","confidence":float(max(.3,1-wall_distance/.2)),"wall":wall}
+        if wall is not None and (wall_semantic or (wall_distance<.10 and lo[2]>.08)): result[item["object_id"]]={"target":wall["plane_id"],"type":"wall","confidence":float(max(.3,1-wall_distance/.2)),"wall":wall}
         elif lo[2]<=.12: result[item["object_id"]]={"target":"plane_floor","type":"floor","confidence":float(max(.3,1-abs(lo[2])/.12))}
         else:
             candidates=[]
             for other in records:
                 if other is item:continue
                 olo,ohi=np.percentile(other["points"],[2,98],axis=0);height_gap=abs(lo[2]-ohi[2]);overlap=max(0,min(hi[0],ohi[0])-max(lo[0],olo[0]))*max(0,min(hi[1],ohi[1])-max(lo[1],olo[1]));candidates.append((height_gap,-overlap,other))
-            gap,neg_overlap,other=min(candidates,key=lambda x:(x[0],x[1]))
-            if gap<.12 and neg_overlap<0:result[item["object_id"]]={"target":other["object_id"],"type":"object","confidence":float(max(.3,1-gap/.12))}
+            best=min(candidates,key=lambda x:(x[0],x[1])) if candidates else None
+            if best is not None and best[0]<.12 and best[1]<0:
+                gap,_,other=best;result[item["object_id"]]={"target":other["object_id"],"type":"object","confidence":float(max(.3,1-gap/.12))}
             else:result[item["object_id"]]={"target":None,"type":"unknown","confidence":.25}
     return result
 
@@ -170,20 +307,33 @@ def _collision_relation(a:dict[str,Any],b:dict[str,Any])->float:
     return float(max(0,depth))
 
 
-def compile_clean(output:Path=DEFAULT_OUTPUT,sam_dir:Path=DEFAULT_SAM_DIR,source_path:Path=DEFAULT_SOURCE,moge_dir:Path=DEFAULT_MOGE,handoff:Path=HANDOFF,scene_id:str="office_test_unified_v3_clean")->dict[str,Any]:
-    output.mkdir(parents=True,exist_ok=True);handoff.mkdir(parents=True,exist_ok=True)
-    manifest=allowed_input_manifest(sam_dir,source_path,moge_dir);(handoff/"allowed_inputs_manifest.json").write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
+def _compile_clean_into(*,output:Path,sam_dir:Path,source_path:Path,moge_dir:Path,scene_id:str,metadata:dict[str,Any])->dict[str,Any]:
+    manifest=allowed_input_manifest(sam_dir,source_path,moge_dir,metadata);manifest_path=output/"allowed_inputs_manifest.json";manifest_path.write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
     allowed=[Path(x["path"]) for x in manifest["inputs"]];guard=CleanReadGuard(allowed);metadata=guard.json(sam_dir/"metadata.json");moge_meta=guard.json(moge_dir/"metadata.json");archive=guard.npz(moge_dir/"geometry.npz");source=guard.image(source_path)
     masks={x["mask_id"]:guard.mask(sam_dir/x["filename"]) for x in metadata["masks"]};points=np.asarray(archive["points"],float);normals=np.asarray(archive["normal"],float);depth=np.asarray(archive["depth"],float);valid=np.asarray(archive["valid_mask"],bool);intrinsics=np.asarray(archive["intrinsics"],float)
     finite=np.isfinite(points).all(axis=2)&np.isfinite(normals).all(axis=2)&np.isfinite(depth);union=np.logical_or.reduce(list(masks.values()));structural=valid&finite&~union;ys,xs=np.nonzero(structural);occupied=np.median(points[valid&finite],axis=0)
-    planes_raw,plane_diag=estimate_structural_planes(points[structural],normals[structural],np.column_stack([xs,ys]),valid.shape,occupied);by_semantic={x["semantic_candidate"]:x for x in planes_raw}
-    if not {"floor","left_wall","right_wall"}.issubset(by_semantic):raise RuntimeError("clean structural plane estimation failed")
+    try:
+        planes_raw,plane_diag=estimate_structural_planes(points[structural],normals[structural],np.column_stack([xs,ys]),valid.shape,occupied)
+    except Exception as exc:
+        raise CompilerValidationError(
+            "indoor room reconstruction requires floor, left_wall, and right_wall evidence; "
+            "available=[], missing=['floor', 'left_wall', 'right_wall']"
+        ) from exc
+    by_semantic={x["semantic_candidate"]:x for x in planes_raw}
+    required_semantics={"floor","left_wall","right_wall"};available_semantics=set(by_semantic);missing_semantics=required_semantics-available_semantics
+    if missing_semantics:
+        raise CompilerValidationError(
+            "indoor room reconstruction requires floor, left_wall, and right_wall evidence; "
+            f"available={sorted(available_semantics)}, missing={sorted(missing_semantics)}"
+        )
     canonical=construct_canonical_transform(by_semantic["floor"]["normal"],by_semantic["floor"]["offset"],occupied);raw_to_canonical=canonical["raw_to_canonical"];canonical_to_raw=canonical["canonical_to_raw"]
     joint_room=fit_joint_room_model(np.asarray(source),points,depth,normals,valid,structural,np.column_stack([xs,ys]),planes_raw,raw_to_canonical,canonical_to_raw,intrinsics);room=joint_room["room_proxies"];room_by_id={x["plane_id"]:x for x in room};camera_candidates=joint_room["camera_candidates"]
     perspective=next(candidate for candidate in camera_candidates if candidate["type"]=="perspective");camera={"canonical_to_camera":np.asarray(perspective["canonical_to_camera_transform"],float),"intrinsics":np.asarray(perspective["normalized_intrinsics"],float),"image_shape":valid.shape};plane_diag["joint_room_fit"]=joint_room["report"];plane_diag["joint_room_landmarks"]=joint_room["structural_landmarks"]
     geometry=[]
     for meta in metadata["masks"]:
-        mask=masks[meta["mask_id"]];raw_valid=mask&valid&finite;cleaning=clean_masked_geometry(mask,points,depth,normals,valid,2)
+        mask=masks[meta["mask_id"]];raw_valid=mask&valid&finite
+        if not raw_valid.any():raise CompilerValidationError(f"SAM mask {meta['mask_id']} has no usable MoGe geometry")
+        cleaning=clean_masked_geometry(mask,points,depth,normals,valid,2)
         if cleaning["success"]:
             raw=cleaning["points"];raw_normals=cleaning["normals"];raw_depth=cleaning["depth"];pixel_yx=cleaning["pixel_yx"]
         else:
@@ -209,7 +359,8 @@ def compile_clean(output:Path=DEFAULT_OUTPUT,sam_dir:Path=DEFAULT_SAM_DIR,source
         elif selected["metrics"]["orientation_valid"] and frame["orientation_confidence"]>=.6 and support["confidence"]>=.5:classification="automatic_high_confidence"
         else:classification="user_review_recommended"
         confidence=float(np.clip(.35*frame["orientation_confidence"]+.20*item["valid_ratio"]+.15*support["confidence"]+.15*selected["metrics"]["hull_iou"]+.15*max(0,1-selected["metrics"]["horizontal_edge_error_degrees"]/30),0,1))
-        record={"object_id":item["object_id"],"semantic_label":item["semantic_label"],"primitive_type":"cube","transform":selected["transform"],"support_target":support["target"],"support_type":support["type"],"support_confidence":support["confidence"],"confidence_classification":classification,"placement_classification":selected["placement"]["classification"],"placement_hard_gates":selected["placement"]["hard_gates"],"placement_scale_ratio":selected["placement"]["scale_ratio"],"final_pose_confidence":confidence,"geometry_confidence":float(min(1,item["valid_ratio"]*min(1,len(item["points"])/500))),"geometry_cleaning":item["cleaning"],"occlusion":{key:value for key,value in occlusion.items() if key!="occluder_masks"},"normal_frame":frame,"normal_angular_dispersion_degrees":normal_disp,"validation_metrics":selected["metrics"],"ambiguity":{"type":"yaw_unobservable" if near_square else frame["ambiguity"],"candidate_count":len(candidate_records)},"rotation_candidates":candidate_records,"orientation_method":"normal_first_v3_universal","material_color":item["meta"]["color"],"collision_warnings":[]};objects.append(record);per_object.append((record,item,segments,projected))
+        material_color,color_fallback=_normalize_color(item["meta"].get("color"),item["object_id"],len(objects))
+        record={"object_id":item["object_id"],"semantic_label":item["semantic_label"],"primitive_type":"cube","transform":selected["transform"],"support_target":support["target"],"support_type":support["type"],"support_confidence":support["confidence"],"confidence_classification":classification,"placement_classification":selected["placement"]["classification"],"placement_hard_gates":selected["placement"]["hard_gates"],"placement_scale_ratio":selected["placement"]["scale_ratio"],"final_pose_confidence":confidence,"geometry_confidence":float(min(1,item["valid_ratio"]*min(1,len(item["points"])/500))),"geometry_cleaning":item["cleaning"],"occlusion":{key:value for key,value in occlusion.items() if key!="occluder_masks"},"normal_frame":frame,"normal_angular_dispersion_degrees":normal_disp,"validation_metrics":selected["metrics"],"ambiguity":{"type":"yaw_unobservable" if near_square else frame["ambiguity"],"candidate_count":len(candidate_records)},"rotation_candidates":candidate_records,"orientation_method":"normal_first_v3_universal","material_color":material_color,"material_color_source":"deterministic_fallback" if color_fallback else "export_metadata","collision_warnings":[]};objects.append(record);per_object.append((record,item,segments,projected))
     propagation=propagate_support_contacts(objects,supports);support_graph["final_contact_propagation"]=propagation
     for obj in objects:
         item=geometry_by_id[obj["object_id"]];occlusion=occlusions[obj["object_id"]];transform=obj["transform"];projected=project_world_points(cuboid_corners(np.asarray(transform["center"]),np.asarray(transform["dimensions"]),np.asarray(transform["rotation_matrix"])),camera["canonical_to_camera"],camera["intrinsics"],camera["image_shape"]);pm=occlusion_projection_metrics(projected,item["mask"],occlusion["occluder_masks"]);assignment=supports[obj["object_id"]];below=False;support_error=obj["validation_metrics"].get("support_error",0.0)
@@ -224,27 +375,124 @@ def compile_clean(output:Path=DEFAULT_OUTPUT,sam_dir:Path=DEFAULT_SAM_DIR,source
     for obj in objects:
         risk=min(1.,sum(x["penetration_estimate"] for x in obj["collision_warnings"])/.15);obj["validation_metrics"]["collision_risk"]=risk
         if risk>.65 and obj["confidence_classification"]=="automatic_high_confidence":obj["confidence_classification"]="user_review_recommended";obj["final_pose_confidence"]*=.75
-    scene={"schema_version":"1.0","mode":"clean_reconstruction","scene_id":scene_id,"input_manifest_sha256":sha256(handoff/"allowed_inputs_manifest.json"),"coordinate_system":{"canonical_up":[0,0,1],"raw_moge_to_canonical":raw_to_canonical.tolist(),"absolute_scale_verified":False},"room_proxies":room,"camera_candidates":camera_candidates,"provisional_camera_id":joint_room["provisional_camera_id"],"support_graph":support_graph,"semantic_objects":objects,"semantic_object_count":len(objects),"room_surface_semantic_count":0,"uncertainties":["absolute scale is unverified","camera selection is based on structural reprojection only","finite room boundaries remain partially occluded by furniture"]}
+    scene={"schema_version":"1.0","mode":"clean_reconstruction","scene_id":scene_id,"input_manifest_sha256":sha256(manifest_path),"coordinate_system":{"canonical_up":[0,0,1],"raw_moge_to_canonical":raw_to_canonical.tolist(),"absolute_scale_verified":False},"room_proxies":room,"camera_candidates":camera_candidates,"provisional_camera_id":joint_room["provisional_camera_id"],"support_graph":support_graph,"semantic_objects":objects,"semantic_object_count":len(objects),"room_surface_semantic_count":0,"uncertainties":["absolute scale is unverified","camera selection is based on structural reprojection only","finite room boundaries remain partially occluded by furniture"]}
     scene=json.loads(json.dumps(scene,default=lambda value:value.item() if isinstance(value,np.generic) else value.tolist()));UnifiedScenePlan.model_validate(scene)
-    _write_outputs(output,source,metadata,masks,scene,collisions,guard,plane_diag,per_object,handoff,moge_meta)
+    jsonschema.validate(scene,json.loads((ROOT/"schemas"/"unified_v3_scene_plan.schema.json").read_text(encoding="utf-8")))
+    _write_outputs(output,source,metadata,masks,scene,collisions,guard,plane_diag,per_object,moge_meta)
     report_path=output/"compilation_report.json";report=json.loads(report_path.read_text(encoding="utf-8"));report["clean_scene_plan_sha256"]=sha256(output/"unified_scene_plan.json");report["clean_output_hash_pending"]=False;report_path.write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
     return scene
+
+
+_UNSET = object()
+
+
+def _validate_compiled_output(output_dir: Path, object_ids: list[str]) -> None:
+    missing=sorted(name for name in REQUIRED_OUTPUT_FILES if not (output_dir/name).is_file())
+    if missing:raise RuntimeError(f"compiler did not produce required outputs: {', '.join(missing)}")
+    scene=json.loads((output_dir/"unified_scene_plan.json").read_text(encoding="utf-8"))
+    UnifiedScenePlan.model_validate(scene)
+    jsonschema.validate(scene,json.loads((ROOT/"schemas"/"unified_v3_scene_plan.schema.json").read_text(encoding="utf-8")))
+    compiled_ids=[item["object_id"] for item in scene["semantic_objects"]]
+    if len(compiled_ids)!=len(object_ids) or set(compiled_ids)!=set(object_ids):
+        raise RuntimeError("compiled object IDs do not exactly preserve export mask IDs")
+    for object_id in object_ids:
+        if not (output_dir/"per_object"/object_id/"metrics.json").is_file():
+            raise RuntimeError(f"missing per-object diagnostics for {object_id}")
+
+
+def compile_clean(
+    output:Path|None=None,
+    sam_dir:Path=DEFAULT_SAM_DIR,
+    source_path:Path=DEFAULT_SOURCE,
+    moge_dir:Path=DEFAULT_MOGE,
+    handoff:Path|None|object=_UNSET,
+    scene_id:str="office_test_unified_v3_clean",
+    *,
+    output_dir:Path|None=None,
+    handoff_dir:Path|None|object=_UNSET,
+) -> dict[str,Any]:
+    """Compile into adjacent staging directories and atomically publish them.
+
+    ``output`` and ``handoff`` remain as compatibility aliases. New callers
+    should use explicit ``output_dir=`` and ``handoff_dir=`` keywords.
+    """
+    if output is not None and output_dir is not None:raise TypeError("use output or output_dir, not both")
+    if handoff is not _UNSET and handoff_dir is not _UNSET:raise TypeError("use handoff or handoff_dir, not both")
+    output_path=Path(output_dir or output or DEFAULT_OUTPUT).expanduser().resolve()
+    validated=validate_compiler_inputs(sam_dir=Path(sam_dir),source_path=Path(source_path),moge_dir=Path(moge_dir))
+    sam_path=validated["sam_dir"];source=validated["source_path"];moge_path=validated["moge_dir"]
+    handoff_value=handoff_dir if handoff_dir is not _UNSET else handoff
+    is_default_run=output_path==DEFAULT_OUTPUT.resolve() and sam_path==DEFAULT_SAM_DIR.resolve() and source==DEFAULT_SOURCE.resolve() and moge_path==DEFAULT_MOGE.resolve()
+    if handoff_value is _UNSET:handoff_path=HANDOFF.resolve() if is_default_run else None
+    else:handoff_path=None if handoff_value is None else Path(handoff_value).expanduser().resolve()
+    if output_path.exists():raise FileExistsError(f"output directory already exists; refusing to overwrite: {output_path}")
+    if handoff_path is not None and handoff_path.exists():raise FileExistsError(f"handoff directory already exists; refusing to overwrite: {handoff_path}")
+    output_path.parent.mkdir(parents=True,exist_ok=True)
+    output_stage=Path(tempfile.mkdtemp(prefix=f".{output_path.name}.staging-",dir=output_path.parent))
+    handoff_stage:Path|None=None;published_handoff=False
+    try:
+        scene=_compile_clean_into(output=output_stage,sam_dir=sam_path,source_path=source,moge_dir=moge_path,scene_id=scene_id,metadata=validated["metadata"])
+        object_ids=[item["mask_id"] for item in validated["metadata"]["masks"]]
+        _validate_compiled_output(output_stage,object_ids)
+        if handoff_path is not None:
+            handoff_path.parent.mkdir(parents=True,exist_ok=True)
+            handoff_stage=Path(tempfile.mkdtemp(prefix=f".{handoff_path.name}.staging-",dir=handoff_path.parent))
+            finalize_handoff(output_dir=output_stage,handoff_dir=handoff_stage,semantic_object_count=len(object_ids))
+            os.replace(handoff_stage,handoff_path);published_handoff=True;handoff_stage=None
+        os.replace(output_stage,output_path)
+        return scene
+    except Exception:
+        if published_handoff and handoff_path is not None and handoff_path.exists():shutil.rmtree(handoff_path,ignore_errors=True)
+        raise
+    finally:
+        if output_stage.exists():shutil.rmtree(output_stage,ignore_errors=True)
+        if handoff_stage is not None and handoff_stage.exists():shutil.rmtree(handoff_stage,ignore_errors=True)
 
 
 def _wire(draw:ImageDraw.ImageDraw,pts:np.ndarray,color:tuple[int,int,int],width:int=2):
     for a,b in ((0,1),(0,2),(0,4),(1,3),(1,5),(2,3),(2,6),(3,7),(4,5),(4,6),(5,7),(6,7)):draw.line([tuple(pts[a]),tuple(pts[b])],fill=color,width=width)
 
 
-def _write_outputs(output:Path,source:Image.Image,metadata:dict[str,Any],masks:dict[str,np.ndarray],scene:dict[str,Any],collisions:list[dict[str,Any]],guard:CleanReadGuard,plane_diag:dict[str,Any],per_object:list[tuple],handoff:Path,moge_meta:dict[str,Any]):
+def _markdown_text(value: Any) -> str:
+    return str(value).replace("\\","\\\\").replace("`","\\`").replace("*","\\*").replace("_","\\_").replace("[","\\[").replace("]","\\]").replace("\r"," ").replace("\n"," ")
+
+
+def evaluate_generic_quality_gates(*,scene:dict[str,Any],export_ids:list[str],collisions:list[dict[str,Any]],room_fit:dict[str,Any],guard:CleanReadGuard)->tuple[dict[str,bool],list[dict[str,str]]]:
+    objects=scene["semantic_objects"];object_ids=[item["object_id"] for item in objects];known_targets=set(object_ids)|{proxy["plane_id"] for proxy in scene["room_proxies"]}
+    violations=[{"path":path,"token":token} for path in guard.read_log for token in FORBIDDEN_TOKENS if token in path.lower()]
+    placement_invalid=sum(item["placement_classification"]=="placement_invalid" for item in objects)
+    transforms_valid=all(np.isfinite(np.asarray(o["transform"]["center"],float)).all() and np.isfinite(np.asarray(o["transform"]["rotation_matrix"],float)).all() for o in objects)
+    quaternions_normalized=all(abs(float(np.linalg.norm(np.asarray(o["transform"]["quaternion_wxyz"],float)))-1.0)<=1e-6 for o in objects)
+    gates={
+        "object_count_matches_export":len(objects)==len(export_ids),
+        "all_export_object_ids_preserved":len(object_ids)==len(export_ids) and set(object_ids)==set(export_ids) and len(set(object_ids))==len(object_ids),
+        "all_objects_have_primitives":all(o["primitive_type"]=="cube" for o in objects),
+        "all_transforms_validate":transforms_valid and quaternions_normalized,
+        "all_dimensions_positive":all((np.asarray(o["transform"]["dimensions"],float)>0).all() for o in objects),
+        "all_support_targets_resolve":all(o["support_target"] is None or (o["support_target"] in known_targets and o["support_target"]!=o["object_id"]) for o in objects),
+        "all_normal_first_compiler_invocations_completed":all(o["orientation_method"]=="normal_first_v3_universal" for o in objects),
+        "all_final_object_support_gaps_below_1e_6":scene["support_graph"]["final_contact_propagation"]["maximum_final_gap"]<=1e-6,
+        "no_invalid_placements":placement_invalid==0,
+        "no_semantic_collisions":len(collisions)==0,
+        "room_fit_completed":bool(room_fit["passed"]),
+        "camera_candidates_present":bool(scene["camera_candidates"]),
+        "provisional_camera_resolves":scene["provisional_camera_id"] in {candidate["camera_id"] for candidate in scene["camera_candidates"]},
+        "no_forbidden_input_reads":not violations and not guard.denied_log,
+    }
+    return gates,violations
+
+
+def _write_outputs(output:Path,source:Image.Image,metadata:dict[str,Any],masks:dict[str,np.ndarray],scene:dict[str,Any],collisions:list[dict[str,Any]],guard:CleanReadGuard,plane_diag:dict[str,Any],per_object:list[tuple],moge_meta:dict[str,Any]):
     objects=scene["semantic_objects"];counts={name:sum(o["confidence_classification"]==name for o in objects) for name in ("automatic_high_confidence","automatic_with_ambiguity","user_review_recommended","yaw_unobservable","insufficient_geometry")}
     placement_counts={name:sum(o["placement_classification"]==name for o in objects) for name in ("placement_high_confidence","placement_with_occlusion","placement_review_required","placement_invalid")}
-    room_fit=plane_diag["joint_room_fit"];room_plan={"schema_version":"1.0","room_proxies":scene["room_proxies"],"uncertainties":scene["uncertainties"],"structural_fit_report":room_fit,"structural_landmarks":plane_diag["joint_room_landmarks"],"plane_fit_diagnostics":plane_diag};cameras={"schema_version":"1.0","provisional_camera_id":scene["provisional_camera_id"],"camera_candidates":scene["camera_candidates"],"moge_fov_x_degrees":moge_meta["estimated_fov_x_degrees"]};pose_report={"schema_version":"1.0","object_count":20,"objects":objects};collision_report={"schema_version":"1.0","collision_count":len(collisions),"collisions":collisions};confidence={"schema_version":"1.0","counts":counts,"placement_counts":placement_counts,"objects":[{"object_id":o["object_id"],"semantic_label":o["semantic_label"],"classification":o["confidence_classification"],"placement_classification":o["placement_classification"],"confidence":o["final_pose_confidence"]} for o in objects]};input_audit={"schema_version":"1.0","mode":"clean_reconstruction","read_paths":guard.read_log,"denied_paths":guard.denied_log,"all_reads_allowed":not guard.denied_log};violations=[{"path":path,"token":token} for path in guard.read_log for token in FORBIDDEN_TOKENS if token in path.lower()];forbidden={"schema_version":"1.0","forbidden_tokens":list(FORBIDDEN_TOKENS),"violations":violations,"passed":not violations}
-    by_label={o["semantic_label"]:o for o in objects};desktop=by_label["desktop_box"];desk=by_label["desk"];chair=by_label["desk_chair"];desktop_assignment=scene["support_graph"]["assignments"][desktop["object_id"]];desktop_gap=float(support_gap(desk,desktop,np.asarray(desktop_assignment["support_normal"])))
-    quality_gates={"exactly_20_semantic_cubes":len(objects)==20,"normal_first_v3_for_all":all(o["orientation_method"]=="normal_first_v3_universal" for o in objects),"desktop_box_supported_by_desk":desktop["support_target"]==desk["object_id"] and desktop["support_type"]=="object","desktop_box_final_support_gap_below_1e_6":abs(desktop_gap)<=1e-6,"all_final_object_support_gaps_below_1e_6":scene["support_graph"]["final_contact_propagation"]["maximum_final_gap"]<=1e-6,"desktop_box_placement_valid":desktop["placement_classification"] in ("placement_high_confidence","placement_with_occlusion") and not desktop["placement_hard_gates"],"chair_occlusion_aware_visible_proxy":chair["placement_classification"]=="placement_with_occlusion" and chair["occlusion"]["partially_occluded"] and "visible_surface_proxy" in chair["occlusion"]["hidden_geometry_policy"],"no_invalid_placements":placement_counts["placement_invalid"]==0,"no_semantic_collisions":len(collisions)==0,"joint_room_fit_passed":bool(room_fit["passed"]),"zero_forbidden_input_reads":not violations and not guard.denied_log}
+    room_fit=plane_diag["joint_room_fit"];room_plan={"schema_version":"1.0","room_proxies":scene["room_proxies"],"uncertainties":scene["uncertainties"],"structural_fit_report":room_fit,"structural_landmarks":plane_diag["joint_room_landmarks"],"plane_fit_diagnostics":plane_diag};cameras={"schema_version":"1.0","provisional_camera_id":scene["provisional_camera_id"],"camera_candidates":scene["camera_candidates"],"moge_fov_x_degrees":moge_meta["estimated_fov_x_degrees"]};pose_report={"schema_version":"1.0","object_count":len(objects),"objects":objects};collision_report={"schema_version":"1.0","collision_count":len(collisions),"collisions":collisions};confidence={"schema_version":"1.0","counts":counts,"placement_counts":placement_counts,"objects":[{"object_id":o["object_id"],"semantic_label":o["semantic_label"],"classification":o["confidence_classification"],"placement_classification":o["placement_classification"],"confidence":o["final_pose_confidence"]} for o in objects]};input_audit={"schema_version":"1.0","mode":"clean_reconstruction","read_paths":guard.read_log,"denied_paths":guard.denied_log,"all_reads_allowed":not guard.denied_log}
+    export_ids=[item["mask_id"] for item in metadata["masks"]];quality_gates,violations=evaluate_generic_quality_gates(scene=scene,export_ids=export_ids,collisions=collisions,room_fit=room_fit,guard=guard);forbidden={"schema_version":"1.0","forbidden_tokens":list(FORBIDDEN_TOKENS),"violations":violations,"passed":not violations}
     placement_report={"schema_version":"1.0","counts":placement_counts,"quality_gates":quality_gates,"support_contact_propagation":scene["support_graph"]["final_contact_propagation"],"objects":[{"object_id":o["object_id"],"semantic_label":o["semantic_label"],"support_type":o["support_type"],"support_target":o["support_target"],"placement_classification":o["placement_classification"],"hard_gates":o["placement_hard_gates"],"support_gap":o["validation_metrics"]["support_error"] if o["support_type"]=="object" else None,"bbox_iou":o["validation_metrics"]["bbox_iou"],"visible_hull_iou":o["validation_metrics"]["visible_hull_iou"],"centroid_error_pixels":o["validation_metrics"]["centroid_error_pixels"],"occlusion":o["occlusion"]} for o in objects]};compilation={"schema_version":"1.0","passed":all(quality_gates.values()),"quality_gates":quality_gates,"object_count":len(objects),"universal_v3_invocations":sum(o["orientation_method"]=="normal_first_v3_universal" for o in objects),"confidence_counts":counts,"placement_counts":placement_counts,"clean_output_hash_pending":True}
     files={"unified_scene_plan.json":scene,"room_plan.json":room_plan,"camera_candidates.json":cameras,"object_pose_report.json":pose_report,"support_graph.json":{"schema_version":"1.0",**scene["support_graph"]},"placement_report.json":placement_report,"collision_report.json":collision_report,"confidence_report.json":confidence,"clean_input_audit.json":input_audit,"forbidden_input_audit.json":forbidden,"compilation_report.json":compilation}
     for name,value in files.items():(output/name).write_text(json.dumps(value,indent=2)+"\n",encoding="utf-8")
-    (output/"unified_scene_plan.md").write_text(f"# Unified clean V3 scene plan\n\n- Objects: 20\n- Room proxies: 3\n- Default orientation: normal-first V3 for every object\n- Provisional camera: {scene['provisional_camera_id']}\n",encoding="utf-8");(output/"object_pose_report.md").write_text("# Object pose report\n\n"+"\n".join(f"- {o['semantic_label']}: {o['confidence_classification']} ({o['final_pose_confidence']:.3f})" for o in objects)+"\n",encoding="utf-8");(output/"ambiguity_report.md").write_text("# Ambiguity report\n\n"+"\n".join(f"- {o['semantic_label']}: {o['ambiguity']['type']}" for o in objects if o["ambiguity"]["type"]!="none")+"\n",encoding="utf-8");(output/"compilation_report.md").write_text("# Compilation report\n\n"+f"- Passed: {compilation['passed']}\n- Universal V3 invocations: {compilation['universal_v3_invocations']}/20\n- Forbidden-input violations: {len(violations)}\n"+"\n".join(f"- {name}: {value}" for name,value in quality_gates.items())+"\n",encoding="utf-8")
+    object_lines="\n".join(f"- `{_markdown_text(o['object_id'])}` — {_markdown_text(o['semantic_label'])}: {o['confidence_classification']} ({o['final_pose_confidence']:.3f})" for o in objects)
+    ambiguities=[o for o in objects if o["ambiguity"]["type"]!="none"];ambiguity_lines="\n".join(f"- `{_markdown_text(o['object_id'])}` — {_markdown_text(o['semantic_label'])}: {_markdown_text(o['ambiguity']['type'])}" for o in ambiguities) or "- None."
+    (output/"unified_scene_plan.md").write_text(f"# Unified clean V3 scene plan\n\n- Objects: {len(objects)}\n- Room proxies: {len(scene['room_proxies'])}\n- Default orientation: normal-first V3 for every object\n- Provisional camera: {_markdown_text(scene['provisional_camera_id'])}\n",encoding="utf-8");(output/"object_pose_report.md").write_text("# Object pose report\n\n"+object_lines+"\n",encoding="utf-8");(output/"ambiguity_report.md").write_text("# Ambiguity report\n\n"+ambiguity_lines+"\n",encoding="utf-8");(output/"compilation_report.md").write_text("# Compilation report\n\n"+f"- Passed: {compilation['passed']}\n- Universal V3 invocations: {compilation['universal_v3_invocations']}/{len(objects)}\n- Forbidden-input violations: {len(violations)}\n"+"\n".join(f"- {name}: {value}" for name,value in quality_gates.items())+"\n",encoding="utf-8")
     perspective=next(candidate for candidate in scene["camera_candidates"] if candidate["type"]=="perspective");camera={"canonical_to_camera":np.asarray(perspective.get("canonical_to_camera_transform",np.linalg.inv(np.asarray(scene["coordinate_system"]["raw_moge_to_canonical"]))),float),"intrinsics":np.asarray(perspective["normalized_intrinsics"]),"image_shape":source.size[::-1]}
     numbered=source.copy();dn=ImageDraw.Draw(numbered);projected_all=source.copy();dp=ImageDraw.Draw(projected_all);normal_overlay=source.copy();dno=ImageDraw.Draw(normal_overlay);projected_centers={}
     for index,o in enumerate(objects,1):
@@ -258,11 +506,14 @@ def _write_outputs(output:Path,source:Image.Image,metadata:dict[str,Any],masks:d
         if destination is not None:support_draw.line([tuple(projected_centers[o["object_id"]]),tuple(destination)],fill=(255,210,40) if o["support_type"]=="object" else (80,180,255),width=2)
     support_overlay.save(output/"support_graph_overlay.png")
     room_overlay=source.copy();room_draw=ImageDraw.Draw(room_overlay)
-    for proxy,color in zip(scene["room_proxies"],((255,220,40),(60,220,255),(255,90,190))):
+    room_colors=((255,220,40),(60,220,255),(255,90,190),(160,255,100),(180,120,255))
+    for index,proxy in enumerate(scene["room_proxies"]):
+        color=room_colors[index%len(room_colors)]
         pts=project_world_points(cuboid_corners(np.asarray(proxy["center"]),np.asarray(proxy["dimensions"]),np.asarray(proxy["rotation_matrix"])),camera["canonical_to_camera"],camera["intrinsics"],camera["image_shape"]);_wire(room_draw,pts,color,3)
     room_draw.text((8,8),f"joint room; FOV={perspective['field_of_view_x_degrees']:.2f}; RMSE={room_fit['structural_corner_reprojection_rmse_pixels']:.2f}px",fill=(255,255,255),stroke_width=2,stroke_fill=(0,0,0));room_overlay.save(output/"room_and_camera_overlay.png");room_overlay.save(output/"room_projection_overlay.png")
-    conf=Image.new("RGB",(1000,700),(18,20,25));d=ImageDraw.Draw(conf);d.text((15,12),"Unified V3 confidence",fill="white")
-    for i,o in enumerate(objects):y=45+i*31;d.text((15,y),o["semantic_label"],fill="white");d.rectangle((260,y,260+int(600*o["final_pose_confidence"]),y+16),fill=(40,210,240));d.text((880,y),o["confidence_classification"],fill="white")
+    confidence_height=max(160,65+len(objects)*31);conf=Image.new("RGB",(1200,confidence_height),(18,20,25));d=ImageDraw.Draw(conf);d.text((15,12),"Unified V3 confidence",fill="white")
+    for i,o in enumerate(objects):
+        y=45+i*31;label=o["semantic_label"].replace("\r"," ").replace("\n"," ")[:48];d.text((15,y),label,fill="white");d.rectangle((360,y,360+int(600*o["final_pose_confidence"]),y+16),fill=(40,210,240));d.text((980,y),o["confidence_classification"],fill="white")
     conf.save(output/"confidence_overview.png");amb=conf.copy();ImageDraw.Draw(amb).text((15,12),"Ambiguity overview",fill=(255,190,70));amb.save(output/"ambiguity_overview.png")
     overview=Image.new("RGB",(1341,894),(10,10,12))
     for i,img in enumerate((numbered,normal_overlay,projected_all,room_overlay,conf.resize((447,447)),amb.resize((447,447)))):overview.paste(img.resize((447,447)),((i%3)*447,(i//3)*447))
@@ -275,16 +526,32 @@ def _write_outputs(output:Path,source:Image.Image,metadata:dict[str,Any],masks:d
         edge.save(folder/"edge_family_visualization.png");single=source.copy();ds=ImageDraw.Draw(single);t=record["transform"];pts=project_world_points(cuboid_corners(np.asarray(t["center"]),np.asarray(t["dimensions"]),np.asarray(t["rotation_matrix"])),camera["canonical_to_camera"],camera["intrinsics"],camera["image_shape"]);_wire(ds,pts,(50,255,120),2);single.save(folder/"projected_primitive.png")
         panels=[]
         for candidate in record["rotation_candidates"]:
-            panel=source.copy();dc=ImageDraw.Draw(panel);ct=candidate["transform"];cp=project_world_points(cuboid_corners(np.asarray(ct["center"]),np.asarray(ct["dimensions"]),np.asarray(ct["rotation_matrix"])),camera["canonical_to_camera"],camera["intrinsics"],camera["image_shape"]);_wire(dc,cp,(50,255,120),2);dc.rectangle((0,0,447,38),fill=(0,0,0));dc.text((5,4),f"{candidate['candidate_id']} yaw={candidate['yaw_degrees']:.1f} score={candidate['metrics']['score']:.3f}",fill=(255,255,255));dc.text((5,20),f"normal={candidate['metrics']['normal_residual_degrees']:.1f} edge={candidate['metrics']['horizontal_edge_error_degrees']:.1f}",fill=(255,200,70));panels.append(panel)
-        comparison=Image.new("RGB",(447*len(panels),447),(10,10,12))
-        for index,panel in enumerate(panels):comparison.paste(panel,(447*index,0))
+            panel=source.copy();dc=ImageDraw.Draw(panel);ct=candidate["transform"];cp=project_world_points(cuboid_corners(np.asarray(ct["center"]),np.asarray(ct["dimensions"]),np.asarray(ct["rotation_matrix"])),camera["canonical_to_camera"],camera["intrinsics"],camera["image_shape"]);_wire(dc,cp,(50,255,120),2);dc.rectangle((0,0,source.width,38),fill=(0,0,0));dc.text((5,4),f"{candidate['candidate_id']} yaw={candidate['yaw_degrees']:.1f} score={candidate['metrics']['score']:.3f}",fill=(255,255,255));dc.text((5,20),f"normal={candidate['metrics']['normal_residual_degrees']:.1f} edge={candidate['metrics']['horizontal_edge_error_degrees']:.1f}",fill=(255,200,70));panels.append(panel)
+        comparison=Image.new("RGB",(source.width*len(panels),source.height),(10,10,12))
+        for index,panel in enumerate(panels):comparison.paste(panel,(source.width*index,0))
         comparison.save(folder/"candidate_comparison.png");(folder/"metrics.json").write_text(json.dumps(record,indent=2,default=lambda value:value.item() if isinstance(value,np.generic) else value.tolist())+"\n",encoding="utf-8")
-    manifest={"schema_version":"1.0","source":"unified_scene_plan.json","room_proxies":scene["room_proxies"],"provisional_camera":scene["camera_candidates"][0],"semantic_primitives":[{"object_id":o["object_id"],"semantic_label":o["semantic_label"],"primitive_type":"cube","transform":o["transform"],"material_color":o["material_color"],"confidence_classification":o["confidence_classification"],"placement_classification":o["placement_classification"],"placement_hard_gates":o["placement_hard_gates"],"occlusion":o["occlusion"],"support_target":o["support_target"],"collision_warnings":o["collision_warnings"],"unresolved_ambiguity":o["ambiguity"]} for o in objects],"semantic_primitive_count":20,"approved_artifact_references":[]}
-    (output/"blender_one_batch_manifest.json").write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8");shutil.copy2(output/"blender_one_batch_manifest.json",handoff/"blender_one_batch_manifest.json")
+    provisional=next(candidate for candidate in scene["camera_candidates"] if candidate["camera_id"]==scene["provisional_camera_id"])
+    manifest={"schema_version":"1.0","source":"unified_scene_plan.json","room_proxies":scene["room_proxies"],"provisional_camera":provisional,"semantic_primitives":[{"object_id":o["object_id"],"semantic_label":o["semantic_label"],"primitive_type":"cube","transform":o["transform"],"material_color":o["material_color"],"confidence_classification":o["confidence_classification"],"placement_classification":o["placement_classification"],"placement_hard_gates":o["placement_hard_gates"],"occlusion":o["occlusion"],"support_target":o["support_target"],"collision_warnings":o["collision_warnings"],"unresolved_ambiguity":o["ambiguity"]} for o in objects],"semantic_primitive_count":len(objects),"approved_artifact_references":[]}
+    (output/"blender_one_batch_manifest.json").write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
 
 
-def finalize_handoff(output:Path=DEFAULT_OUTPUT,handoff:Path=HANDOFF):
-    forbidden={"schema_version":"1.0","patterns":["*.blend","approved transforms","manual room/camera corrections","prior renders"],"included_forbidden_artifacts":[],"passed":True};(handoff/"forbidden_artifacts_manifest.json").write_text(json.dumps(forbidden,indent=2)+"\n",encoding="utf-8");(handoff/"README.md").write_text("# Unified V3 clean-room Blender handoff\n\nStart a new Codex chat with Blender in an empty scene. Use only `blender_one_batch_manifest.json`. Create the three room proxies, provisional camera, and exactly 20 semantic cubes in one batch. Render once after construction, avoid per-object feedback, save to a new output folder, and report transform, collision, projection, and confidence validation. Do not load prior checkpoints or renders.\n",encoding="utf-8");(handoff/"execution_instructions.md").write_text("# Execution instructions\n\n1. Start from an empty Blender scene.\n2. Read only the clean manifest.\n3. Construct room, camera, and 20 cubes in one batch.\n4. Render perspective once.\n5. Save a new checkpoint and validation report.\n",encoding="utf-8");(handoff/"expected_output_contract.json").write_text(json.dumps({"required":["new .blend checkpoint","perspective render","validation JSON","protected clean-manifest hash"],"semantic_cube_count":20},indent=2)+"\n",encoding="utf-8");schemas=handoff/"schemas";schemas.mkdir(exist_ok=True);shutil.copy2(ROOT/"schemas"/"unified_v3_scene_plan.schema.json",schemas/"unified_v3_scene_plan.schema.json")
+def finalize_handoff(*,output_dir:Path,handoff_dir:Path,semantic_object_count:int)->None:
+    output_dir=Path(output_dir).resolve();handoff_dir=Path(handoff_dir).resolve()
+    manifest_path=output_dir/"blender_one_batch_manifest.json"
+    if not manifest_path.is_file():raise CompilerValidationError(f"Blender-neutral manifest is missing: {manifest_path}")
+    manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("semantic_primitive_count")!=semantic_object_count or len(manifest.get("semantic_primitives",[]))!=semantic_object_count:
+        raise CompilerValidationError("handoff semantic object count does not match the run manifest")
+    handoff_dir.mkdir(parents=True,exist_ok=True)
+    shutil.copy2(manifest_path,handoff_dir/"blender_one_batch_manifest.json")
+    allowed_manifest=output_dir/"allowed_inputs_manifest.json"
+    if allowed_manifest.is_file():shutil.copy2(allowed_manifest,handoff_dir/"allowed_inputs_manifest.json")
+    forbidden={"schema_version":"1.0","patterns":["*.blend","approved transforms","manual room/camera corrections","prior renders"],"included_forbidden_artifacts":[],"passed":True}
+    (handoff_dir/"forbidden_artifacts_manifest.json").write_text(json.dumps(forbidden,indent=2)+"\n",encoding="utf-8")
+    (handoff_dir/"README.md").write_text(f"# Unified V3 clean-room Blender-neutral handoff\n\nUse only `blender_one_batch_manifest.json`. Construct the {len(manifest['room_proxies'])} room proxies, provisional camera, and {semantic_object_count} semantic primitives in one batch. This handoff does not execute Blender or create Blender objects. Do not load prior checkpoints, transforms, or renders.\n",encoding="utf-8")
+    (handoff_dir/"execution_instructions.md").write_text(f"# Execution instructions\n\n1. Start from an empty scene.\n2. Read only the clean manifest.\n3. Construct room, camera, and {semantic_object_count} semantic primitives in one batch.\n4. Render perspective once.\n5. Save a new checkpoint and validation report.\n",encoding="utf-8")
+    (handoff_dir/"expected_output_contract.json").write_text(json.dumps({"required":["new .blend checkpoint","perspective render","validation JSON","protected clean-manifest hash"],"semantic_primitive_count":semantic_object_count},indent=2)+"\n",encoding="utf-8")
+    schemas=handoff_dir/"schemas";schemas.mkdir(exist_ok=True);shutil.copy2(ROOT/"schemas"/"unified_v3_scene_plan.schema.json",schemas/"unified_v3_scene_plan.schema.json")
 
 
 def run_regression_audit(clean_output:Path=DEFAULT_OUTPUT,audit_output:Path|None=None)->dict[str,Any]:

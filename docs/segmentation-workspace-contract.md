@@ -428,6 +428,47 @@ The export quality report is written as both JSON and Markdown and includes
 per-mask metrics, connected components, border-touch diagnostics, pairwise
 overlaps, bbox comparisons, and warnings. Warnings do not fail export creation.
 
+## Generic Reconstruction Compiler Boundary
+
+The experiment Unified V3 clean compiler is ready to be invoked by a future
+managed reconstruction job. It accepts the immutable export directory, source
+image, persisted MoGe directory, a new output directory, stable scene ID, and an
+optional new Blender-neutral handoff directory. It supports variable object
+counts and arbitrary or duplicate semantic labels. Export `mask_id` values are
+preserved exactly as reconstructed `object_id` values.
+
+The compiler validates source dimensions, safe mask filenames, unique IDs,
+non-empty binary masks, required MoGe arrays and shapes, finite usable geometry,
+and metadata dimensions before creating staging output. It reads only those
+inputs and checked-in generic schemas. Output and optional handoff publication
+are atomic and do not overwrite existing directories.
+
+The current algorithm remains scoped to indoor reconstruction and requires
+evidence for a floor and two room walls (`floor`, `left_wall`, and `right_wall`).
+Insufficient structural evidence is a hard compiler error. Generic quality gates
+cover identity, primitive and transform validity, supports, normal-first
+completion, clean reads, room/camera output, placements, and collisions.
+Review-quality gate failure is recorded as `passed=false` and is distinct from a
+hard input or contract failure.
+
+The exact repository-root invocation is:
+
+```powershell
+& $env:RECONSTRUCTION_PYTHON -m experiments.moge_scene_graph_spike.src.compile_unified_v3_scene `
+  --mode clean_reconstruction `
+  --sam-dir <immutable-export-directory> `
+  --source-image <source-image-path> `
+  --moge-dir <moge-output-directory> `
+  --output-dir <new-reconstruction-output-directory> `
+  --scene-id <stable-scene-id> `
+  --handoff-dir <optional-new-handoff-directory>
+```
+
+`RECONSTRUCTION_PYTHON` must provide `numpy`, `Pillow`, `scipy`, `pydantic`, and
+`jsonschema`; it is deliberately separate from `MOGE_PYTHON`. The application
+backend does not consume this variable yet. Managed reconstruction APIs and
+frontend controls remain deferred.
+
 ## Deferred Features
 
 The following remain intentionally outside this contract:

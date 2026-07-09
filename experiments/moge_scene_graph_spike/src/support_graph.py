@@ -48,8 +48,8 @@ def infer_support_graph(objects: list[dict[str,Any]], wall_assignments: dict[str
             if support is subject:continue
             top=tops[support["object_id"]];gap=bottom-top["z"];overlap=_horizontal_overlap(subject["points"],support["points"]);adjacency=mask_adjacency(subject["mask"],support["mask"]);depth_order=float(np.median(subject["depth"])-np.median(support["depth"]));height_score=max(0,1-abs(gap)/.18);overlap_score=min(1,overlap/.45);adjacency_score=max(0,1-adjacency/18);compat=semantic_support_compatibility(subject["semantic_label"],support["semantic_label"]);score=.38*height_score+.30*overlap_score+.12*adjacency_score+.12*top["confidence"]+.08*max(0,1-abs(depth_order)/.5)+compat
             candidates.append({"subject_object_id":sid,"support_object_id":support["object_id"],"support_label":support["semantic_label"],"score":float(min(1,score)),"bottom_to_top_distance":gap,"horizontal_overlap_ratio":overlap,"mask_adjacency_pixels":adjacency,"relative_depth":depth_order,"support_top":top})
-        best=max(candidates,key=lambda x:x["score"])
-        if best["score"]>=.62 and best["horizontal_overlap_ratio"]>=.08 and abs(best["bottom_to_top_distance"])<=.22:
+        best=max(candidates,key=lambda x:x["score"]) if candidates else None
+        if best is not None and best["score"]>=.62 and best["horizontal_overlap_ratio"]>=.08 and abs(best["bottom_to_top_distance"])<=.22:
             assignments[sid]={"target":best["support_object_id"],"type":"object","confidence":best["score"],"support_top_z":best["support_top"]["z"],"support_normal":best["support_top"]["normal"]};best["selected"]=True;relationships.append(best)
         elif bottom<=.10:
             assignments[sid]={"target":"plane_floor","type":"floor","confidence":float(max(.35,1-abs(bottom)/.12))}

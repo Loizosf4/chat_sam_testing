@@ -120,3 +120,55 @@ The compiler writes `outputs/office_test/primitive_plan/`. It produces exactly o
 Only accepted support and attachment relationships can influence transforms. Uncertain relationships are review-only; rejected, directional, proximity, and occlusion relationships are ignored for transforms. Accepted support or attachment evidence that remains user-reviewable is soft rather than hard.
 
 Object geometry is shared by both camera candidates. Reprojection metrics and overlays are diagnostic outputs; the compiler does not retune an object independently for either camera. Structural extents, metric scale, the final camera model, incomplete chair geometry, filing-cabinet support, desktop-box depth correction, and wall-light thickness remain explicitly reviewable.
+
+## Generic Unified V3 clean reconstruction
+
+The Unified V3 compiler accepts an adapter-compatible immutable SAM export, its
+source image, and a persisted MoGe output directory. It supports one or more
+semantic objects, arbitrary and duplicate labels, and preserves every export
+`mask_id` as the scene `object_id`. Labels are display metadata and never object
+identity. A deterministic display colour is assigned when export colour metadata
+is missing or malformed.
+
+From the repository root, use a dedicated reconstruction environment containing
+at least `numpy`, `Pillow`, `scipy`, `pydantic`, and `jsonschema`:
+
+```powershell
+& $env:RECONSTRUCTION_PYTHON -m experiments.moge_scene_graph_spike.src.compile_unified_v3_scene `
+  --mode clean_reconstruction `
+  --sam-dir <immutable-export-directory> `
+  --source-image <source-image-path> `
+  --moge-dir <moge-output-directory> `
+  --output-dir <new-reconstruction-output-directory> `
+  --scene-id <stable-scene-id> `
+  --handoff-dir <optional-new-handoff-directory>
+```
+
+Omit `--handoff-dir` when no Blender-neutral handoff is required. Custom runs do
+not use the office output or global handoff directories. The output and optional
+handoff targets must not already exist; both are built in adjacent staging
+directories and atomically published.
+
+Clean compilation reads only the source image, export metadata and referenced
+binary masks, MoGe `geometry.npz` and metadata, plus the checked-in generic
+schema. The allowed-input manifest records resolved paths and SHA-256 hashes.
+Prior scene plans, approved transforms, Blender files, corrected outputs, and
+historical handoffs remain forbidden.
+
+The current reconstruction scope is indoor rooms. Structural estimation must
+establish `floor`, `left_wall`, and `right_wall`; missing evidence is a hard,
+clear validation failure rather than a fabricated room. Missing/invalid inputs,
+invalid arrays or masks, unresolved identities, and invalid final contracts are
+also hard failures. Review-quality gates are different: low confidence,
+review-recommended placement, collision warnings, or an unsuccessful room-fit
+review gate can produce a valid scene plan with `compilation_report.passed=false`.
+
+Clean-mode quality gates are generic: export counts and IDs, primitive coverage,
+transform and dimension validity, support-target resolution, normal-first
+invocation coverage, protected-input reads, room/camera completion, placement
+validity, and semantic collisions. Office-label expectations remain only in the
+separate `regression_audit` fixture workflow.
+
+`RECONSTRUCTION_PYTHON` is documented in the root `.env.example` for the next
+managed backend-job phase. The backend does not use it yet. Managed job APIs and
+frontend reconstruction controls remain deferred.
