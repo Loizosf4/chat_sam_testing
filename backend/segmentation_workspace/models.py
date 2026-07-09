@@ -87,6 +87,62 @@ class SamDraftState(ContractModel):
         return self
 
 
+class ManualMaskState(ContractModel):
+    manual_revision: int = Field(default=0, ge=0, strict=True)
+    base_prompt_revision: int | None = Field(default=None, ge=1)
+    base_candidate_index: int | None = Field(default=None, ge=0)
+    add_mask_url: str | None = None
+    remove_mask_url: str | None = None
+    composite_mask_url: str | None = None
+    area_pixels: int = Field(default=0, ge=0, strict=True)
+    bbox_xyxy: list[int] = Field(default_factory=lambda: [0, 0, 0, 0], min_length=4, max_length=4)
+    updated_at: datetime | None = None
+
+    @field_validator("add_mask_url", "remove_mask_url", "composite_mask_url")
+    @classmethod
+    def manual_mask_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if value.startswith("/api/segmentation-artifacts/manual-masks/"):
+            return value
+        if value.startswith("file://") or _WINDOWS_PATH.match(value):
+            raise ValueError("manual mask URLs must not be filesystem paths")
+        raise ValueError("manual mask URLs must be application-controlled manual-mask URLs")
+
+    @model_validator(mode="after")
+    def validate_active_state(self) -> "ManualMaskState":
+        if len(self.bbox_xyxy) != 4:
+            raise ValueError("bbox_xyxy must contain exactly four integers")
+        if self.manual_revision == 0:
+            if (
+                self.base_prompt_revision is not None
+                or self.base_candidate_index is not None
+                or self.add_mask_url is not None
+                or self.remove_mask_url is not None
+                or self.composite_mask_url is not None
+                or self.area_pixels != 0
+                or self.bbox_xyxy != [0, 0, 0, 0]
+                or self.updated_at is not None
+            ):
+                raise ValueError("empty manual mask state cannot contain active metadata")
+            return self
+        missing = [
+            name
+            for name in (
+                "base_prompt_revision",
+                "base_candidate_index",
+                "add_mask_url",
+                "remove_mask_url",
+                "composite_mask_url",
+                "updated_at",
+            )
+            if getattr(self, name) is None
+        ]
+        if missing:
+            raise ValueError(f"active manual mask state is missing {', '.join(missing)}")
+        return self
+
+
 class SourceImage(ContractModel):
     image_id: str = Field(pattern=UUID_PATTERN)
     url: str
@@ -129,6 +185,7 @@ class SegmentationObject(ContractModel):
     created_at: datetime
     updated_at: datetime
     sam_draft: SamDraftState = Field(default_factory=SamDraftState)
+    manual_mask: ManualMaskState = Field(default_factory=ManualMaskState)
 
     @field_validator("semantic_label", "display_name")
     @classmethod

@@ -63,6 +63,52 @@ selected automatically after prediction unless a later selection request chooses
 another candidate. `selected_candidate_index` references the current candidate
 set; no semantic object ID changes when candidates are regenerated.
 
+## Manual Mask Corrections
+
+Each segmentation object also owns a `manual_mask` state for layered manual
+corrections on top of the selected SAM candidate:
+
+```text
+manual_mask
+    manual_revision
+    base_prompt_revision
+    base_candidate_index
+    add_mask_url
+    remove_mask_url
+    composite_mask_url
+    area_pixels
+    bbox_xyxy
+    updated_at
+```
+
+New objects start with `manual_revision` set to `0`, no base prompt or candidate
+metadata, no artifact URLs, `area_pixels` set to `0`, `bbox_xyxy` set to
+`[0, 0, 0, 0]`, and `updated_at` set to `null`.
+
+When `manual_revision` is greater than zero, the state is anchored to the current
+selected SAM candidate by `base_prompt_revision` and `base_candidate_index`.
+Active manual states require all three artifact URLs and only expose
+application-controlled URLs under
+`/api/segmentation-artifacts/manual-masks/...`.
+
+The persisted layers use this formula:
+
+```text
+composite_mask = (sam_base_mask OR manual_add_mask) AND NOT manual_remove_mask
+```
+
+The save endpoint accepts the complete edited binary mask that the user sees.
+The backend derives:
+
+```text
+manual_add    = edited AND NOT base
+manual_remove = base AND NOT edited
+composite     = (base OR manual_add) AND NOT manual_remove
+```
+
+The composite must exactly match the uploaded edited mask. The add, remove, and
+composite artifacts are full-resolution single-channel binary PNG files.
+
 ## Storage Layout
 
 By default, workspaces are stored under `data/segmentation_workspaces/`. The root
@@ -80,6 +126,11 @@ data/segmentation_workspaces/{workspace_id}/
                     candidate-0.png
                     candidate-1.png
                     candidate-2.png
+            manual/
+                {manual_revision}/
+                    add.png
+                    remove.png
+                    composite.png
     artifact-index.json
 ```
 
@@ -95,6 +146,12 @@ candidate artifact directories for that object are removed. Candidate masks are
 full-resolution binary PNGs served with `Cache-Control: no-store` because they
 are interactive drafts.
 
+Manual artifacts use keys such as
+`manual-masks/{workspace_id}/{object_id}/{manual_revision}/add`. Only the latest
+manual revision is retained after a successful replacement. Manual artifact
+responses are served with `Cache-Control: no-store` and
+`X-Content-Type-Options: nosniff`.
+
 ## API Endpoints
 
 ```text
@@ -108,9 +165,17 @@ DELETE /api/segmentation-workspaces/{workspace_id}/objects/{object_id}?expected_
 POST   /api/segmentation-workspaces/{workspace_id}/prepare-sam
 POST   /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/predict
 POST   /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/select-candidate
+PUT    /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/manual-mask
+DELETE /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/manual-mask?expected_workspace_revision=...&expected_object_version=...&expected_manual_revision=...
 DELETE /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/sam-draft?expected_workspace_revision=...&expected_object_version=...
 GET    /api/segmentation-artifacts/{kind}/{identifier}
 ```
+
+Manual mask save uses `multipart/form-data` with `edited_mask`,
+`base_prompt_revision`, `base_candidate_index`, `expected_workspace_revision`,
+`expected_object_version`, and `expected_manual_revision`. `edited_mask` must be
+a grayscale binary PNG with the exact source-image dimensions. The backend does
+not accept a client-provided base mask path or base mask file.
 
 ## Browser Workspace
 
@@ -157,13 +222,27 @@ revision, run SAM without holding the workspace file lock for the full inference
 then reacquire the lock and reject the result if an equal or newer prompt revision
 has already been stored.
 
+Manual mask save and clear require workspace, object, and manual optimistic
+concurrency values. A successful manual save increments `manual_revision`,
+`object_version`, and `workspace_revision`. A successful clear resets the manual
+state, increments object/workspace revisions, and preserves the SAM prompt,
+candidate list, and selected candidate.
+
+Saved manual corrections are anchored to the selected SAM candidate. While a
+manual revision is active, the backend rejects new SAM prediction persistence and
+selection of a different candidate with `409 Conflict`. Clearing the SAM draft is
+an explicit destructive reset and clears manual corrections and their artifacts
+in the same successful mutation. Object deletion removes manual artifact-index
+entries and the object artifact directory.
+
 ## Deferred Features
 
 The following remain intentionally outside this contract:
 
 - Brush corrections.
-- Manual override layers.
-- Final-mask composition.
+- Frontend brush UI.
+- Candidate-mask quality reports.
+- Final-mask finalization.
 - Mask finalization.
 - Quality reports.
 - Export to the MoGe stage.

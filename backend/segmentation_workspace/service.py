@@ -215,6 +215,11 @@ def _validate_prediction_state(
         raise SegmentationWorkspaceStoreError("workspace is finalized", 409)
     if item.status == "finalized":
         raise SegmentationWorkspaceStoreError("object is finalized", 409)
+    if item.manual_mask.manual_revision > 0:
+        raise SegmentationWorkspaceStoreError(
+            "Clear manual mask corrections before changing the SAM prompt.",
+            409,
+        )
     if prompt_revision <= item.sam_draft.prompt_revision:
         raise SegmentationWorkspaceStoreError(
             f"stale prompt revision: incoming {prompt_revision}, current {item.sam_draft.prompt_revision}",

@@ -18,6 +18,7 @@ from PIL import Image
 from .models import (
     CURRENT_SCHEMA_VERSION,
     ImageDimensions,
+    ManualMaskState,
     SamDraftCandidate,
     SamDraftState,
     SamPromptPoint,
@@ -141,6 +142,66 @@ def _save_binary_mask_array(path: Path, mask_array: Any) -> None:
     image.save(path, format="PNG")
 
 
+def load_binary_mask_png(
+    path: Path,
+    *,
+    expected_height: int,
+    expected_width: int,
+) -> Any:
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise SegmentationWorkspaceStoreError("numpy is not installed", 500) from exc
+
+    try:
+        with Image.open(path) as image:
+            image.load()
+            if image.mode not in {"1", "L"}:
+                raise SegmentationWorkspaceStoreError("mask artifact is not grayscale", 500)
+            if image.size != (expected_width, expected_height):
+                raise SegmentationWorkspaceStoreError("mask artifact dimensions do not match the source image", 500)
+            pixels = np.asarray(image)
+    except SegmentationWorkspaceStoreError:
+        raise
+    except Exception as exc:
+        raise SegmentationWorkspaceStoreError("mask artifact could not be decoded", 500) from exc
+    if pixels.ndim != 2:
+        raise SegmentationWorkspaceStoreError("mask artifact must be two-dimensional", 500)
+    if pixels.dtype == np.bool_:
+        return pixels.astype(bool)
+    unique = set(np.unique(pixels).tolist())
+    if not unique.issubset({0, 255}):
+        raise SegmentationWorkspaceStoreError("mask artifact is not binary", 500)
+    return pixels == 255
+
+
+def derive_manual_layers(base_mask: Any, edited_mask: Any) -> tuple[Any, Any, Any, int, list[int]]:
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise SegmentationWorkspaceStoreError("numpy is not installed", 500) from exc
+
+    base = np.asarray(base_mask).astype(bool)
+    edited = np.asarray(edited_mask).astype(bool)
+    if base.shape != edited.shape:
+        raise SegmentationWorkspaceStoreError("edited mask dimensions do not match the selected candidate")
+    manual_add = np.logical_and(edited, np.logical_not(base))
+    manual_remove = np.logical_and(base, np.logical_not(edited))
+    composite = np.logical_and(np.logical_or(base, manual_add), np.logical_not(manual_remove))
+    if not np.array_equal(composite, edited):
+        raise SegmentationWorkspaceStoreError("manual mask composition failed", 500)
+    _mask, area, bbox = validate_candidate_mask(
+        composite,
+        expected_height=edited.shape[0],
+        expected_width=edited.shape[1],
+    )
+    return manual_add, manual_remove, composite, area, bbox
+
+
+def empty_manual_mask_state() -> dict[str, Any]:
+    return ManualMaskState().model_dump(mode="json")
+
+
 def _require_expected(current: int, expected: int, label: str) -> None:
     if current != expected:
         raise SegmentationWorkspaceStoreError(
@@ -209,6 +270,51 @@ class SegmentationWorkspaceStore:
         if item is None:
             raise SegmentationWorkspaceStoreError("object not found", 404)
         return item
+
+    def _resolve_workspace_artifact(self, workspace_id: str, key: str) -> tuple[Path, str]:
+        index = self._index(workspace_id)
+        entry = index.get(key)
+        if not entry:
+            raise SegmentationWorkspaceStoreError("artifact not found", 404)
+        base = self._workspace_dir(workspace_id).resolve()
+        path = (base / entry["path"]).resolve()
+        if base not in path.parents or not path.is_file():
+            raise SegmentationWorkspaceStoreError("artifact index escaped workspace root", 500)
+        if sha256_file(path) != entry["sha256"]:
+            raise SegmentationWorkspaceStoreError("artifact integrity check failed", 500)
+        return path, entry["media_type"]
+
+    def _manual_prefix(self, workspace_id: str, object_id: str) -> str:
+        return f"manual-masks/{workspace_id}/{object_id}/"
+
+    def _manual_root(self, workspace_id: str, object_id: str) -> Path:
+        return self._workspace_dir(workspace_id) / "objects" / object_id / "manual"
+
+    def _remove_old_manual_dirs(self, workspace_id: str, object_id: str, keep_revision: str | None = None) -> None:
+        manual_root = self._manual_root(workspace_id, object_id)
+        if not manual_root.is_dir():
+            return
+        for child in manual_root.iterdir():
+            if child.name.startswith("."):
+                shutil.rmtree(child, ignore_errors=True)
+            elif keep_revision is None or child.name != keep_revision:
+                shutil.rmtree(child, ignore_errors=True)
+
+    def _selected_candidate_document(self, item: dict[str, Any]) -> dict[str, Any]:
+        draft = item.get("sam_draft") or {}
+        candidates = draft.get("candidates") or []
+        if not candidates:
+            raise SegmentationWorkspaceStoreError("current SAM candidates are required", 409)
+        selected_index = draft.get("selected_candidate_index")
+        if selected_index is None:
+            raise SegmentationWorkspaceStoreError("a selected SAM candidate is required", 409)
+        candidate = next((candidate for candidate in candidates if candidate["candidate_index"] == selected_index), None)
+        if candidate is None:
+            raise SegmentationWorkspaceStoreError("selected SAM candidate is missing", 409)
+        return candidate
+
+    def _manual_active(self, item: dict[str, Any]) -> bool:
+        return int((item.get("manual_mask") or {}).get("manual_revision", 0)) > 0
 
     def create_workspace(
         self,
@@ -311,6 +417,7 @@ class SegmentationWorkspaceStore:
                     created_at=now,
                     updated_at=now,
                     sam_draft=SamDraftState(),
+                    manual_mask=ManualMaskState(),
                 ).model_dump(mode="json")
             )
             document["workspace_revision"] += 1
@@ -372,14 +479,30 @@ class SegmentationWorkspaceStore:
             document["workspace_revision"] += 1
             document["updated_at"] = datetime.now(timezone.utc).isoformat()
             updated = SegmentationWorkspace.model_validate(document)
+            original_index = self._index(workspace_id)
             index = {
                 key: value
-                for key, value in self._index(workspace_id).items()
-                if not key.startswith(f"sam-candidates/{workspace_id}/{object_id}/")
+                for key, value in original_index.items()
+                if not (
+                    key.startswith(f"sam-candidates/{workspace_id}/{object_id}/")
+                    or key.startswith(self._manual_prefix(workspace_id, object_id))
+                )
             }
-            self._write_index(workspace_id, index)
+            index_written = False
+            workspace_written = False
+            try:
+                self._write_index(workspace_id, index)
+                index_written = True
+                self._save(updated)
+                workspace_written = True
+            except Exception:
+                if index_written and not workspace_written:
+                    try:
+                        self._write_index(workspace_id, original_index)
+                    except Exception:
+                        pass
+                raise
             self._remove_object_artifacts(workspace_id, object_id)
-            self._save(updated)
             return updated
 
     def persist_sam_prediction(
@@ -405,6 +528,11 @@ class SegmentationWorkspaceStore:
             item = self._find_object_document(document, object_id)
             if item["status"] == "finalized":
                 raise SegmentationWorkspaceStoreError("object is finalized", 409)
+            if self._manual_active(item):
+                raise SegmentationWorkspaceStoreError(
+                    "Clear manual mask corrections before changing the SAM prompt.",
+                    409,
+                )
             current_revision = int(item.get("sam_draft", {}).get("prompt_revision", 0))
             if prompt_revision <= current_revision:
                 raise SegmentationWorkspaceStoreError(
@@ -512,15 +640,24 @@ class SegmentationWorkspaceStore:
     ) -> SegmentationWorkspace:
         with self._lock(workspace_id):
             workspace = self._load(workspace_id)
+            if workspace.status == "finalized":
+                raise SegmentationWorkspaceStoreError("workspace is finalized", 409)
             _require_expected(workspace.workspace_revision, expected_workspace_revision, "workspace revision")
             document = workspace.model_dump(mode="json")
             item = self._find_object_document(document, object_id)
+            if item["status"] == "finalized":
+                raise SegmentationWorkspaceStoreError("object is finalized", 409)
             _require_expected(item["object_version"], expected_object_version, "object version")
             draft = item.get("sam_draft") or {}
             if draft.get("prompt_revision", 0) != prompt_revision:
                 raise SegmentationWorkspaceStoreError("prompt revision does not match current candidates", 409)
             if candidate_index not in {candidate["candidate_index"] for candidate in draft.get("candidates", [])}:
                 raise SegmentationWorkspaceStoreError("candidate not found", 404)
+            if self._manual_active(item) and candidate_index != draft.get("selected_candidate_index"):
+                raise SegmentationWorkspaceStoreError(
+                    "Clear manual mask corrections before selecting a different SAM candidate.",
+                    409,
+                )
             now = datetime.now(timezone.utc)
             draft["selected_candidate_index"] = candidate_index
             draft["updated_at"] = now.isoformat()
@@ -549,19 +686,221 @@ class SegmentationWorkspaceStore:
             _require_expected(item["object_version"], expected_object_version, "object version")
             now = datetime.now(timezone.utc)
             item["sam_draft"] = SamDraftState(prompt_revision=0, updated_at=now).model_dump(mode="json")
+            item["manual_mask"] = empty_manual_mask_state()
             item["object_version"] += 1
             item["updated_at"] = now.isoformat()
             document["workspace_revision"] += 1
             document["updated_at"] = now.isoformat()
             updated = SegmentationWorkspace.model_validate(document)
+            original_index = self._index(workspace_id)
             index = {
                 key: value
-                for key, value in self._index(workspace_id).items()
-                if not key.startswith(f"sam-candidates/{workspace_id}/{object_id}/")
+                for key, value in original_index.items()
+                if not (
+                    key.startswith(f"sam-candidates/{workspace_id}/{object_id}/")
+                    or key.startswith(self._manual_prefix(workspace_id, object_id))
+                )
             }
-            self._write_index(workspace_id, index)
+            index_written = False
+            workspace_written = False
+            try:
+                self._write_index(workspace_id, index)
+                index_written = True
+                self._save(updated)
+                workspace_written = True
+            except Exception:
+                if index_written and not workspace_written:
+                    try:
+                        self._write_index(workspace_id, original_index)
+                    except Exception:
+                        pass
+                raise
             self._remove_object_artifacts(workspace_id, object_id)
-            self._save(updated)
+            return updated
+
+    def save_manual_mask(
+        self,
+        workspace_id: str,
+        object_id: str,
+        *,
+        edited_mask: Any,
+        base_prompt_revision: int,
+        base_candidate_index: int,
+        expected_workspace_revision: int,
+        expected_object_version: int,
+        expected_manual_revision: int,
+    ) -> SegmentationWorkspace:
+        with self._lock(workspace_id):
+            workspace = self._load(workspace_id)
+            if workspace.status == "finalized":
+                raise SegmentationWorkspaceStoreError("workspace is finalized", 409)
+            _require_expected(workspace.workspace_revision, expected_workspace_revision, "workspace revision")
+            document = workspace.model_dump(mode="json")
+            item = self._find_object_document(document, object_id)
+            if item["status"] == "finalized":
+                raise SegmentationWorkspaceStoreError("object is finalized", 409)
+            _require_expected(item["object_version"], expected_object_version, "object version")
+            current_manual = item.get("manual_mask") or empty_manual_mask_state()
+            _require_expected(
+                int(current_manual.get("manual_revision", 0)),
+                expected_manual_revision,
+                "manual revision",
+            )
+            draft = item.get("sam_draft") or {}
+            if int(draft.get("prompt_revision", 0)) != base_prompt_revision:
+                raise SegmentationWorkspaceStoreError(
+                    "manual mask was edited against an obsolete SAM prompt revision",
+                    409,
+                )
+            selected_index = draft.get("selected_candidate_index")
+            if selected_index is None:
+                raise SegmentationWorkspaceStoreError("a selected SAM candidate is required", 409)
+            if selected_index != base_candidate_index:
+                raise SegmentationWorkspaceStoreError(
+                    "manual mask was edited against an obsolete SAM candidate",
+                    409,
+                )
+            candidate = self._selected_candidate_document(item)
+            if candidate["candidate_index"] != base_candidate_index:
+                raise SegmentationWorkspaceStoreError("selected SAM candidate is inconsistent", 409)
+            mask_url = candidate["mask_url"]
+            prefix = "/api/segmentation-artifacts/"
+            if not mask_url.startswith(prefix):
+                raise SegmentationWorkspaceStoreError("selected candidate URL is invalid", 500)
+            artifact_key = mask_url[len(prefix) :]
+            candidate_path, media_type = self._resolve_workspace_artifact(workspace_id, artifact_key)
+            if media_type != "image/png":
+                raise SegmentationWorkspaceStoreError("selected candidate is not a PNG mask", 500)
+            base_mask = load_binary_mask_png(
+                candidate_path,
+                expected_height=workspace.image_dimensions.height,
+                expected_width=workspace.image_dimensions.width,
+            )
+            manual_add, manual_remove, composite, area_pixels, bbox_xyxy = derive_manual_layers(base_mask, edited_mask)
+
+            manual_revision = expected_manual_revision + 1
+            manual_root = self._manual_root(workspace_id, object_id)
+            manual_root.mkdir(parents=True, exist_ok=True)
+            temporary = Path(tempfile.mkdtemp(prefix=f".{manual_revision}.", dir=manual_root))
+            target = manual_root / str(manual_revision)
+            if target.exists():
+                shutil.rmtree(temporary, ignore_errors=True)
+                raise SegmentationWorkspaceStoreError("manual revision artifacts already exist", 409)
+            original_index = self._index(workspace_id)
+            index = {key: dict(value) for key, value in original_index.items()}
+            artifact_prefix = self._manual_prefix(workspace_id, object_id)
+            target_published = False
+            index_written = False
+            workspace_written = False
+            try:
+                artifacts = {
+                    "add": manual_add,
+                    "remove": manual_remove,
+                    "composite": composite,
+                }
+                urls: dict[str, str] = {}
+                for name, mask in artifacts.items():
+                    destination = temporary / f"{name}.png"
+                    _save_binary_mask_array(destination, mask)
+                    artifact_id = f"{artifact_prefix}{manual_revision}/{name}"
+                    index[artifact_id] = {
+                        "path": f"objects/{object_id}/manual/{manual_revision}/{name}.png",
+                        "media_type": "image/png",
+                        "sha256": sha256_file(destination),
+                    }
+                    urls[name] = f"/api/segmentation-artifacts/{artifact_id}"
+                os.replace(temporary, target)
+                target_published = True
+                index = {
+                    key: value
+                    for key, value in index.items()
+                    if not (key.startswith(artifact_prefix) and not key.startswith(f"{artifact_prefix}{manual_revision}/"))
+                }
+                now = datetime.now(timezone.utc)
+                item["manual_mask"] = ManualMaskState(
+                    manual_revision=manual_revision,
+                    base_prompt_revision=base_prompt_revision,
+                    base_candidate_index=base_candidate_index,
+                    add_mask_url=urls["add"],
+                    remove_mask_url=urls["remove"],
+                    composite_mask_url=urls["composite"],
+                    area_pixels=area_pixels,
+                    bbox_xyxy=bbox_xyxy,
+                    updated_at=now,
+                ).model_dump(mode="json")
+                item["object_version"] += 1
+                item["updated_at"] = now.isoformat()
+                document["workspace_revision"] += 1
+                document["updated_at"] = now.isoformat()
+                updated = SegmentationWorkspace.model_validate(document)
+                self._write_index(workspace_id, index)
+                index_written = True
+                self._save(updated)
+                workspace_written = True
+                self._remove_old_manual_dirs(workspace_id, object_id, str(manual_revision))
+                return updated
+            except Exception:
+                shutil.rmtree(temporary, ignore_errors=True)
+                if target_published:
+                    shutil.rmtree(target, ignore_errors=True)
+                if index_written and not workspace_written:
+                    try:
+                        self._write_index(workspace_id, original_index)
+                    except Exception:
+                        pass
+                raise
+
+    def clear_manual_mask(
+        self,
+        workspace_id: str,
+        object_id: str,
+        *,
+        expected_workspace_revision: int,
+        expected_object_version: int,
+        expected_manual_revision: int,
+    ) -> SegmentationWorkspace:
+        with self._lock(workspace_id):
+            workspace = self._load(workspace_id)
+            _require_expected(workspace.workspace_revision, expected_workspace_revision, "workspace revision")
+            document = workspace.model_dump(mode="json")
+            item = self._find_object_document(document, object_id)
+            _require_expected(item["object_version"], expected_object_version, "object version")
+            current_manual = item.get("manual_mask") or empty_manual_mask_state()
+            _require_expected(
+                int(current_manual.get("manual_revision", 0)),
+                expected_manual_revision,
+                "manual revision",
+            )
+            if expected_manual_revision == 0:
+                return workspace
+            original_index = self._index(workspace_id)
+            index = {
+                key: value
+                for key, value in original_index.items()
+                if not key.startswith(self._manual_prefix(workspace_id, object_id))
+            }
+            now = datetime.now(timezone.utc)
+            item["manual_mask"] = empty_manual_mask_state()
+            item["object_version"] += 1
+            item["updated_at"] = now.isoformat()
+            document["workspace_revision"] += 1
+            document["updated_at"] = now.isoformat()
+            updated = SegmentationWorkspace.model_validate(document)
+            index_written = False
+            workspace_written = False
+            try:
+                self._write_index(workspace_id, index)
+                index_written = True
+                self._save(updated)
+                workspace_written = True
+            except Exception:
+                if index_written and not workspace_written:
+                    try:
+                        self._write_index(workspace_id, original_index)
+                    except Exception:
+                        pass
+                raise
+            self._remove_old_manual_dirs(workspace_id, object_id)
             return updated
 
     def _remove_object_artifacts(self, workspace_id: str, object_id: str) -> None:
@@ -577,11 +916,11 @@ class SegmentationWorkspaceStore:
                 shutil.rmtree(child, ignore_errors=True)
 
     def resolve_artifact(self, kind: str, identifier: str) -> tuple[Path, str]:
-        if kind not in {"source-images", "sam-candidates"}:
+        if kind not in {"source-images", "sam-candidates", "manual-masks"}:
             raise SegmentationWorkspaceStoreError("artifact not found", 404)
         if kind == "source-images" and (not valid_id(identifier) or "/" in identifier or "\\" in identifier):
             raise SegmentationWorkspaceStoreError("invalid artifact identifier")
-        if kind == "sam-candidates" and (
+        if kind in {"sam-candidates", "manual-masks"} and (
             not identifier
             or "\\" in identifier
             or any(part in {"", ".", ".."} for part in identifier.split("/"))

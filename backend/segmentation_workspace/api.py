@@ -8,13 +8,14 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend import sam_engine
 
 from .models import SamPromptPoint
+from . import manual_masks
 from . import service
 from .store import SegmentationWorkspaceStore, SegmentationWorkspaceStoreError
 
@@ -75,12 +76,12 @@ def _sam_error(exc: sam_engine.SamEngineError) -> HTTPException:
     return HTTPException(status_code=exc.status_code, detail=str(exc))
 
 
-async def _save_upload(upload: UploadFile, destination: Path) -> None:
+async def _save_upload(upload: UploadFile, destination: Path, *, max_bytes: int = MAX_UPLOAD_BYTES) -> None:
     total = 0
     with destination.open("wb") as stream:
         while block := await upload.read(1024 * 1024):
             total += len(block)
-            if total > MAX_UPLOAD_BYTES:
+            if total > max_bytes:
                 raise HTTPException(413, "upload is too large")
             stream.write(block)
 
@@ -219,6 +220,64 @@ def select_candidate(workspace_id: str, object_id: str, payload: SamCandidateSel
         raise _error(exc) from exc
 
 
+@router.put("/{workspace_id}/objects/{object_id}/manual-mask")
+async def save_manual_mask(
+    workspace_id: str,
+    object_id: str,
+    edited_mask: UploadFile = File(...),
+    base_prompt_revision: int = Form(..., ge=1),
+    base_candidate_index: int = Form(..., ge=0),
+    expected_workspace_revision: int = Form(..., ge=1),
+    expected_object_version: int = Form(..., ge=1),
+    expected_manual_revision: int = Form(..., ge=0),
+) -> dict[str, Any]:
+    temporary = Path(tempfile.mkdtemp(prefix="segmentation-manual-mask-"))
+    try:
+        uploaded = temporary / "edited-mask"
+        await _save_upload(
+            edited_mask,
+            uploaded,
+            max_bytes=manual_masks.MAX_MANUAL_MASK_UPLOAD_BYTES,
+        )
+        try:
+            return manual_masks.save_manual_mask(
+                STORE,
+                workspace_id,
+                object_id,
+                edited_mask_path=uploaded,
+                base_prompt_revision=base_prompt_revision,
+                base_candidate_index=base_candidate_index,
+                expected_workspace_revision=expected_workspace_revision,
+                expected_object_version=expected_object_version,
+                expected_manual_revision=expected_manual_revision,
+            )
+        except SegmentationWorkspaceStoreError as exc:
+            raise _error(exc) from exc
+    finally:
+        shutil.rmtree(temporary, ignore_errors=True)
+
+
+@router.delete("/{workspace_id}/objects/{object_id}/manual-mask")
+def clear_manual_mask(
+    workspace_id: str,
+    object_id: str,
+    expected_workspace_revision: int = Query(..., ge=1),
+    expected_object_version: int = Query(..., ge=1),
+    expected_manual_revision: int = Query(..., ge=0),
+) -> dict[str, Any]:
+    try:
+        return manual_masks.clear_manual_mask(
+            STORE,
+            workspace_id,
+            object_id,
+            expected_workspace_revision=expected_workspace_revision,
+            expected_object_version=expected_object_version,
+            expected_manual_revision=expected_manual_revision,
+        )
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+
+
 @router.delete("/{workspace_id}/objects/{object_id}/sam-draft")
 def clear_sam_draft(
     workspace_id: str,
@@ -249,6 +308,6 @@ def get_segmentation_artifact(kind: str, identifier: str) -> FileResponse:
         media_type=media_type,
         headers={
             "X-Content-Type-Options": "nosniff",
-            "Cache-Control": "no-store" if kind == "sam-candidates" else "private, max-age=3600",
+            "Cache-Control": "no-store" if kind in {"sam-candidates", "manual-masks"} else "private, max-age=3600",
         },
     )
