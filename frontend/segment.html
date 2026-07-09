@@ -107,6 +107,18 @@
             <h3>Candidates</h3>
             <div id="candidate-list" class="candidate-list"></div>
           </section>
+          <section class="detail-section export-section" id="export-section" aria-busy="false">
+            <div class="section-heading-row">
+              <h3>Export snapshots</h3>
+              <button id="refresh-exports" type="button" class="secondary">Refresh</button>
+            </div>
+            <button id="create-export" type="button" class="primary export-create">Create export snapshot</button>
+            <p id="export-status" class="export-status">No export history loaded</p>
+            <div id="export-readiness" class="export-readiness"></div>
+            <h3>Export history</h3>
+            <div id="export-history" class="export-history"></div>
+            <div id="export-details" class="export-details"></div>
+          </section>
         </aside>
       </section>
     </main>

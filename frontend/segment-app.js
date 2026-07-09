@@ -18,6 +18,13 @@ import {
 import {canvasEventPoint,canvasPointToImage,fitViewport} from "/static/segment-coordinates.js";
 import {candidateListHtml,objectListHtml} from "/static/segment-components.js";
 import {
+  ExportWorkspaceState,
+  exportReadiness,
+  exportRequestPayload,
+  sourceKindLabel,
+  staleLabel
+} from "/static/segment-exports.js";
+import {
   CandidateMaskCache,
   ControllerRegistry,
   PredictionController,
@@ -53,9 +60,11 @@ const refreshGate=new WorkspaceLoadGate();
 const renderGate=new RenderGate();
 const structuralBusyByObject=new Map();
 const manualOps=new ManualOperationRegistry();
+const exportState=new ExportWorkspaceState();
 let sourceImage=null,sourceImageId=null,renderQueued=false,panPointer=null,brushSession=null,brushGeneration=0,brushPointer=null,brushCursor=null;
 
 function absoluteUrl(path){return new URL(path,location.origin).href}
+function esc(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c])}
 function toast(message,error=false){const el=document.createElement("div");el.className=`toast${error?" error":""}`;el.textContent=message;$("#status-region").append(el);setTimeout(()=>el.remove(),4200)}
 function setCanvasMessage(message){$("#canvas-message").textContent=message;$("#canvas-message").hidden=!message}
 function currentObject(){return store.selected}
@@ -67,11 +76,16 @@ function selectedBrushSession(){return brushSession?.workspaceId===selectedWorks
 function selectedManualOperation(){return store.selectedObjectId&&selectedWorkspaceId()?manualOps.get(selectedWorkspaceId(),store.selectedObjectId):null}
 function selectedManualOperationActive(){return Boolean(selectedManualOperation())}
 function anyManualOperationActive(){return manualOps.hasAny()}
-function selectedBrushBusy(){const session=selectedBrushSession();return Boolean(session?.loading||session?.saving||session?.clearing||selectedManualOperationActive())}
+function exportOperationActive(){return Boolean(exportState.activeOperation)}
+function selectedBrushBusy(){const session=selectedBrushSession();return Boolean(session?.loading||session?.saving||session?.clearing||selectedManualOperationActive()||exportOperationActive())}
 function clearObjectMaskCache(workspaceId,objectId){candidateImageCache.clearObject(workspaceId,objectId)}
 function waitForManualOperation(){toast("Wait for the manual mask operation to finish.",true)}
 function ensureNoSelectedManualOperation(){if(selectedManualOperationActive()){waitForManualOperation();return false}return true}
 function ensureNoManualOperation(){if(anyManualOperationActive()){waitForManualOperation();return false}return true}
+function waitForExportOperation(){toast("Wait for the export snapshot to finish.",true)}
+function ensureNoExportOperation(){if(exportOperationActive()){waitForExportOperation();return false}return true}
+function anyPredictionActive(){return [...controllers.controllers.values()].some(controller=>controller.running||controller.pending)||[...store.localPromptStateByObject.values()].some(state=>state.running||state.pending)}
+function anyStructuralBusy(){return structuralBusyByObject.size>0}
 function operationOwnsSession(operation,session){return Boolean(operation&&session&&session.workspaceId===operation.workspaceId&&session.objectId===operation.objectId&&session.generation===operation.brushGeneration&&session.identity===operation.brushIdentity)}
 function setOwnedSessionBusy(operation,ownerSession,field,value){if(operationOwnsSession(operation,ownerSession))ownerSession[field]=value;if(operationOwnsSession(operation,brushSession))brushSession[field]=value}
 function objectByOperation(operation){return store.workspace?.workspace_id===operation.workspaceId?store.workspace.objects.find(item=>item.object_id===operation.objectId):null}
@@ -114,19 +128,40 @@ async function prepareBrushForSelection(){
 
 async function loadSourceImage(workspace,generation){const image=await imageElement(workspace.source_image.url);if(!loadGate.isCurrent(generation))return false;sourceImage=image;sourceImageId=workspace.source_image.image_id;view.setImageSize(workspace.image_dimensions.width,workspace.image_dimensions.height).fit();resizeCanvas();return true}
 async function prepareSam(generation=loadGate.generation,workspaceId=store.workspace?.workspace_id){if(!workspaceId||!loadGate.isCurrent(generation))return;store.setSamStatus("preparing","Preparing...");try{const result=await api.prepareSam(workspaceId);if(!loadGate.isCurrent(generation)||store.workspace?.workspace_id!==workspaceId)return;store.setSamStatus("ready",`Ready (${result.model_type} ${result.device})`)}catch(error){if(!loadGate.isCurrent(generation)||store.workspace?.workspace_id!==workspaceId)return;store.setSamStatus("failed",error.message);toast(error.message,true)}}
-function resetTransientForWorkspaceChange(){controllers.clear();structuralBusyByObject.clear();candidateImageCache.clear();manualOps.invalidateAll();refreshGate.begin();disposeBrushSession();renderGate.request();$("#mask-updating").hidden=true}
-async function activateWorkspace(workspace,generation){if(!loadGate.isCurrent(generation))return false;resetTransientForWorkspaceChange();store.load(workspace);history.replaceState(null,"",`/segment?workspace=${encodeURIComponent(workspace.workspace_id)}`);$("#workspace-id").value=workspace.workspace_id;$("#empty-state").hidden=true;$("#workspace-app").hidden=false;setCanvasMessage("");prepareBrushForSelection();requestDraw();await prepareSam(generation,workspace.workspace_id);return loadGate.isCurrent(generation)}
+function resetTransientForWorkspaceChange(){controllers.clear();structuralBusyByObject.clear();candidateImageCache.clear();manualOps.invalidateAll();exportState.reset(null);refreshGate.begin();disposeBrushSession();renderGate.request();$("#mask-updating").hidden=true}
+async function refreshExportHistory(workspaceId=selectedWorkspaceId(),selectId=exportState.selectedExportId){
+  if(!workspaceId)return;
+  const generation=exportState.beginList(workspaceId);
+  renderExports();
+  try{
+    const records=await api.listExports(workspaceId);
+    if(!exportState.isCurrent(workspaceId,generation)||store.workspace?.workspace_id!==workspaceId)return;
+    exportState.setRecords(records);
+    if(selectId&&exportState.records.some(item=>item.export_id===selectId))exportState.select(selectId);
+  }catch(error){
+    if(!exportState.isCurrent(workspaceId,generation))return;
+    exportState.loading=false;
+    exportState.error=error.message;
+    toast(error.message,true);
+  }finally{
+    renderExports();
+  }
+}
+function scheduleExportHistoryRefresh(workspaceId=selectedWorkspaceId(),selectId=exportState.selectedExportId){
+  if(workspaceId)queueMicrotask(()=>{if(store.workspace?.workspace_id===workspaceId)refreshExportHistory(workspaceId,selectId)});
+}
+async function activateWorkspace(workspace,generation){if(!loadGate.isCurrent(generation))return false;resetTransientForWorkspaceChange();store.load(workspace);exportState.reset(workspace.workspace_id);history.replaceState(null,"",`/segment?workspace=${encodeURIComponent(workspace.workspace_id)}`);$("#workspace-id").value=workspace.workspace_id;$("#empty-state").hidden=true;$("#workspace-app").hidden=false;setCanvasMessage("");prepareBrushForSelection();requestDraw();refreshExportHistory(workspace.workspace_id);await prepareSam(generation,workspace.workspace_id);return loadGate.isCurrent(generation)}
 async function loadWorkspace(workspaceId){const generation=loadGate.begin();try{store.loadingState="Loading";store.setError("");setCanvasMessage("Loading workspace...");const workspace=await api.getWorkspace(workspaceId);if(!loadGate.isCurrent(generation))return;if(!await loadSourceImage(workspace,generation))return;await activateWorkspace(workspace,generation)}catch(error){if(!loadGate.isCurrent(generation))return;setCanvasMessage("");toast(error.message,true);store.setError(error.message)}}
 async function createWorkspace(file){const generation=loadGate.begin();try{const workspace=await api.createWorkspace(file);if(!loadGate.isCurrent(generation))return;if(!await loadSourceImage(workspace,generation))return;await activateWorkspace(workspace,generation)}catch(error){if(loadGate.isCurrent(generation))toast(error.message,true)}}
 
-function updateWorkspace(workspace,preserveId=store.selectedObjectId){const previousWorkspaceId=store.workspace?.workspace_id??workspace.workspace_id;const previousIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);const previousBrush=brushSession;store.load(workspace,preserveId);const currentIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);for(const id of previousIds)if(!currentIds.has(id)){controllers.dispose(previousWorkspaceId,id);structuralBusyByObject.delete(id);manualOps.invalidateObject(previousWorkspaceId,id);clearObjectMaskCache(previousWorkspaceId,id);if(previousBrush?.objectId===id)disposeBrushSession()}if(!brushSessionStillCompatible(previousBrush,currentObject())){if(previousBrush?.editor?.dirty&&previousBrush.objectId===store.selectedObjectId)brushSession={...previousBrush,error:"Workspace state changed. Save is disabled until you reload or discard local brush edits."};else prepareBrushForSelection()}else brushSession=previousBrush;renderPredictionStatus();requestDraw()}
+function updateWorkspace(workspace,preserveId=store.selectedObjectId){const previousWorkspaceId=store.workspace?.workspace_id??workspace.workspace_id;const previousIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);const previousBrush=brushSession;store.load(workspace,preserveId);if(exportState.workspaceId!==workspace.workspace_id)exportState.reset(workspace.workspace_id);const currentIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);for(const id of previousIds)if(!currentIds.has(id)){controllers.dispose(previousWorkspaceId,id);structuralBusyByObject.delete(id);manualOps.invalidateObject(previousWorkspaceId,id);clearObjectMaskCache(previousWorkspaceId,id);if(previousBrush?.objectId===id)disposeBrushSession()}if(!brushSessionStillCompatible(previousBrush,currentObject())){if(previousBrush?.editor?.dirty&&previousBrush.objectId===store.selectedObjectId)brushSession={...previousBrush,error:"Workspace state changed. Save is disabled until you reload or discard local brush edits."};else prepareBrushForSelection()}else brushSession=previousBrush;renderPredictionStatus();requestDraw();scheduleExportHistoryRefresh(workspace.workspace_id,exportState.selectedExportId)}
 function selectedObjectColor(){const index=Math.max(0,(store.workspace?.objects||[]).findIndex(o=>o.object_id===store.selectedObjectId));return colorForIndex(index)}
 
 function renderObjects(){if(!store.workspace)return;$("#object-list").innerHTML=objectListHtml(store.workspace.objects,store.selectedObjectId,store.localPromptStateByObject)}
 function renderDetails(){
   const object=currentObject();
   const operationActive=selectedManualOperationActive();
-  const busy=object?Boolean(structuralBusyByObject.get(object.object_id)||operationActive):false;
+  const busy=object?Boolean(structuralBusyByObject.get(object.object_id)||operationActive||exportOperationActive()):exportOperationActive();
   const prompt=currentPromptState();
   const session=selectedBrushSession();
   const dirty=brushDirty();
@@ -134,6 +169,7 @@ function renderDetails(){
   const manualActive=object?manualMaskActive(object):false;
   $("#rename-form").hidden=!object;
   $("#delete-object").disabled=!object||busy;
+  $("#new-object").disabled=!store.workspace||exportOperationActive();
   const samReady=store.samStatus.state==="ready";
   const samPromptAllowed=canUseSamPrompting({object,promptState:prompt,brushDirty:dirty,structuralBusy:busy,samReady});
   document.querySelectorAll("[data-tool='positive'],[data-tool='negative']").forEach(button=>{button.disabled=!samPromptAllowed;button.title=!samReady?"SAM is not ready":manualActive?"Clear saved manual corrections before changing the SAM mask.":dirty?"Save or reset your brush edits before changing the SAM base.":""});
@@ -172,7 +208,164 @@ function renderDetails(){
 }
 function renderSamStatus(){const el=$("#sam-status");el.dataset.state=store.samStatus.state;el.querySelector("output").textContent=store.samStatus.message;$("#retry-sam").hidden=!store.workspace}
 function renderPredictionStatus(){const controller=selectedController();const state=currentPromptState();$("#mask-updating").hidden=!predictionStatusVisible({controller,promptState:state})}
-function renderAll(){renderObjects();renderDetails();renderSamStatus();renderPredictionStatus();requestDraw()}
+function formatDate(value){const date=new Date(value);return Number.isNaN(date.getTime())?"-":date.toLocaleString()}
+function formatNumber(value){return Number(value||0).toLocaleString()}
+function shortHash(value){return value?`${value.slice(0,12)}...${value.slice(-8)}`:"-"}
+function badgeHtml(record){const label=staleLabel(record);return `<span class="badge ${label.toLowerCase()}">${label}</span>`}
+function exportReadinessState(){
+  return exportReadiness(store.workspace,{
+    brushDirty:brushDirty(),
+    manualOperationActive:anyManualOperationActive(),
+    predictionActive:anyPredictionActive(),
+    structuralBusy:anyStructuralBusy(),
+    exportActive:exportOperationActive()
+  });
+}
+function renderExports(){
+  const section=$("#export-section");
+  if(!section)return;
+  section.setAttribute("aria-busy",String(exportState.loading||exportState.creating||exportState.qualityLoading));
+  const readiness=exportReadinessState();
+  const create=$("#create-export");
+  create.disabled=!readiness.ready||exportState.creating;
+  create.textContent=exportState.creating?"Creating export snapshot...":"Create export snapshot";
+  const status=$("#export-status");
+  status.className=`export-status ${readiness.ready?"is-ready":"is-blocked"}`;
+  status.textContent=exportState.creating?"Creating export snapshot...":readiness.ready?"Ready to export":"Export blocked";
+  $("#export-readiness").innerHTML=readiness.ready?"":readiness.reasons.map(reason=>`<p class="export-reason">${esc(reason.message)}</p>`).join("");
+  $("#refresh-exports").disabled=!store.workspace||exportState.loading||exportState.creating;
+  const history=$("#export-history");
+  if(!store.workspace)history.innerHTML="<p class='muted-pad'>Load a workspace</p>";
+  else if(exportState.loading)history.innerHTML="<p class='muted-pad'>Loading exports...</p>";
+  else if(exportState.error)history.innerHTML=`<p class="export-reason">${esc(exportState.error)}</p>`;
+  else if(!exportState.records.length)history.innerHTML="<p class='muted-pad'>No exports yet</p>";
+  else history.innerHTML=exportState.records.map((record,index)=>`<button type="button" class="export-row ${record.export_id===exportState.selectedExportId?"is-selected":""}" data-export-id="${esc(record.export_id)}">
+    <span><strong>Export ${exportState.records.length-index}</strong><small>${esc(formatDate(record.created_at))}</small><small>${record.mask_count} masks - ${record.warning_count} warnings</small></span>
+    <span>${badgeHtml(record)}<small>rev ${record.created_from_workspace_revision} -> ${record.published_workspace_revision}</small></span>
+  </button>`).join("");
+  renderExportDetails();
+}
+function renderExportDetails(){
+  const container=$("#export-details");
+  const record=exportState.selectedRecord();
+  if(!record){container.innerHTML="";return}
+  const quality=exportState.cachedQuality(record);
+  container.innerHTML=`
+    <section class="export-details">
+      <dl class="export-summary">
+        <div><dt>Export ID</dt><dd class="hash-text" title="${esc(record.export_id)}">${esc(record.export_id)}</dd></div>
+        <div><dt>Status</dt><dd>${badgeHtml(record)}</dd></div>
+        <div><dt>Created</dt><dd>${esc(formatDate(record.created_at))}</dd></div>
+        <div><dt>Masks</dt><dd>${record.mask_count}</dd></div>
+        <div><dt>Warnings</dt><dd>${record.warning_count}</dd></div>
+        <div><dt>Total area</dt><dd>${formatNumber(record.total_mask_area)} px</dd></div>
+        <div><dt>Source rev</dt><dd>${record.created_from_workspace_revision}</dd></div>
+        <div><dt>Published rev</dt><dd>${record.published_workspace_revision}</dd></div>
+        <div><dt>Archive SHA</dt><dd class="hash-text" title="${esc(record.archive_sha256)}">${esc(shortHash(record.archive_sha256))}</dd></div>
+      </dl>
+      <div class="artifact-actions">
+        <a href="${esc(record.archive_url)}" download>Download ZIP</a>
+        <a href="${esc(record.metadata_url)}" target="_blank" rel="noopener">Open metadata JSON</a>
+        <a href="${esc(record.quality_report_url)}" target="_blank" rel="noopener">Open quality JSON</a>
+        <a href="${esc(record.quality_markdown_url)}" target="_blank" rel="noopener">Open quality Markdown</a>
+        <a href="${esc(record.combined_preview_url)}" target="_blank" rel="noopener">Open combined preview</a>
+      </div>
+      <div class="export-preview">
+        <strong>Combined preview</strong>
+        <a href="${esc(record.combined_preview_url)}" target="_blank" rel="noopener"><img src="${esc(record.combined_preview_url)}" alt="Combined mask overlay preview for export ${esc(record.export_id)}" loading="lazy"></a>
+      </div>
+      <details class="quality-block" id="quality-details" ${quality?"open":""}>
+        <summary>Quality report ${exportState.qualityLoading?"(loading...)":""}</summary>
+        <div id="quality-content">${quality?qualityHtml(quality):"<p class='export-muted'>Open to load quality diagnostics.</p>"}</div>
+      </details>
+      <div class="mask-list">
+        <strong>Mask snapshots</strong>
+        ${record.masks.map(mask=>maskSnapshotHtml(mask)).join("")}
+      </div>
+    </section>`;
+}
+function maskSnapshotHtml(mask){
+  return `<article class="mask-snapshot">
+    <strong>${esc(mask.display_name)}</strong>
+    <div class="mask-grid">
+      <span><b>Semantic label</b>${esc(mask.semantic_label)}</span>
+      <span><b>Stable object ID</b><span class="hash-text">${esc(mask.object_id)}</span></span>
+      <span><b>Object version</b>${mask.object_version}</span>
+      <span><b>Source</b>${esc(sourceKindLabel(mask.source_kind))}</span>
+      <span><b>SAM prompt</b>${mask.source_prompt_revision}</span>
+      <span><b>Candidate</b>Candidate ${mask.source_candidate_index+1}</span>
+      <span><b>Manual rev</b>${mask.source_manual_revision}</span>
+      <span><b>Area</b>${formatNumber(mask.area_pixels)} px</span>
+      <span><b>Bounds</b>[${mask.bbox_xyxy.join(", ")}]</span>
+      <span><b>Filename</b>${esc(mask.filename)}</span>
+      <span><b>Mask SHA</b><span class="hash-text" title="${esc(mask.mask_sha256)}">${esc(shortHash(mask.mask_sha256))}</span></span>
+    </div>
+    <div class="artifact-actions"><a href="${esc(mask.mask_url)}" target="_blank" rel="noopener">Open mask</a><a href="${esc(mask.preview_url)}" target="_blank" rel="noopener">Open overlay</a></div>
+  </article>`;
+}
+function qualityHtml(report){
+  const warnings=report.summary?.warnings||[];
+  const overlaps=(report.pairwise_overlaps||[]).filter(item=>Number(item.overlap_pixels)>0);
+  const bbox=(report.bbox_comparisons||[]).filter(item=>Number(item.bbox_iou)>=.9);
+  return `<div class="quality-block">
+    <strong>${warnings.length?`${warnings.length} quality warning${warnings.length===1?"":"s"}`:"No quality warnings"}</strong>
+    <ul class="quality-list">${warnings.length?warnings.map(w=>`<li><b>${esc(w.severity||"warning")}</b> ${esc(w.label||w.mask_id||"mask")} - ${esc(w.message||"")}</li>`).join(""):"<li>No quality warnings</li>"}</ul>
+    <strong>Per-mask metrics</strong>
+    <ul class="quality-list">${(report.masks||[]).map(m=>`<li>${esc(m.label)}: ${formatNumber(m.area)} px, ${m.percent_image_area}% image, ${m.connected_component_count} components, largest ${formatNumber(m.largest_component_area)}, small ${m.small_component_count}, border ${m.touches_image_border?"yes":"no"}, bbox [${(m.bbox||[]).join(", ")}]</li>`).join("")}</ul>
+    <strong>Overlaps</strong>
+    <ul class="quality-list">${overlaps.length?overlaps.map(o=>`<li>${esc(o.label_a||o.mask_a)} / ${esc(o.label_b||o.mask_b)}: ${formatNumber(o.overlap_pixels)} px, ${o.overlap_percent_of_smaller_mask}% smaller, ${o.overlap_percent_of_union}% union</li>`).join(""):"<li>No overlapping mask pairs</li>"}</ul>
+    <details><summary>Bounding-box diagnostics</summary><ul class="quality-list">${bbox.length?bbox.map(b=>`<li>${esc(b.label_a||b.mask_a)} / ${esc(b.label_b||b.mask_b)}: IoU ${b.bbox_iou}</li>`).join(""):"<li>No high-IoU bounding boxes</li>"}</ul></details>
+  </div>`;
+}
+function renderAll(){renderObjects();renderDetails();renderSamStatus();renderPredictionStatus();renderExports();requestDraw()}
+
+async function createExportSnapshot(){
+  const readiness=exportReadinessState();
+  if(!readiness.ready){toast(readiness.reasons[0]?.message||"Export is not ready.",true);renderExports();return}
+  const snapshot=exportState.beginCreate(store.workspace);
+  if(!snapshot){waitForExportOperation();return}
+  const payload=exportRequestPayload(snapshot);
+  renderAll();
+  try{
+    const record=await api.createExport({
+      workspaceId:snapshot.workspaceId,
+      expectedWorkspaceRevision:payload.expected_workspace_revision,
+      expectedObjects:payload.expected_objects
+    });
+    if(!exportState.isCurrentOperation(snapshot,snapshot.workspaceId)||store.workspace?.workspace_id!==snapshot.workspaceId)return;
+    exportState.upsertRecord(record);
+    if(store.workspace)store.load({...store.workspace,workspace_revision:record.published_workspace_revision},store.selectedObjectId);
+    await refreshActiveWorkspace(snapshot.workspaceId,store.selectedObjectId);
+    await refreshExportHistory(snapshot.workspaceId,record.export_id);
+    exportState.select(record.export_id);
+    toast("Export snapshot created");
+  }catch(error){
+    if(error.status===409){
+      await refreshActiveWorkspace(snapshot.workspaceId,store.selectedObjectId,"Export was stale. Reloaded workspace state.");
+      await refreshExportHistory(snapshot.workspaceId);
+    }else toast(error.message,true);
+  }finally{
+    exportState.finishCreate(snapshot);
+    renderAll();
+  }
+}
+
+async function loadSelectedQualityReport(){
+  const record=exportState.selectedRecord();
+  if(!record||exportState.cachedQuality(record)||exportState.qualityLoading)return;
+  const context=exportState.beginQuality(record);
+  renderExports();
+  try{
+    const report=await api.getJsonArtifact(context.url);
+    if(!exportState.isCurrentQuality(context)||store.workspace?.workspace_id!==context.workspaceId)return;
+    exportState.setQuality(record,report);
+  }catch(error){
+    if(exportState.isCurrentQuality(context)){exportState.error=error.message;toast(error.message,true)}
+  }finally{
+    exportState.finishQuality(context);
+    renderExports();
+  }
+}
 
 function drawPoint(point){
   const canvasPoint=view.imageToCanvas(point.x,point.y);
@@ -330,6 +523,7 @@ function getController(objectId){
 
 function submitPrompt(objectId,revision,points,box){
   const object=store.workspace.objects.find(o=>o.object_id===objectId);
+  if(exportOperationActive()){waitForExportOperation();return}
   if(manualOps.has(store.workspace.workspace_id,objectId)){waitForManualOperation();return}
   if(manualMaskActive(object)){toast("Clear saved manual corrections before changing the SAM mask.",true);return}
   if(brushDirty()){toast("Save or reset your brush edits before changing the SAM base.",true);return}
@@ -355,6 +549,7 @@ function disposeController(objectId){const workspaceId=store.workspace?.workspac
 async function clearDraft(objectId){
   const object=store.workspace.objects.find(o=>o.object_id===objectId);
   if(!object||structuralBusyByObject.get(objectId))return;
+  if(exportOperationActive()){waitForExportOperation();return}
   if(manualOps.has(store.workspace.workspace_id,objectId)){waitForManualOperation();return}
   if((manualMaskActive(object)||brushDirty())&&!confirm("Resetting the SAM draft will remove SAM points, SAM candidates, saved manual corrections, and unsaved brush edits. Continue?"))return;
   const previousBrush=brushSession;
@@ -390,6 +585,7 @@ async function reloadAfterConflict(message){await refreshActiveWorkspace(selecte
 
 async function saveManualMask(){
   const object=currentObject(),session=selectedBrushSession();
+  if(exportOperationActive()){waitForExportOperation();return}
   const predictionActive=Boolean(selectedController()?.running||selectedController()?.pending);
   const structuralBusy=Boolean(object&&structuralBusyByObject.get(object.object_id));
   if(!canStartManualOperation({workspace:store.workspace,object,session,operationActive:selectedManualOperationActive(),predictionActive,structuralBusy,type:"save"}))return;
@@ -451,6 +647,7 @@ async function saveManualMask(){
 
 async function clearManualMask(){
   const object=currentObject(),session=selectedBrushSession();
+  if(exportOperationActive()){waitForExportOperation();return}
   const structuralBusy=Boolean(object&&structuralBusyByObject.get(object.object_id));
   if(!canStartManualOperation({workspace:store.workspace,object,session,operationActive:selectedManualOperationActive(),structuralBusy,type:"clear"}))return;
   if(session?.editor?.dirty&&!confirm("Clear saved corrections and discard unsaved brush edits?"))return;
@@ -499,11 +696,12 @@ async function clearManualMask(){
   }
 }
 
-function confirmDiscardBrushEdits(message){if(anyManualOperationActive()){waitForManualOperation();return false}return !brushDirty()||confirm(message)}
+function confirmDiscardBrushEdits(message){if(anyManualOperationActive()){waitForManualOperation();return false}if(exportOperationActive()){waitForExportOperation();return false}return !brushDirty()||confirm(message)}
 
 function updateBrushDirty(){markBrushEdited(brushSession);renderDetails();requestDraw()}
 function beginBrushStroke(event,point,imagePoint){
   const session=selectedBrushSession();
+  if(exportOperationActive()){waitForExportOperation();return false}
   if(!session?.editor||selectedBrushBusy()){toast(session?.error||NO_SAM_MASK_MESSAGE,true);return false}
   if(!brushSessionStillCompatible(session,currentObject())){toast("Brush base changed. Reload or reset local edits before painting.",true);return false}
   const mode=store.activeTool==="manual-add"?"add":"remove";
@@ -526,6 +724,7 @@ stage.addEventListener("pointerdown",event=>{
     return;
   }
   if((store.activeTool==="positive"||store.activeTool==="negative")&&currentObject()){
+    if(!ensureNoExportOperation())return;
     if(!ensureNoSelectedManualOperation())return;
     if(store.samStatus.state!=="ready"){toast("SAM is not ready yet.",true);return}
     if(structuralBusyByObject.get(store.selectedObjectId)){toast("Wait for the current object action to finish.",true);return}
@@ -565,21 +764,32 @@ stage.addEventListener("wheel",event=>{if(!store.workspace)return;event.preventD
 $("#workspace-loader").addEventListener("submit",event=>{event.preventDefault();const id=$("#workspace-id").value.trim();if(id&&confirmDiscardBrushEdits("Discard unsaved brush edits and load another workspace?"))loadWorkspace(id)});
 $("#upload-form").addEventListener("submit",async event=>{event.preventDefault();const file=$("#source-image").files[0];if(!file||!confirmDiscardBrushEdits("Discard unsaved brush edits and create another workspace?"))return;try{await createWorkspace(file)}catch(error){toast(error.message,true)}});
 $("#retry-sam").addEventListener("click",prepareSam);
-$("#new-object").addEventListener("click",()=>{if(!ensureNoManualOperation())return;$("#object-create-form").hidden=false;$("#new-display-name").focus()});
+$("#new-object").addEventListener("click",()=>{if(!ensureNoExportOperation()||!ensureNoManualOperation())return;$("#object-create-form").hidden=false;$("#new-display-name").focus()});
 $("#cancel-create").addEventListener("click",()=>{$("#object-create-form").hidden=true});
 $("#new-display-name").addEventListener("input",()=>{$("#new-semantic-label").value=semanticLabelFromDisplayName($("#new-display-name").value)});
-$("#object-create-form").addEventListener("submit",async event=>{event.preventDefault();if(!ensureNoManualOperation())return;try{const display=$("#new-display-name").value.trim();const label=$("#new-semantic-label").value.trim()||semanticLabelFromDisplayName(display);const workspace=await api.createObject(store.workspace,label,display);const created=workspace.objects.find(o=>!store.workspace.objects.some(existing=>existing.object_id===o.object_id));$("#object-create-form").hidden=true;$("#new-display-name").value="";$("#new-semantic-label").value="";updateWorkspace(workspace,created?.object_id);toast("Object created")}catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry create.");else toast(error.message,true)}});
+$("#object-create-form").addEventListener("submit",async event=>{event.preventDefault();if(!ensureNoExportOperation()||!ensureNoManualOperation())return;try{const display=$("#new-display-name").value.trim();const label=$("#new-semantic-label").value.trim()||semanticLabelFromDisplayName(display);const workspace=await api.createObject(store.workspace,label,display);const created=workspace.objects.find(o=>!store.workspace.objects.some(existing=>existing.object_id===o.object_id));$("#object-create-form").hidden=true;$("#new-display-name").value="";$("#new-semantic-label").value="";updateWorkspace(workspace,created?.object_id);toast("Object created")}catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry create.");else toast(error.message,true)}});
 $("#object-list").addEventListener("click",event=>{const row=event.target.closest("[data-object-id]");if(row){if(row.dataset.objectId!==store.selectedObjectId&&!confirmDiscardBrushEdits("Discard unsaved brush edits and select another object?"))return;store.select(row.dataset.objectId);prepareBrushForSelection();renderPredictionStatus();requestDraw()}});
-$("#rename-form").addEventListener("submit",async event=>{event.preventDefault();const object=currentObject();if(!object||!ensureNoSelectedManualOperation())return;try{const workspace=await api.updateObject(store.workspace,object,$("#semantic-label").value.trim(),$("#display-name").value.trim());updateWorkspace(workspace,object.object_id);toast("Object renamed")}catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry rename.");else toast(error.message,true)}});
-$("#delete-object").addEventListener("click",async()=>{const object=currentObject();if(!object||structuralBusyByObject.get(object.object_id)||!ensureNoSelectedManualOperation())return;const extra=brushDirty()?" This will also discard unsaved brush edits.":"";if(!confirm(`Delete ${object.display_name}?${extra}`))return;const previousBrush=brushSession;structuralBusyByObject.set(object.object_id,"delete");disposeController(object.object_id);disposeBrushSession();renderAll();try{const workspace=await api.deleteObject(store.workspace,object);clearObjectMaskCache(store.workspace.workspace_id,object.object_id);const next=workspace.objects[0]?.object_id??null;updateWorkspace(workspace,next);toast("Object deleted")}catch(error){structuralBusyByObject.delete(object.object_id);store.resetPromptState(object.object_id);if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry delete.");else{restoreBrushSession(previousBrush,store.workspace?.objects.find(item=>item.object_id===object.object_id));toast(error.message,true)}renderAll()}});
-$("#candidate-list").addEventListener("click",async event=>{const button=event.target.closest("[data-candidate-index]");const object=currentObject();if(!button||!object||!ensureNoSelectedManualOperation())return;const state=currentPromptState();const controller=selectedController();if(manualMaskActive(object)){toast("Clear saved manual corrections before changing the SAM mask.",true);return}if(brushDirty()){toast("Save or reset your brush edits before changing the SAM base.",true);return}if(controller?.running||controller?.pending||!canSelectCandidate(state)){toast("Wait for the current prediction before selecting a candidate.",true);return}const index=Number(button.dataset.candidateIndex);const previous=object.sam_draft.selected_candidate_index;const previousBrush=brushSession;object.sam_draft.selected_candidate_index=index;disposeBrushSession();renderDetails();requestDraw();try{const response=await api.selectCandidate(store.workspace,object,object.sam_draft.prompt_revision,index);updateWorkspace(mergeCandidateSelectionResponse(store.workspace,response),object.object_id);prepareBrushForSelection()}catch(error){object.sam_draft.selected_candidate_index=previous;renderDetails();requestDraw();if(!restoreBrushSession(previousBrush,object))prepareBrushForSelection();if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry candidate selection.");else toast(error.message,true)}});
-$("#undo-point").addEventListener("click",async()=>{const object=currentObject();if(!object||!ensureNoSelectedManualOperation())return;if(manualMaskActive(object)){toast("Clear saved manual corrections before changing the SAM mask.",true);return}if(brushDirty()){toast("Save or reset your brush edits before changing the SAM base.",true);return}const result=store.undoPoint(object.object_id);if(!result)return;if(!result.points.length&&!result.box){await clearDraft(object.object_id);return}requestDraw();submitPrompt(object.object_id,result.revision,result.points,result.box)});
+$("#rename-form").addEventListener("submit",async event=>{event.preventDefault();const object=currentObject();if(!object||!ensureNoExportOperation()||!ensureNoSelectedManualOperation())return;try{const workspace=await api.updateObject(store.workspace,object,$("#semantic-label").value.trim(),$("#display-name").value.trim());updateWorkspace(workspace,object.object_id);toast("Object renamed")}catch(error){if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry rename.");else toast(error.message,true)}});
+$("#delete-object").addEventListener("click",async()=>{const object=currentObject();if(!object||structuralBusyByObject.get(object.object_id)||!ensureNoExportOperation()||!ensureNoSelectedManualOperation())return;const extra=brushDirty()?" This will also discard unsaved brush edits.":"";if(!confirm(`Delete ${object.display_name}?${extra}`))return;const previousBrush=brushSession;structuralBusyByObject.set(object.object_id,"delete");disposeController(object.object_id);disposeBrushSession();renderAll();try{const workspace=await api.deleteObject(store.workspace,object);clearObjectMaskCache(store.workspace.workspace_id,object.object_id);const next=workspace.objects[0]?.object_id??null;updateWorkspace(workspace,next);toast("Object deleted")}catch(error){structuralBusyByObject.delete(object.object_id);store.resetPromptState(object.object_id);if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry delete.");else{restoreBrushSession(previousBrush,store.workspace?.objects.find(item=>item.object_id===object.object_id));toast(error.message,true)}renderAll()}});
+$("#candidate-list").addEventListener("click",async event=>{const button=event.target.closest("[data-candidate-index]");const object=currentObject();if(!button||!object||!ensureNoExportOperation()||!ensureNoSelectedManualOperation())return;const state=currentPromptState();const controller=selectedController();if(manualMaskActive(object)){toast("Clear saved manual corrections before changing the SAM mask.",true);return}if(brushDirty()){toast("Save or reset your brush edits before changing the SAM base.",true);return}if(controller?.running||controller?.pending||!canSelectCandidate(state)){toast("Wait for the current prediction before selecting a candidate.",true);return}const index=Number(button.dataset.candidateIndex);const previous=object.sam_draft.selected_candidate_index;const previousBrush=brushSession;object.sam_draft.selected_candidate_index=index;disposeBrushSession();renderDetails();requestDraw();try{const response=await api.selectCandidate(store.workspace,object,object.sam_draft.prompt_revision,index);updateWorkspace(mergeCandidateSelectionResponse(store.workspace,response),object.object_id);prepareBrushForSelection()}catch(error){object.sam_draft.selected_candidate_index=previous;renderDetails();requestDraw();if(!restoreBrushSession(previousBrush,object))prepareBrushForSelection();if(error.status===409)await reloadAfterConflict("Workspace changed. Reloaded; retry candidate selection.");else toast(error.message,true)}});
+$("#undo-point").addEventListener("click",async()=>{const object=currentObject();if(!object||!ensureNoExportOperation()||!ensureNoSelectedManualOperation())return;if(manualMaskActive(object)){toast("Clear saved manual corrections before changing the SAM mask.",true);return}if(brushDirty()){toast("Save or reset your brush edits before changing the SAM base.",true);return}const result=store.undoPoint(object.object_id);if(!result)return;if(!result.points.length&&!result.box){await clearDraft(object.object_id);return}requestDraw();submitPrompt(object.object_id,result.revision,result.points,result.box)});
 $("#reset-draft").addEventListener("click",()=>{if(currentObject())clearDraft(currentObject().object_id)});
-$("#undo-brush").addEventListener("click",()=>{if(!ensureNoSelectedManualOperation())return;if(selectedBrushSession()?.editor?.undo()){updateBrushDirty()}});
-$("#redo-brush").addEventListener("click",()=>{if(!ensureNoSelectedManualOperation())return;if(selectedBrushSession()?.editor?.redo()){updateBrushDirty()}});
-$("#reset-brush").addEventListener("click",()=>{if(!ensureNoSelectedManualOperation())return;selectedBrushSession()?.editor?.reset();updateBrushDirty()});
+$("#undo-brush").addEventListener("click",()=>{if(!ensureNoExportOperation()||!ensureNoSelectedManualOperation())return;if(selectedBrushSession()?.editor?.undo()){updateBrushDirty()}});
+$("#redo-brush").addEventListener("click",()=>{if(!ensureNoExportOperation()||!ensureNoSelectedManualOperation())return;if(selectedBrushSession()?.editor?.redo()){updateBrushDirty()}});
+$("#reset-brush").addEventListener("click",()=>{if(!ensureNoExportOperation()||!ensureNoSelectedManualOperation())return;selectedBrushSession()?.editor?.reset();updateBrushDirty()});
 $("#save-manual").addEventListener("click",saveManualMask);
 $("#clear-manual").addEventListener("click",clearManualMask);
+$("#create-export").addEventListener("click",createExportSnapshot);
+$("#refresh-exports").addEventListener("click",()=>refreshExportHistory(selectedWorkspaceId(),exportState.selectedExportId));
+$("#export-history").addEventListener("click",event=>{
+  const row=event.target.closest("[data-export-id]");
+  if(!row)return;
+  exportState.select(row.dataset.exportId);
+  renderExports();
+});
+$("#export-details").addEventListener("toggle",event=>{
+  if(event.target.id==="quality-details"&&event.target.open)loadSelectedQualityReport();
+},true);
 document.querySelectorAll("[data-tool]").forEach(button=>button.addEventListener("click",()=>{store.setTool(button.dataset.tool);document.querySelectorAll("[data-tool]").forEach(item=>item.classList.toggle("is-active",item===button));stage.dataset.tool=button.dataset.tool}));
 $("#brush-size").addEventListener("input",()=>{$("#brush-size-output").textContent=`${$("#brush-size").value} px`;requestDraw()});
 $("#overlay-opacity").addEventListener("input",()=>{$("#opacity-output").textContent=`${Math.round(Number($("#overlay-opacity").value)*100)}%`;requestDraw()});
@@ -591,11 +801,11 @@ window.addEventListener("keydown",event=>{
   if(target&&["INPUT","TEXTAREA"].includes(target.tagName))return;
   if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="z"&&!event.shiftKey){
     event.preventDefault();
-    if(!ensureNoSelectedManualOperation())return;
+    if(!ensureNoExportOperation()||!ensureNoSelectedManualOperation())return;
     if(selectedBrushSession()?.editor?.undo())updateBrushDirty();
   }else if((event.ctrlKey||event.metaKey)&&((event.key.toLowerCase()==="z"&&event.shiftKey)||event.key.toLowerCase()==="y")){
     event.preventDefault();
-    if(!ensureNoSelectedManualOperation())return;
+    if(!ensureNoExportOperation()||!ensureNoSelectedManualOperation())return;
     if(selectedBrushSession()?.editor?.redo())updateBrushDirty();
   }
 });

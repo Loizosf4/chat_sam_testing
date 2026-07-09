@@ -343,6 +343,23 @@ are cleared. While unsaved local brush edits exist, `/segment` also blocks SAM
 base changes and warns before object/workspace switches, object deletion, SAM
 draft reset, or browser navigation would discard those local edits.
 
+`/segment` also exposes an Export snapshots panel backed by the immutable export
+API. The panel shows export readiness, current/stale export history, artifact
+links, combined preview, per-mask snapshot metadata, and a lazily loaded quality
+report. Export creation is blocked until every object has a persisted effective
+mask and there are no unsaved brush edits, manual save/clear operations, active
+SAM predictions, object mutations, or another export in progress. While an
+export request is active, workspace loading/upload, object CRUD, SAM prompting,
+candidate selection, SAM draft reset, manual painting, brush undo/redo/reset,
+manual save/clear, and a second export request are disabled. Pan, zoom, inspect,
+and overlay opacity remain local view controls and stay available.
+
+The browser captures the workspace revision and exact object/version set before
+calling the export endpoint. A stale `409 Conflict` refreshes the active
+workspace and export history without retrying automatically. Export-history,
+export-create, and quality-report responses are applied only when they still
+belong to the currently active workspace and selected export.
+
 ## Optimistic Concurrency
 
 Every successful object mutation increments `workspace_revision`. Object updates
@@ -415,12 +432,9 @@ overlaps, bbox comparisons, and warnings. Warnings do not fail export creation.
 
 The following remain intentionally outside this contract:
 
-- Brush corrections.
-- Frontend brush UI.
 - Candidate-mask quality reports.
 - Final-mask finalization.
 - Mask finalization.
-- Frontend export UI.
 - Export import through `/api/scenes/import`.
 - MoGe pipeline integration.
 - MoGe execution.

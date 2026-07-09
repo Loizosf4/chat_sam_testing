@@ -76,4 +76,21 @@ export class SegmentationWorkspaceClient {
     const query=new URLSearchParams({expected_workspace_revision:expectedWorkspaceRevision,expected_object_version:expectedObjectVersion,expected_manual_revision:expectedManualRevision});
     return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/objects/${objectId}/manual-mask?${query}`,{method:"DELETE"});
   }
+  createExport({workspaceId,expectedWorkspaceRevision,expectedObjects}){
+    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/exports`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({expected_workspace_revision:expectedWorkspaceRevision,expected_objects:expectedObjects.map(item=>({...item})),include_previews:true})
+    });
+  }
+  listExports(workspaceId){
+    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/exports`);
+  }
+  getExport(workspaceId,exportId){
+    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/exports/${encodeURIComponent(exportId)}`);
+  }
+  getJsonArtifact(url){
+    if(!String(url||"").startsWith("/api/segmentation-artifacts/"))throw new Error("Artifact URL must be an application URL");
+    return this.request(url);
+  }
 }
