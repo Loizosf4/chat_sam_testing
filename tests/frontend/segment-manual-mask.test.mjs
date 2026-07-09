@@ -16,12 +16,16 @@ test("manual mask API sends multipart optimistic-lock fields without base64",asy
   let request;
   global.fetch=async(url,options)=>{request={url,options};return{ok:true,json:async()=>({manual_mask:{manual_revision:2}})}};
   const api=new SegmentationWorkspaceClient();
-  await api.saveManualMask(
-    {workspace_id:"workspace",workspace_revision:8},
-    object(1),
-    {basePromptRevision:3,baseCandidateIndex:0,manualRevision:1},
-    new Blob(["png"],{type:"image/png"})
-  );
+  await api.saveManualMask({
+    workspaceId:"workspace",
+    objectId:"object",
+    expectedWorkspaceRevision:8,
+    expectedObjectVersion:4,
+    expectedManualRevision:1,
+    basePromptRevision:3,
+    baseCandidateIndex:0,
+    blob:new Blob(["png"],{type:"image/png"})
+  });
   assert.equal(request.url,"/api/segmentation-workspaces/workspace/objects/object/manual-mask");
   assert.equal(request.options.method,"PUT");
   assert.equal(request.options.body.get("base_prompt_revision"),"3");
@@ -37,7 +41,7 @@ test("manual mask clear API sends revision query fields",async()=>{
   let request;
   global.fetch=async(url,options)=>{request={url,options};return{ok:true,json:async()=>({})}};
   const api=new SegmentationWorkspaceClient();
-  await api.clearManualMask({workspace_id:"workspace",workspace_revision:9},object(2));
+  await api.clearManualMask({workspaceId:"workspace",objectId:"object",expectedWorkspaceRevision:9,expectedObjectVersion:4,expectedManualRevision:2});
   assert.equal(request.options.method,"DELETE");
   assert.equal(request.url,"/api/segmentation-workspaces/workspace/objects/object/manual-mask?expected_workspace_revision=9&expected_object_version=4&expected_manual_revision=2");
 });

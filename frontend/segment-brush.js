@@ -115,3 +115,99 @@ export function brushSaveState(session){
   if(session.error)return session.error;
   return session.editor.dirty?"Unsaved brush edits":"Saved";
 }
+
+export function manualOperationKey(workspaceId,objectId){return `${workspaceId}:${objectId}`}
+
+export function createManualOperationContext({operationId,type,workspace,object,session}){
+  const manual=object?.manual_mask||{};
+  const context={
+    operationId,
+    type,
+    workspaceId:workspace.workspace_id,
+    objectId:object.object_id,
+    expectedWorkspaceRevision:workspace.workspace_revision,
+    expectedObjectVersion:object.object_version,
+    expectedManualRevision:manual.manual_revision||0,
+    basePromptRevision:session?.basePromptRevision??null,
+    baseCandidateIndex:session?.baseCandidateIndex??null,
+    brushGeneration:session?.generation??0,
+    brushIdentity:session?.identity??null,
+    brushEditRevision:session?.editRevision??0,
+    editedMask:null
+  };
+  if(type==="save"){
+    context.editedMask=new Uint8Array(session.editor.mask);
+  }
+  return context;
+}
+
+export function manualOperationMatchesCurrentState(context,{workspace,object,session}){
+  if(!context||!workspace||!object)return false;
+  const manual=object.manual_mask||{};
+  return workspace.workspace_id===context.workspaceId&&
+    object.object_id===context.objectId&&
+    workspace.workspace_revision===context.expectedWorkspaceRevision&&
+    object.object_version===context.expectedObjectVersion&&
+    (manual.manual_revision||0)===context.expectedManualRevision&&
+    (!session||(
+      session.generation===context.brushGeneration&&
+      session.identity===context.brushIdentity&&
+      session.editRevision===context.brushEditRevision
+    ));
+}
+
+export function canStartManualOperation({workspace,object,session,operationActive=false,predictionActive=false,structuralBusy=false,type="save"}){
+  if(!workspace||!object)return false;
+  if(operationActive||predictionActive||structuralBusy)return false;
+  if(type==="save")return Boolean(session?.editor?.dirty);
+  if(type==="clear")return Number(object.manual_mask?.manual_revision||0)>0;
+  return false;
+}
+
+export function manualConflictCompatibility(context,workspace){
+  if(!context||!workspace||workspace.workspace_id!==context.workspaceId)return {compatible:false,reason:"workspace_changed"};
+  const object=(workspace.objects||[]).find(item=>item.object_id===context.objectId);
+  if(!object)return {compatible:false,reason:"object_deleted"};
+  const draft=object.sam_draft||{},manual=object.manual_mask||{};
+  if(draft.prompt_revision!==context.basePromptRevision)return {compatible:false,reason:"sam_prompt_changed",object};
+  if(draft.selected_candidate_index!==context.baseCandidateIndex)return {compatible:false,reason:"selected_candidate_changed",object};
+  if((manual.manual_revision||0)!==context.expectedManualRevision)return {compatible:false,reason:"manual_revision_changed",object};
+  return {compatible:true,reason:"compatible",object};
+}
+
+export class ManualOperationRegistry {
+  constructor(){this.operations=new Map();this.nextId=1}
+  key(workspaceId,objectId){return manualOperationKey(workspaceId,objectId)}
+  begin(context){
+    const key=this.key(context.workspaceId,context.objectId);
+    if(this.operations.has(key))return null;
+    const operation={...context,operationId:context.operationId??this.nextId++,invalidated:false};
+    this.operations.set(key,operation);
+    return operation;
+  }
+  get(workspaceId,objectId){return this.operations.get(this.key(workspaceId,objectId))}
+  has(workspaceId,objectId){return this.operations.has(this.key(workspaceId,objectId))}
+  hasAny(){return this.operations.size>0}
+  isCurrent(context){
+    const active=this.get(context.workspaceId,context.objectId);
+    return Boolean(active)&&!active.invalidated&&active.operationId===context.operationId&&active.type===context.type;
+  }
+  finish(context){
+    if(this.isCurrent(context))this.operations.delete(this.key(context.workspaceId,context.objectId));
+  }
+  invalidateObject(workspaceId,objectId){
+    const key=this.key(workspaceId,objectId);
+    const active=this.operations.get(key);
+    if(active)active.invalidated=true;
+    this.operations.delete(key);
+  }
+  invalidateWorkspace(workspaceId){
+    for(const [key,operation] of [...this.operations.entries()]){
+      if(operation.workspaceId===workspaceId){operation.invalidated=true;this.operations.delete(key)}
+    }
+  }
+  invalidateAll(){
+    for(const operation of this.operations.values())operation.invalidated=true;
+    this.operations.clear();
+  }
+}

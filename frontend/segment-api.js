@@ -53,19 +53,27 @@ export class SegmentationWorkspaceClient {
     const query=new URLSearchParams({expected_workspace_revision:workspace.workspace_revision,expected_object_version:object.object_version});
     return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspace.workspace_id)}/objects/${object.object_id}/sam-draft?${query}`,{method:"DELETE"});
   }
-  saveManualMask(workspace,object,session,blob){
+  saveManualMask({
+    workspaceId,
+    objectId,
+    expectedWorkspaceRevision,
+    expectedObjectVersion,
+    expectedManualRevision,
+    basePromptRevision,
+    baseCandidateIndex,
+    blob
+  }){
     const form=new FormData();
     form.append("edited_mask",blob,"edited-mask.png");
-    form.append("base_prompt_revision",String(session.basePromptRevision));
-    form.append("base_candidate_index",String(session.baseCandidateIndex));
-    form.append("expected_workspace_revision",String(workspace.workspace_revision));
-    form.append("expected_object_version",String(object.object_version));
-    form.append("expected_manual_revision",String(session.manualRevision));
-    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspace.workspace_id)}/objects/${object.object_id}/manual-mask`,{method:"PUT",body:form});
+    form.append("base_prompt_revision",String(basePromptRevision));
+    form.append("base_candidate_index",String(baseCandidateIndex));
+    form.append("expected_workspace_revision",String(expectedWorkspaceRevision));
+    form.append("expected_object_version",String(expectedObjectVersion));
+    form.append("expected_manual_revision",String(expectedManualRevision));
+    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/objects/${objectId}/manual-mask`,{method:"PUT",body:form});
   }
-  clearManualMask(workspace,object){
-    const manual=object.manual_mask||{};
-    const query=new URLSearchParams({expected_workspace_revision:workspace.workspace_revision,expected_object_version:object.object_version,expected_manual_revision:manual.manual_revision||0});
-    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspace.workspace_id)}/objects/${object.object_id}/manual-mask?${query}`,{method:"DELETE"});
+  clearManualMask({workspaceId,objectId,expectedWorkspaceRevision,expectedObjectVersion,expectedManualRevision}){
+    const query=new URLSearchParams({expected_workspace_revision:expectedWorkspaceRevision,expected_object_version:expectedObjectVersion,expected_manual_revision:expectedManualRevision});
+    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/objects/${objectId}/manual-mask?${query}`,{method:"DELETE"});
   }
 }
