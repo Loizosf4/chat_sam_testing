@@ -16,6 +16,7 @@ data/images/*
 data/masks/*
 data/exports/*
 data/scene_packages/
+data/segmentation_workspaces/
 !data/images/.gitkeep
 !data/masks/.gitkeep
 !data/exports/.gitkeep

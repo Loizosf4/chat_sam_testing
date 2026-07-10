@@ -1,0 +1,657 @@
+{
+  "mode": "clean_reconstruction",
+  "scene_id": "living_room_543d9228_semantic_masks",
+  "semantic_object_count": 16,
+  "semantic_objects": [
+    {
+      "object_id": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "semantic_label": "pink_armchair",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "floor",
+      "support_target": "plane_floor",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          -0.7006666666666668,
+          -0.3806666666666665,
+          0.1
+        ],
+        "dimensions": [
+          1.044,
+          0.8066666666666666,
+          0.18
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "e86fe422054c4e89b83b845aa6be7584",
+      "semantic_label": "armchair_pink_cushion",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "object",
+      "support_target": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          -0.7566666666666666,
+          -0.14733333333333354,
+          0.1
+        ],
+        "dimensions": [
+          0.444,
+          0.372,
+          0.12
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "semantic_label": "armchair_green_pillow",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "object",
+      "support_target": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          -0.742,
+          -0.2826666666666666,
+          0.1
+        ],
+        "dimensions": [
+          0.20133333333333334,
+          0.21866666666666668,
+          0.12
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "3aaa9d13f04642d69ad238115cfd47ce",
+      "semantic_label": "pink_sofa",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "floor",
+      "support_target": "plane_floor",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          0.6286666666666667,
+          -0.45333333333333314,
+          0.1
+        ],
+        "dimensions": [
+          1.3506666666666667,
+          1.0426666666666666,
+          0.18
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "499c6ce99870435faa1c545baf38244e",
+      "semantic_label": "sofa_center_pink_cushion",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "object",
+      "support_target": "3aaa9d13f04642d69ad238115cfd47ce",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          0.4293333333333331,
+          -0.06733333333333347,
+          0.1
+        ],
+        "dimensions": [
+          0.6346666666666667,
+          0.4146666666666667,
+          0.12
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "c5ea3368e1114c40a6f1773447875ef7",
+      "semantic_label": "sofa_right_pink_cushion",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "object",
+      "support_target": "3aaa9d13f04642d69ad238115cfd47ce",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          0.7946666666666666,
+          -0.15600000000000014,
+          0.1
+        ],
+        "dimensions": [
+          0.568,
+          0.3973333333333333,
+          0.12
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "11020b6e583c4c92a4b0d410c9ce7561",
+      "semantic_label": "sofa_left_green_pillow",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "object",
+      "support_target": "3aaa9d13f04642d69ad238115cfd47ce",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          0.29466666666666663,
+          -0.09200000000000008,
+          0.1
+        ],
+        "dimensions": [
+          0.25866666666666666,
+          0.2613333333333333,
+          0.12
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "a94c512ccd114c1a912791532a1b57fe",
+      "semantic_label": "sofa_right_green_pillow",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "object",
+      "support_target": "3aaa9d13f04642d69ad238115cfd47ce",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          0.8180000000000001,
+          -0.34799999999999986,
+          0.1
+        ],
+        "dimensions": [
+          0.18533333333333332,
+          0.21066666666666667,
+          0.12
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "0383351def6c4bdfa2becb053101ed14",
+      "semantic_label": "yellow_oval_coffee_table",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "floor",
+      "support_target": "plane_floor",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          0.0259999999999998,
+          -0.786,
+          0.1
+        ],
+        "dimensions": [
+          0.5213333333333333,
+          0.412,
+          0.18
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "6c0d67e795bd49f9a869c7566ab64f25",
+      "semantic_label": "small_tabletop_object",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "object",
+      "support_target": "0383351def6c4bdfa2becb053101ed14",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          -0.01866666666666661,
+          -0.5673333333333335,
+          0.1
+        ],
+        "dimensions": [
+          0.07733333333333334,
+          0.15866666666666668,
+          0.08
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "4459bf808120456d995d7a98d4c08ba2",
+      "semantic_label": "pink_rectangular_rug",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "floor",
+      "support_target": "plane_floor",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          -0.014000000000000012,
+          -0.9326666666666665,
+          0.1
+        ],
+        "dimensions": [
+          1.6066666666666667,
+          0.7213333333333334,
+          0.18
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": false,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "semantic_label": "potted_plant",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "floor",
+      "support_target": "plane_floor",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          -0.10666666666666669,
+          0.07533333333333325,
+          0.1
+        ],
+        "dimensions": [
+          0.5413333333333333,
+          0.7373333333333333,
+          0.18
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "b45a9b530a4b471fb9c0434d66105c00",
+      "semantic_label": "framed_wall_artwork",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "wall",
+      "support_target": "plane_wall",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          0.7466666666666666,
+          0.692,
+          0.1
+        ],
+        "dimensions": [
+          0.7493333333333333,
+          0.84,
+          0.04
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": false,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "semantic_label": "left_green_curtain_panel",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "wall",
+      "support_target": "plane_wall",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          -0.8440000000000001,
+          0.716,
+          0.1
+        ],
+        "dimensions": [
+          0.38666666666666666,
+          1.0773333333333333,
+          0.04
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "8bad72e1478c434995a431dc0564113e",
+      "semantic_label": "right_green_curtain_panel",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "wall",
+      "support_target": "plane_wall",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          -0.42599999999999993,
+          0.8986666666666667,
+          0.1
+        ],
+        "dimensions": [
+          0.4493333333333333,
+          1.0586666666666666,
+          0.04
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    },
+    {
+      "object_id": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "semantic_label": "brown_curtain_rod_assembly",
+      "primitive_type": "cube",
+      "geometry_confidence": 0.15,
+      "final_pose_confidence": 0.1,
+      "confidence_classification": "mask_import_only_geometry_pending",
+      "placement_classification": "placement_review_required",
+      "support_type": "wall",
+      "support_target": "plane_wall",
+      "support_confidence": 0.1,
+      "orientation_method": "bbox_provisional",
+      "transform": {
+        "center": [
+          -0.17399999999999993,
+          1.4133333333333333,
+          0.1
+        ],
+        "dimensions": [
+          0.23866666666666667,
+          0.15733333333333333,
+          0.04
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "occlusion": {
+        "partially_occluded": true,
+        "hidden_geometry_policy": "visible mask only; reconstruction pending"
+      }
+    }
+  ],
+  "provisional_camera_id": "mask_review_camera",
+  "camera_candidates": [
+    {
+      "camera_id": "mask_review_camera",
+      "type": "orthographic",
+      "matrix_world": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          6
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "confidence": 0.1,
+      "provisional": true,
+      "orthographic_scale": 4.0
+    }
+  ],
+  "coordinate_system": {
+    "absolute_scale_verified": false
+  },
+  "room_proxies": [
+    {
+      "plane_id": "plane_floor",
+      "semantic": "floor",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "dimensions": [
+        4,
+        4,
+        0.04
+      ],
+      "quaternion_wxyz": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "confidence": 0.1,
+      "extent_policy": "provisional mask-review floor proxy"
+    },
+    {
+      "plane_id": "plane_wall",
+      "semantic": "wall",
+      "center": [
+        0,
+        1.8,
+        1.5
+      ],
+      "dimensions": [
+        4,
+        3,
+        0.04
+      ],
+      "quaternion_wxyz": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "confidence": 0.1,
+      "extent_policy": "provisional mask-review wall proxy"
+    }
+  ],
+  "uncertainties": [
+    "geometry transforms are provisional bbox-derived placeholders",
+    "curtain rod mask is partial: right rod/finial isolated; left rod/support rejected due wall bleed",
+    "source dimensions were 3000 x 3000, not the preliminary 2048 x 2048 context"
+  ]
+}

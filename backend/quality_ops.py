@@ -115,6 +115,115 @@ def create_mask_quality_report(
     }
 
 
+def create_mask_quality_report_from_arrays(
+    *,
+    image_id: str,
+    original_filename: str,
+    width: int,
+    height: int,
+    masks: list[dict[str, Any]],
+    output_dir: str | Path,
+) -> dict[str, Any]:
+    """Write mask-quality diagnostics from already-loaded binary masks."""
+    report = analyze_mask_quality_arrays(
+        image_id=image_id,
+        original_filename=original_filename,
+        width=width,
+        height=height,
+        masks=masks,
+    )
+    report_dir = Path(output_dir)
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report_path = report_dir / "mask_quality_report.json"
+    markdown_path = report_dir / "mask_quality_report.md"
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    markdown_path.write_text(_markdown_report(report), encoding="utf-8")
+    return {
+        "report_path": str(report_path),
+        "markdown_path": str(markdown_path),
+        "summary": report["summary"],
+        "report": report,
+    }
+
+
+def analyze_mask_quality_arrays(
+    *,
+    image_id: str,
+    original_filename: str,
+    width: int,
+    height: int,
+    masks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Return quality diagnostics without using the legacy image/mask registry."""
+    clean_image_id = _clean_image_id(image_id)
+    if width <= 0 or height <= 0:
+        raise QualityOpsError("image dimensions must be positive.")
+    if not masks:
+        raise QualityOpsError("masks must contain at least one mask entry.")
+
+    image_area = int(width * height)
+    expected_shape = (height, width)
+    loaded_masks = []
+    for index, mask_ref in enumerate(masks):
+        if not isinstance(mask_ref, dict):
+            raise QualityOpsError("Each mask entry must be an object.")
+        mask_id = _clean_mask_id(mask_ref.get("mask_id"))
+        label = _clean_label(mask_ref.get("label"), mask_id)
+        mask = np.asarray(mask_ref.get("mask")).astype(bool)
+        if mask.ndim != 2:
+            raise QualityOpsError(f"Mask '{mask_id}' must be two-dimensional.")
+        if mask.shape != expected_shape:
+            raise QualityOpsError(f"Mask '{mask_id}' dimensions do not match source image dimensions.")
+        components = _connected_components(mask)
+        loaded_masks.append(
+            {
+                "index": index,
+                "mask_id": mask_id,
+                "label": label,
+                "mask": mask,
+                "metrics": _mask_metrics(mask=mask, components=components, image_area=image_area),
+            }
+        )
+
+    warnings = []
+    for mask_ref in loaded_masks:
+        warnings.extend(_mask_warnings(mask_ref, image_area))
+
+    pairwise_overlaps = _pairwise_overlaps(loaded_masks)
+    for overlap in pairwise_overlaps:
+        warnings.extend(_overlap_warnings(overlap))
+
+    bbox_comparisons = _bbox_comparisons(loaded_masks)
+    for comparison in bbox_comparisons:
+        warnings.extend(_bbox_warnings(comparison))
+
+    return {
+        "image_id": clean_image_id,
+        "image": {
+            "width": width,
+            "height": height,
+            "area": image_area,
+            "original_filename": original_filename,
+        },
+        "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "thresholds": DEFAULT_THRESHOLDS,
+        "masks": [
+            {
+                "mask_id": mask_ref["mask_id"],
+                "label": mask_ref["label"],
+                **mask_ref["metrics"],
+            }
+            for mask_ref in loaded_masks
+        ],
+        "pairwise_overlaps": pairwise_overlaps,
+        "bbox_comparisons": bbox_comparisons,
+        "summary": {
+            "mask_count": len(loaded_masks),
+            "warnings": warnings,
+        },
+    }
+
+
 def _mask_metrics(mask: np.ndarray, components: list[int], image_area: int) -> dict[str, Any]:
     area = int(mask.sum())
     bbox = mask_ops._mask_bbox(mask)
@@ -177,12 +286,14 @@ def _mask_warnings(mask_ref: dict[str, Any], image_area: int) -> list[dict[str, 
     metrics = mask_ref["metrics"]
     warnings = []
     label = mask_ref["label"]
+    mask_id = mask_ref.get("mask_id")
 
     if metrics["connected_component_count"] > DEFAULT_THRESHOLDS["many_components_count"]:
         warnings.append(
             _warning(
                 label,
                 f"Mask has many disconnected components ({metrics['connected_component_count']}).",
+                mask_id,
             )
         )
 
@@ -191,6 +302,7 @@ def _mask_warnings(mask_ref: dict[str, Any], image_area: int) -> list[dict[str, 
             _warning(
                 label,
                 f"Mask has {metrics['small_component_count']} small disconnected component(s).",
+                mask_id,
             )
         )
 
@@ -199,6 +311,7 @@ def _mask_warnings(mask_ref: dict[str, Any], image_area: int) -> list[dict[str, 
             _warning(
                 label,
                 f"Mask area is unusually small ({metrics['percent_image_area']}% of image).",
+                mask_id,
             )
         )
 
@@ -207,11 +320,12 @@ def _mask_warnings(mask_ref: dict[str, Any], image_area: int) -> list[dict[str, 
             _warning(
                 label,
                 f"Mask area is unusually large ({metrics['percent_image_area']}% of image).",
+                mask_id,
             )
         )
 
     if metrics["touches_image_border"]:
-        warnings.append(_warning(label, "Mask touches image border."))
+        warnings.append(_warning(label, "Mask touches image border.", mask_id))
 
     return warnings
 
@@ -228,10 +342,12 @@ def _overlap_warnings(overlap: dict[str, Any]) -> list[dict[str, str]]:
         _warning(
             overlap["label_a"],
             f"Mask overlaps {overlap['label_b']} by {overlap_percent}% of the smaller mask.",
+            overlap["mask_a"],
         ),
         _warning(
             overlap["label_b"],
             f"Mask overlaps {overlap['label_a']} by {overlap_percent}% of the smaller mask.",
+            overlap["mask_b"],
         ),
     ]
 
@@ -244,10 +360,12 @@ def _bbox_warnings(comparison: dict[str, Any]) -> list[dict[str, str]]:
         _warning(
             comparison["label_a"],
             f"Mask bbox is nearly identical to {comparison['label_b']} (IoU {comparison['bbox_iou']}).",
+            comparison["mask_a"],
         ),
         _warning(
             comparison["label_b"],
             f"Mask bbox is nearly identical to {comparison['label_a']} (IoU {comparison['bbox_iou']}).",
+            comparison["mask_b"],
         ),
     ]
 
@@ -396,12 +514,15 @@ def _percent(numerator: int, denominator: int) -> float:
     return round((numerator / denominator) * 100.0, 2)
 
 
-def _warning(label: str, message: str) -> dict[str, str]:
-    return {
+def _warning(label: str, message: str, mask_id: str | None = None) -> dict[str, str]:
+    value = {
         "label": label,
         "severity": "warning",
         "message": message,
     }
+    if mask_id:
+        value["mask_id"] = mask_id
+    return value
 
 
 def _clean_image_id(image_id: Any) -> str:

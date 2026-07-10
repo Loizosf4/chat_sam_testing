@@ -64,6 +64,15 @@ Artifact URLs are resolved through a server-owned index. Client path fragments
 are never joined directly to the filesystem. Both `/artifacts/...` (the URLs
 stored in packages) and `/api/artifacts/...` are supported.
 
+Scenes created from managed reconstruction jobs carry additive browser-safe
+provenance in `Scene.metadata` while preserving adapter metadata such as
+`source_contract`, `source_mode`, `input_manifest_sha256`, and `uncertainties`.
+The provenance identifies the import origin, segmentation workspace/export,
+export archive SHA-256, reconstruction job ID/version, reconstruction scene ID,
+compiler quality status, reconstruction result manifest SHA-256, and source
+image ID. It never contains filesystem paths, commands, environment data,
+temporary directories, model checkpoints, or local file timestamps.
+
 ## HTTP API
 
 All mutations use optimistic concurrency. A stale package revision, object
@@ -85,6 +94,18 @@ retrying.
 | `GET` | `/api/scenes/{scene_id}/reconstruction-status` | Return stages and stale object IDs |
 | `GET` | `/artifacts/{kind}/{artifact_id}` | Serve a registered artifact |
 
+Managed reconstruction jobs are imported through segmentation workspace bridge
+endpoints, not through `POST /api/scenes/import`:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}/review-scene` | Return whether the job's scene already exists |
+| `POST` | `/api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}/review-scene` | Explicitly create or resolve the review scene |
+
+The POST is idempotent for one successful job. New creation returns `201`;
+resolving an existing matching scene returns `200`. A scene-ID collision with
+unrelated provenance returns `409` and is not overwritten.
+
 ### Import after an MCP masking export
 
 The masking agent finishes the export completely before calling the backend.
@@ -101,6 +122,12 @@ sam_export=@office-sam.zip;type=application/zip
 unified_manifest=@unified_scene_plan.json;type=application/json
 source_image=@office.jpg;type=image/jpeg
 ```
+
+Segmentation workspace export snapshots use the same final-SAM `metadata.json`
+shape and ZIP member layout. Their `mask_id` values are the stable segmentation
+workspace `object_id` values, so the adapter can consume an extracted workspace
+export alongside a matching Unified clean-reconstruction manifest without a
+separate adapter path.
 
 The server validates the archive boundary, IDs, one-to-one SAM/Unified object
 mapping, actual image types and dimensions, binary mask pixels, and hashes. It
@@ -126,6 +153,40 @@ The abbreviated array values above are explanatory only; the actual response
 contains full object and revision records and validates against the checked-in
 JSON Schema. Mutation responses return that same complete package with
 incremented `package_revision` and object `version` values.
+
+### Import from a managed reconstruction job
+
+The reconstruction bridge reuses `SceneStore.import_scene` and the existing
+adapter path. The browser does not upload files for this flow and does not call
+the multipart import endpoint. The server resolves the exact immutable SAM
+export, exact Unified scene plan, and workspace-managed source image from
+persisted workspace/job state and managed artifact indexes.
+
+Before calling the scene store, the bridge revalidates the job, export archive
+SHA, SAM metadata, final masks, overlays, source image hash/dimensions,
+reconstruction result manifest, Unified scene plan identity, compilation report
+quality status, MoGe geometry, and sanitized MoGe summary. A successful job with
+`compilation_passed=false` can be imported only when the POST body includes
+`acknowledge_review_required=true`.
+
+The imported scene is self-contained. In addition to the source image, SAM
+metadata, masks, overlays, Unified scene plan, and optional mask quality report,
+the scene store copies and registers:
+
+```text
+scene-inputs/{scene_id}/reconstruction-result-manifest
+scene-inputs/{scene_id}/compilation-report
+scene-inputs/{scene_id}/compilation-markdown
+scene-inputs/{scene_id}/moge-geometry
+scene-inputs/{scene_id}/moge-summary
+```
+
+Corresponding `Scene.artifact_urls` keys are
+`reconstruction_result_manifest`, `compilation_report`,
+`compilation_report_markdown`, `moge_geometry`, and `moge_summary`. The stored
+scene remains available through `/?scene={scene_id}` after deleting the
+segmentation workspace. The review frontend shows `Back to segmentation
+workspace` only when reconstruction-job provenance is present.
 
 ### Label and approval examples
 
@@ -205,6 +266,11 @@ data/scene_packages/{scene_id}/
     inputs/sam-metadata.json
     inputs/unified-scene-plan.json
     inputs/mask-quality-report.json
+    inputs/reconstruction-result-manifest.json
+    inputs/compilation_report.json
+    inputs/compilation_report.md
+    inputs/moge/geometry.npz
+    inputs/moge/moge-summary.json
     revisions/{object_id}/{revision_id}/
       mask.png
       overlay.png              # initial revision when exported

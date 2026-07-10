@@ -8,9 +8,14 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from backend import mask_ops, sam_engine
+from backend import mask_ops, moge_engine, sam_engine
 from backend.blender_sync_proxy import router as blender_sync_router
 from backend.scene_package.api import artifact_router, router as scene_package_router
+from backend.segmentation_workspace.api import (
+    artifact_router as segmentation_artifact_router,
+    reconstruction_router as segmentation_reconstruction_router,
+    router as segmentation_workspace_router,
+)
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -60,6 +65,14 @@ class ExportRequest(BaseModel):
     masks: list[ExportMaskRef] = Field(default_factory=list)
 
 
+class MogeInferenceRequest(BaseModel):
+    image_id: str = ""
+    output_dir: str | None = None
+    requested_outputs: list[str] = Field(default_factory=list)
+    resolution_level: int = 9
+    num_tokens: int | None = None
+
+
 app = FastAPI(title="Local SAM Mask Editor")
 
 app.add_middleware(
@@ -72,6 +85,9 @@ app.add_middleware(
 
 app.include_router(scene_package_router)
 app.include_router(artifact_router)
+app.include_router(segmentation_workspace_router)
+app.include_router(segmentation_artifact_router)
+app.include_router(segmentation_reconstruction_router)
 app.include_router(blender_sync_router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
@@ -86,6 +102,33 @@ def health() -> dict[str, str]:
 @app.get("/api/health")
 def api_health() -> dict[str, str]:
     return health()
+
+
+@app.get("/api/moge/health")
+def moge_health() -> dict:
+    return moge_engine.get_status()
+
+
+@app.post("/api/moge/validate")
+def validate_moge() -> dict:
+    try:
+        return moge_engine.validate_model(load_model=True)
+    except moge_engine.MogeEngineError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@app.post("/api/moge/infer")
+def infer_moge(payload: MogeInferenceRequest) -> dict:
+    try:
+        return moge_engine.run_inference(
+            image_id=payload.image_id,
+            output_dir=payload.output_dir,
+            requested_outputs=payload.requested_outputs or None,
+            resolution_level=payload.resolution_level,
+            num_tokens=payload.num_tokens,
+        )
+    except moge_engine.MogeEngineError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
 @app.post("/upload_image")
@@ -231,6 +274,11 @@ def export_masks(payload: ExportRequest) -> dict:
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "index.html", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/segment")
+def segment() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "segment.html", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/style.css")

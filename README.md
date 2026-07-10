@@ -6,7 +6,7 @@ A local-first object mask editor scaffold.
 
 - Python FastAPI backend
 - Plain HTML, CSS, and JavaScript frontend
-- Local SAM model integration in a later phase
+- Local Meta Segment Anything Model 1 integration through `segment_anything`
 - No React
 - No database
 - No cloud APIs
@@ -42,6 +42,37 @@ python -m venv .venv
 The runner uses http://127.0.0.1:8000 when available. If port `8000` is occupied, it automatically tries the next free port through `8010` and prints the URL.
 
 Open the printed URL, or open `frontend/index.html` directly in your browser. When opened directly, the frontend probes local ports `8000` through `8010` to find the backend.
+
+## Local SAM 1 Configuration
+
+This project uses Meta's original SAM 1 Python package, `segment_anything`, through `backend/sam_engine.py`. It expects a SAM 1 checkpoint whose architecture matches `SAM_MODEL_TYPE`.
+
+For the local CPU ViT-B setup, create `.env` from `.env.example` or set these variables in PowerShell:
+
+```powershell
+$env:SAM_CHECKPOINT = 'I:\Models\SAM1_CPU\segment-anything\checkpoints\sam_vit_b_01ec64.pth'
+$env:SAM_MODEL_TYPE = 'vit_b'
+$env:SAM_DEVICE = 'cpu'
+```
+
+`SAM_CHECKPOINT_PATH` is still accepted as a backward-compatible alias, but `SAM_CHECKPOINT` is preferred.
+
+Do not commit `.env`; it is ignored by git. The checkpoint remains outside the repository.
+
+The repository `.venv` contains the app dependencies, but PyTorch is not pinned in `requirements.txt` because CPU and GPU builds are installed from different package indexes. For this machine, the existing SAM environment has CPU PyTorch and SAM installed, but it does not currently include the FastAPI/MCP app dependencies. The safer option is to use the project `.venv` for the app and install a CPU PyTorch build into it, or install the app requirements into the SAM environment after checking versions. Do not reinstall or upgrade PyTorch, TorchVision, NumPy, or OpenCV without reviewing the current versions first.
+
+Validate the configured checkpoint and load the model without processing a dataset:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\validate_sam_model.py
+```
+
+If you choose to run from the existing SAM environment instead, first ensure it contains the app dependencies from `requirements.txt`, then start the app with:
+
+```powershell
+I:\Models\SAM1_CPU\.venv\Scripts\Activate.ps1
+python run.py
+```
 
 ## Local Files
 
@@ -95,6 +126,108 @@ Use this workflow when an agent needs high-quality object masks:
 
 Temporary component masks are fine during construction, but only final whole-object masks should be exported. Always report uncertain masks and explain what should be checked visually.
 
-## Phase 1
+## Local MoGe 2 Configuration
 
-The app can upload an image to `data/images/`, return its generated image ID and dimensions, and display it on the frontend canvas. SAM, points, boxes, masks, and MCP are not implemented yet.
+MoGe runs out-of-process through the configured MoGe Python environment. The
+FastAPI/SAM process does not import `torch` or `moge`, so the Python 3.10 CPU
+SAM environment stays separate from the Python 3.12 AMD ROCm MoGe environment.
+
+Create or update your untracked `.env` with local values:
+
+```powershell
+$env:MOGE_PYTHON = '<path-to-moge-venv-python.exe>'
+$env:MOGE_REPOSITORY = '<path-to-local-moge-repository>'
+$env:MOGE_CHECKPOINT = '<path-to-moge-2-vitl-normal-model.pt>'
+$env:MOGE_VERSION = 'v2'
+$env:MOGE_DEVICE = 'cuda'
+$env:MOGE_MODEL = 'moge-2-vitl-normal'
+```
+
+Do not set `MOGE_DEVICE=rocm` or `hip`; ROCm PyTorch exposes the AMD GPU
+through the CUDA-facing API, so the device string remains `cuda` or `cuda:0`.
+CPU execution is disabled unless `MOGE_ALLOW_CPU=true` is set explicitly.
+
+Validate the configured worker, editable MoGe import, AMD compatibility fix,
+PyTorch/ROCm stack, GPU visibility, and checkpoint load:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\validate_moge_model.py
+```
+
+The MoGe worker receives a registered RGB source image path and writes numerical
+geometry under `data/exports/moge/{image_id}/` by default:
+
+- `geometry.npz`
+- `points.npy`
+- `depth.npy`
+- `normal.npy`
+- `valid_mask.npy`
+- `intrinsics.npy`
+- preview PNGs
+- `metadata.json`
+
+The existing reconstruction pipeline consumes MoGe points, depth, normals,
+validity mask, and normalized intrinsics. It does not require GLB or PLY output
+for the checked-in scene-package flow. SAM masks and MoGe geometry are produced
+independently from the same source image; downstream reconstruction filters the
+full-image MoGe maps with the final SAM object masks.
+
+## Managed Segmentation Reconstruction Jobs
+
+Pre-MoGe segmentation exports can now start persistent managed reconstruction
+jobs through the backend API. A job is anchored to one immutable segmentation
+export and the workspace-managed source image, runs MoGe through the isolated
+worker, then invokes the generic Unified V3 compiler with `RECONSTRUCTION_PYTHON`.
+Jobs are stored under the owning workspace in `reconstruction-jobs/`, and
+successful immutable outputs are published under `reconstructions/{job_id}/`.
+
+Required local settings:
+
+```powershell
+$env:RECONSTRUCTION_PYTHON = '<path-to-reconstruction-venv-python.exe>'
+$env:RECONSTRUCTION_COMPILER_TIMEOUT_SECONDS = '1800'
+$env:RECONSTRUCTION_MAX_QUEUED_JOBS = '8'
+```
+
+The reconstruction Python must include `numpy`, `Pillow`, `scipy`, `pydantic`,
+and `jsonschema`. Job status is available through:
+
+```text
+POST /api/segmentation-workspaces/{workspace_id}/exports/{export_id}/reconstructions
+GET  /api/segmentation-workspaces/{workspace_id}/reconstructions
+GET  /api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}
+GET  /api/segmentation-reconstruction/health
+```
+
+The backend processes one reconstruction at a time. Queued or running jobs are
+marked `interrupted` after restart; retry means creating a new job. Active jobs
+block workspace deletion, but normal object edits and new exports remain
+allowed.
+
+Successful completed jobs can be explicitly added to scene review from the
+selected job details in `/segment`. The bridge is server-side and trusted: it
+uses the exact immutable export, exact Unified scene plan, managed source image,
+and managed reconstruction artifacts already stored by the backend. The browser
+does not upload, download, or re-upload the export ZIP, scene plan, MoGe
+geometry, or source image, and it does not call the generic multipart
+`/api/scenes/import` endpoint.
+
+```text
+GET  /api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}/review-scene
+POST /api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}/review-scene
+```
+
+The POST requires the current job version and is idempotent. A first import
+returns a self-contained scene package and later calls return the existing scene
+when provenance matches. Jobs with compiler quality gates passed can be imported
+directly. Jobs with `compilation_passed=false` are still successful, but require
+an explicit review-required acknowledgement before import.
+
+Imported scenes preserve stable object IDs and reconstruction provenance, copy
+the source image, SAM masks/overlays, Unified scene plan, reconstruction result
+manifest, compilation reports, MoGe geometry, and sanitized MoGe summary into
+the scene-package store, and open in the existing review UI with `/?scene=...`.
+They remain available after the segmentation workspace is deleted. The review UI
+shows a `Back to segmentation workspace` link for scenes created from
+reconstruction-job provenance. Blender execution and asset replacement remain
+separate, deferred steps.

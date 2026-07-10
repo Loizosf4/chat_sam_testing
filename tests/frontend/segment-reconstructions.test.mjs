@@ -1,0 +1,438 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {SegmentationWorkspaceClient} from "../../frontend/segment-api.js";
+import {
+  ReconstructionWorkspaceState,
+  createReconstructionRequestSnapshot,
+  createReviewSceneRequestSnapshot,
+  hidePathLikeValue,
+  isActiveReconstructionJob,
+  isTerminalReconstructionJob,
+  normalizeCompilationReport,
+  normalizeMogeSummary,
+  normalizeReconstructionHealth,
+  normalizeReconstructionJob,
+  normalizeReviewSceneStatus,
+  reconstructionOutcomeLabel,
+  reconstructionRequestPayload,
+  reconstructionStartReadiness,
+  reviewSceneReadiness,
+  reviewSceneRequestPayload,
+  sortReconstructionJobsNewestFirst
+} from "../../frontend/segment-reconstructions.js";
+
+const sha="a".repeat(64);
+const workspace={workspace_id:"workspace-a",workspace_revision:18};
+const exportRecord={export_id:"export-a",archive_sha256:sha,is_stale:false};
+const readyHealth={configured:true,moge_configured:true,compiler_configured:true,worker_running:false,device:"cuda",model:"moge-2-vitl-normal",queue_running:0,queue_queued:0,error:null};
+
+function job(overrides={}){
+  return {
+    job_id:"job-a",
+    job_version:1,
+    workspace_id:"workspace-a",
+    export_id:"export-a",
+    export_archive_sha256:sha,
+    source_image_id:"image-a",
+    status:"queued",
+    stage:"queued",
+    progress_percent:0,
+    created_at:"2026-07-10T08:00:00Z",
+    started_at:null,
+    updated_at:"2026-07-10T08:00:00Z",
+    finished_at:null,
+    request:{expected_workspace_revision:18,expected_export_archive_sha256:sha,resolution_level:9,num_tokens:null},
+    export_was_stale_at_start:false,
+    semantic_object_count:1,
+    object_ids:["object-a"],
+    scene_id:"scene-a",
+    result:null,
+    error:null,
+    ...overrides
+  };
+}
+
+function succeeded(overrides={}){
+  return job({
+    status:"succeeded",
+    stage:"complete",
+    progress_percent:100,
+    finished_at:"2026-07-10T08:03:00Z",
+    result:{
+      scene_id:"scene-a",
+      semantic_object_count:1,
+      object_ids:["object-a"],
+      compilation_passed:false,
+      artifacts:{
+        result_manifest_url:"/api/segmentation-artifacts/reconstruction-results/w/j/result-manifest",
+        unified_scene_plan_url:"/api/segmentation-artifacts/reconstruction-results/w/j/scene-plan",
+        compilation_report_url:"/api/segmentation-artifacts/reconstruction-results/w/j/compilation-report",
+        compilation_markdown_url:"/api/segmentation-artifacts/reconstruction-results/w/j/compilation-markdown",
+        room_plan_url:"/api/segmentation-artifacts/reconstruction-results/w/j/room-plan",
+        camera_candidates_url:"/api/segmentation-artifacts/reconstruction-results/w/j/camera-candidates",
+        object_pose_report_url:"/api/segmentation-artifacts/reconstruction-results/w/j/object-pose-report",
+        placement_report_url:"/api/segmentation-artifacts/reconstruction-results/w/j/placement-report",
+        collision_report_url:"/api/segmentation-artifacts/reconstruction-results/w/j/collision-report",
+        confidence_report_url:"/api/segmentation-artifacts/reconstruction-results/w/j/confidence-report",
+        support_graph_url:"/api/segmentation-artifacts/reconstruction-results/w/j/support-graph",
+        blender_manifest_url:"/api/segmentation-artifacts/reconstruction-results/w/j/blender-manifest",
+        moge_geometry_url:"/api/segmentation-artifacts/reconstruction-results/w/j/moge-geometry",
+        moge_summary_url:"/api/segmentation-artifacts/reconstruction-results/w/j/moge-summary",
+        overview_url:null
+      }
+    },
+    ...overrides
+  });
+}
+
+test("health normalization and readiness block unavailable services",()=>{
+  assert.equal(normalizeReconstructionHealth({...readyHealth,device:"C:\\secret"}).device,null);
+  assert.equal(reconstructionStartReadiness({workspace,exportRecord,health:normalizeReconstructionHealth(readyHealth)}).ready,true);
+  assert.equal(reconstructionStartReadiness({workspace,exportRecord,health:null}).reasons[0].code,"health_missing");
+  assert.equal(reconstructionStartReadiness({workspace,exportRecord,health:normalizeReconstructionHealth({...readyHealth,configured:false,moge_configured:false})}).ready,false);
+  assert.equal(reconstructionStartReadiness({workspace,exportRecord,health:normalizeReconstructionHealth({...readyHealth,configured:false,compiler_configured:false})}).ready,false);
+  assert.equal(reconstructionStartReadiness({workspace,exportRecord:{...exportRecord,is_stale:true},health:normalizeReconstructionHealth(readyHealth)}).ready,true);
+  assert.equal(reconstructionStartReadiness({workspace,exportRecord,health:normalizeReconstructionHealth(readyHealth),exportCreationActive:true}).reasons[0].code,"export_active");
+  assert.equal(reconstructionStartReadiness({workspace,exportRecord,health:normalizeReconstructionHealth(readyHealth),startActive:true}).reasons[0].code,"start_active");
+  assert.equal(reconstructionStartReadiness({workspace,exportRecord,health:normalizeReconstructionHealth(readyHealth),resolutionLevel:10}).reasons[0].code,"invalid_resolution");
+  assert.equal(reconstructionStartReadiness({workspace,exportRecord,health:normalizeReconstructionHealth(readyHealth),numTokensInput:"1.5"}).reasons[0].code,"invalid_tokens");
+});
+
+test("request snapshot captures immutable values, workspace generation, and null tokens",()=>{
+  const mutableWorkspace={...workspace};
+  const mutableExport={...exportRecord};
+  const snapshot=createReconstructionRequestSnapshot({operationId:7,workspace:mutableWorkspace,exportRecord:mutableExport,resolutionLevel:9,numTokens:"",stateGeneration:3});
+  mutableWorkspace.workspace_id="other";
+  mutableExport.archive_sha256="b".repeat(64);
+  assert.deepEqual(snapshot,{operationId:7,workspaceId:"workspace-a",expectedWorkspaceRevision:18,exportId:"export-a",expectedExportArchiveSha256:sha,resolutionLevel:9,numTokens:null,stateGeneration:3});
+  assert.deepEqual(reconstructionRequestPayload(snapshot),{expected_workspace_revision:18,expected_export_archive_sha256:sha,resolution_level:9,num_tokens:null});
+});
+
+test("job normalization preserves statuses, false compilation, artifacts, and errors",()=>{
+  assert.equal(normalizeReconstructionJob(job({status:"new-status",stage:"new-stage"})).status,"unknown");
+  assert.equal(isActiveReconstructionJob(normalizeReconstructionJob(job({status:"running",stage:"moge",progress_percent:10}))),true);
+  assert.equal(isTerminalReconstructionJob(normalizeReconstructionJob(job({status:"failed",stage:"failed",progress_percent:100,finished_at:"now",error:{code:"x",message:"failed",stage:"failed",retryable:true}}))),true);
+  const normalized=normalizeReconstructionJob(succeeded());
+  assert.equal(normalized.result.compilation_passed,false);
+  assert.equal(normalized.result.artifacts.overview_url,null);
+  assert.equal(reconstructionOutcomeLabel(normalized),"Succeeded - review required");
+  const failed=normalizeReconstructionJob(job({status:"failed",stage:"failed",progress_percent:100,finished_at:"now",error:{code:"queue_limit",message:"queue limit reached",stage:"failed",retryable:false}}));
+  assert.equal(failed.error.code,"queue_limit");
+  assert.equal(failed.error.retryable,false);
+});
+
+test("job sorting and version-aware authoritative merging protect newer terminal records",()=>{
+  const state=new ReconstructionWorkspaceState({setTimeoutFn:()=>1,clearTimeoutFn:()=>{}});
+  state.reset("workspace-a");
+  const context=state.beginJobs("workspace-a");
+  state.setJobs(context,[job({job_id:"older",created_at:"2026-07-09T00:00:00Z"}),job({job_id:"newer",created_at:"2026-07-10T00:00:00Z"})]);
+  assert.deepEqual(state.jobs.map(item=>item.job_id),["newer","older"]);
+  state.upsertJob(succeeded({job_id:"newer",job_version:5}));
+  const staleContext=state.beginJobs("workspace-a");
+  state.setJobs(staleContext,[job({job_id:"newer",job_version:4,status:"running",stage:"moge",progress_percent:10,started_at:"now"}),job({job_id:"retry",created_at:"2026-07-11T00:00:00Z"})]);
+  assert.equal(state.jobs.find(item=>item.job_id==="newer").job_version,5);
+  assert.equal(state.jobs.find(item=>item.job_id==="newer").status,"succeeded");
+  assert.deepEqual(state.jobs.map(item=>item.job_id),["retry","newer"]);
+  assert.deepEqual(sortReconstructionJobsNewestFirst([job({job_id:"a",created_at:"2026-07-08"}),job({job_id:"b",created_at:"2026-07-09"})]).map(item=>item.job_id),["b","a"]);
+});
+
+test("state guards late health, job, start, poll, and diagnostic responses",()=>{
+  const state=new ReconstructionWorkspaceState({setTimeoutFn:()=>42,clearTimeoutFn:()=>{}});
+  const healthA=state.beginHealth("workspace-a");
+  state.reset("workspace-b");
+  assert.equal(state.setHealth(healthA,readyHealth),false);
+  const jobsB=state.beginJobs("workspace-b");
+  state.setJobs(jobsB,[job({workspace_id:"workspace-b"}),job({job_id:"job-b",workspace_id:"workspace-b"})]);
+  const jobsA={workspaceId:"workspace-a",workspaceGeneration:state.workspaceGeneration,jobsGeneration:jobsB.jobsGeneration,pollGeneration:state.pollGeneration,kind:"manual"};
+  assert.equal(state.setJobs(jobsA,[job()]),false);
+  const snapshot=state.startSnapshot({workspace_id:"workspace-b",workspace_revision:2},{export_id:"export-b",archive_sha256:sha},{resolutionLevel:9,numTokens:null});
+  assert.equal(state.beginStart(snapshot),true);
+  assert.equal(state.beginStart(snapshot),false);
+  state.finishStart(snapshot);
+  state.schedulePoll(()=>{},2000);
+  assert.equal(state.pollTimer,42);
+  const selected=state.jobs[0];
+  state.selectJob(selected.job_id);
+  const diag=state.beginDiagnostic(selected,"/api/segmentation-artifacts/reconstruction-results/w/j/compilation-report","compilation");
+  state.selectJob(state.jobs.find(item=>item.job_id!==selected.job_id).job_id);
+  assert.equal(state.setDiagnostic(diag,{passed:true}),true);
+  state.finishDiagnostic(diag);
+  assert.equal(state.diagnosticLoading.get(diag.key),false);
+});
+
+test("poll failure backoff is bounded and manual refresh resets it",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const context=state.beginJobs("workspace-a");
+  state.failJobs(context,new Error("network"),{poll:true});
+  assert.equal(state.pollDelay(),4000);
+  for(let i=0;i<8;i++){
+    const c=state.beginJobs("workspace-a");
+    state.failJobs(c,new Error("network"),{poll:true});
+  }
+  assert.equal(state.pollDelay(),15000);
+  state.beginJobs("workspace-a",{manual:true});
+  assert.equal(state.pollFailureCount,0);
+});
+
+test("retry readiness uses a new request with original export and current workspace revision",()=>{
+  const failed=normalizeReconstructionJob(job({status:"failed",stage:"failed",progress_percent:100,finished_at:"now",request:{expected_workspace_revision:8,expected_export_archive_sha256:sha,resolution_level:6,num_tokens:128},error:{code:"executor",message:"failed",stage:"failed",retryable:true}}));
+  const retryExport={export_id:failed.export_id,archive_sha256:"b".repeat(64)};
+  const snapshot=createReconstructionRequestSnapshot({operationId:2,workspace:{workspace_id:failed.workspace_id,workspace_revision:20},exportRecord:retryExport,resolutionLevel:failed.request.resolution_level,numTokens:failed.request.num_tokens,stateGeneration:1});
+  assert.equal(snapshot.expectedWorkspaceRevision,20);
+  assert.equal(snapshot.exportId,failed.export_id);
+  assert.equal(snapshot.expectedExportArchiveSha256,"b".repeat(64));
+  assert.equal(snapshot.numTokens,128);
+});
+
+test("start operation survives health, manual list, and poll refreshes but not workspace reset",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const snapshot=state.startSnapshot(workspace,exportRecord,{resolutionLevel:9,numTokens:null});
+  assert.equal(snapshot.stateGeneration,state.workspaceGeneration);
+  assert.equal(state.beginStart(snapshot),true);
+  const list=state.beginJobs("workspace-a",{manual:true});
+  assert.equal(state.isCurrentStart(snapshot),true);
+  state.setJobs(list,[]);
+  state.finishJobs(list);
+  const poll=state.beginJobs("workspace-a",{poll:true,pollGeneration:state.pollGeneration});
+  assert.equal(state.isCurrentStart(snapshot),true);
+  state.finishJobs(poll);
+  const health=state.beginHealth("workspace-a");
+  state.setHealth(health,readyHealth);
+  assert.equal(state.isCurrentStart(snapshot),true);
+  state.reset("workspace-b");
+  assert.equal(state.isCurrentStart(snapshot),false);
+});
+
+test("successful start upsert after concurrent list keeps newer version and selected job",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const snapshot=state.startSnapshot(workspace,exportRecord,{resolutionLevel:9,numTokens:null});
+  state.beginStart(snapshot);
+  const refresh=state.beginJobs("workspace-a",{manual:true});
+  state.setJobs(refresh,[job({job_id:"job-a",job_version:3,status:"running",stage:"moge",progress_percent:10,started_at:"now"})]);
+  state.finishJobs(refresh);
+  assert.equal(state.isCurrentStart(snapshot),true);
+  state.upsertJob(job({job_id:"job-a",job_version:1,status:"queued",stage:"queued",progress_percent:0}));
+  assert.equal(state.jobs.find(item=>item.job_id==="job-a").job_version,3);
+  assert.equal(state.jobs.find(item=>item.job_id==="job-a").status,"running");
+  assert.equal(state.selectedJobId,"job-a");
+});
+
+test("compilation and MoGe diagnostics load concurrently and cache independently",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const current=succeeded();
+  state.upsertJob(current);
+  const normalized=state.selectedJob();
+  const compilation=state.beginDiagnostic(normalized,normalized.result.artifacts.compilation_report_url,"compilation");
+  const moge=state.beginDiagnostic(normalized,normalized.result.artifacts.moge_summary_url,"moge");
+  assert.equal(state.diagnosticLoading.get(compilation.key),true);
+  assert.equal(state.diagnosticLoading.get(moge.key),true);
+  assert.equal(state.setDiagnostic(compilation,{passed:false,quality_gates:{gate_a:true}}),true);
+  assert.equal(state.setDiagnostic(moge,{model:"moge",path:"C:\\secret"}),true);
+  state.finishDiagnostic(compilation);
+  state.finishDiagnostic(moge);
+  assert.equal(state.diagnosticLoading.get(compilation.key),false);
+  assert.equal(state.diagnosticLoading.get(moge.key),false);
+  assert.equal(state.cachedDiagnostic(normalized,normalized.result.artifacts.compilation_report_url,"compilation").quality_gates[0].key,"gate_a");
+  assert.equal(state.cachedDiagnostic(normalized,normalized.result.artifacts.moge_summary_url,"moge").visible.path,"Value hidden");
+});
+
+test("diagnostics cache while another job is selected and retries are per key",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const jobA=succeeded({job_id:"job-a"});
+  const jobB=succeeded({job_id:"job-b",created_at:"2026-07-11T08:00:00Z"});
+  state.setJobs(state.beginJobs("workspace-a"),[jobA,jobB]);
+  state.selectJob("job-a");
+  const selectedA=state.selectedJob();
+  const url=selectedA.result.artifacts.compilation_report_url;
+  const compilation=state.beginDiagnostic(selectedA,url,"compilation");
+  state.selectJob("job-b");
+  assert.equal(state.setDiagnostic(compilation,{passed:true,quality_gates:{after_switch:true}}),true);
+  state.finishDiagnostic(compilation);
+  state.selectJob("job-a");
+  assert.equal(state.cachedDiagnostic(selectedA,url,"compilation").quality_gates[0].key,"after_switch");
+  const moge=state.beginDiagnostic(selectedA,selectedA.result.artifacts.moge_summary_url,"moge");
+  const retry1=state.beginDiagnostic(selectedA,url,"compilation");
+  const retry2=state.beginDiagnostic(selectedA,url,"compilation");
+  assert.equal(state.setDiagnostic(retry1,{passed:false,quality_gates:{old:false}}),false);
+  state.finishDiagnostic(retry1);
+  assert.equal(state.diagnosticLoading.get(retry2.key),true);
+  assert.equal(state.setDiagnostic(retry2,{passed:false,quality_gates:{newer:true}}),true);
+  state.finishDiagnostic(retry2);
+  assert.equal(state.diagnosticLoading.get(retry2.key),false);
+  assert.equal(state.diagnosticLoading.get(moge.key),true);
+  state.failDiagnostic(moge,new Error("moge failed"));
+  state.finishDiagnostic(moge);
+  assert.equal(state.diagnosticLoading.get(moge.key),false);
+  assert.equal(state.diagnosticError.get(moge.key),"moge failed");
+});
+
+test("workspace reset rejects old diagnostics and clears loading, errors, caches, and start state",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const normalized=state.upsertJob(succeeded());
+  const diag=state.beginDiagnostic(normalized,normalized.result.artifacts.compilation_report_url,"compilation");
+  const snapshot=state.startSnapshot(workspace,exportRecord,{resolutionLevel:9,numTokens:null});
+  state.beginStart(snapshot);
+  state.failDiagnostic(diag,new Error("temporary"));
+  state.reset("workspace-b");
+  assert.equal(state.setDiagnostic(diag,{passed:true}),false);
+  state.finishDiagnostic(diag);
+  assert.equal(state.diagnosticLoading.size,0);
+  assert.equal(state.diagnosticError.size,0);
+  assert.equal(state.compilationReportByJob.size,0);
+  assert.equal(state.startOperation,null);
+});
+
+test("poll ownership handles supersession, invalidation, and workspace switching",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const pollA=state.beginJobs("workspace-a",{poll:true,pollGeneration:state.pollGeneration});
+  assert.ok(pollA);
+  assert.equal(state.beginJobs("workspace-a",{poll:true,pollGeneration:state.pollGeneration}),null);
+  const manualB=state.beginJobs("workspace-a",{manual:true});
+  state.setJobs(manualB,[job({job_id:"manual"})]);
+  state.finishJobs(manualB);
+  assert.equal(state.setJobs(pollA,[job({job_id:"stale-poll"})]),false);
+  state.finishJobs(pollA);
+  const pollC=state.beginJobs("workspace-a",{poll:true,pollGeneration:state.pollGeneration});
+  assert.ok(pollC);
+  state.invalidatePolling();
+  assert.equal(state.setJobs(pollC,[job({job_id:"invalidated"})]),false);
+  state.finishJobs(pollC);
+  assert.equal(state.jobs.some(item=>item.job_id==="invalidated"),false);
+  assert.equal(state.activePollContext,null);
+  assert.equal(state.jobsLoading,false);
+  const pollD=state.beginJobs("workspace-a",{poll:true,pollGeneration:state.pollGeneration});
+  state.reset("workspace-b");
+  assert.equal(state.setJobs(pollD,[job({job_id:"workspace-a-job"})]),false);
+  assert.equal(state.workspaceId,"workspace-b");
+  assert.deepEqual(state.jobs,[]);
+});
+
+test("reconstruction settings form submit prevents page reload and starts once",()=>{
+  const source=readFileSync(new URL("../../frontend/segment-app.js",import.meta.url),"utf8");
+  assert.match(source,/\$\("#reconstruction-settings"\)\.addEventListener\("submit",event=>\{event\.preventDefault\(\);startSelectedExportReconstruction\(\)\}\)/);
+});
+
+test("diagnostic normalization is dynamic and hides path-like values",()=>{
+  const report=normalizeCompilationReport({passed:false,object_count:2,quality_gates:{object_count_matches_export:true,no_semantic_collisions:false},confidence_counts:{high:1},placement_counts:{floor:2},clean_scene_plan_sha256:sha});
+  assert.deepEqual(report.quality_gates.map(item=>[item.key,item.passed]),[["object_count_matches_export",true],["no_semantic_collisions",false]]);
+  const summary=normalizeMogeSummary({model:"moge",source_image:"/tmp/source.png",gpu:{name:"RTX",path:"C:\\secret"},shape:[1,2,3]});
+  assert.equal(summary.visible.source_image,"Value hidden");
+  assert.equal(summary.visible.gpu.path,"Value hidden");
+  assert.equal(hidePathLikeValue("file:///tmp/a"),"Value hidden");
+});
+
+test("reconstruction API methods encode ids and keep artifact fetching browser-safe",async()=>{
+  const calls=[];
+  global.fetch=async(url,options={})=>{calls.push({url,options});return{ok:true,json:async()=>({ok:true})}};
+  const api=new SegmentationWorkspaceClient();
+  await api.getReconstructionHealth();
+  await api.startReconstruction({workspaceId:"workspace/a",exportId:"export/a",expectedWorkspaceRevision:18,expectedExportArchiveSha256:sha,resolutionLevel:9,numTokens:undefined});
+  await api.listReconstructions("workspace/a");
+  await api.getReconstruction("workspace/a","job/a");
+  await api.getJsonArtifact("/api/segmentation-artifacts/reconstruction-results/w/j/compilation-report");
+  assert.equal(calls[0].url,"/api/segmentation-reconstruction/health");
+  assert.equal(calls[1].url,"/api/segmentation-workspaces/workspace%2Fa/exports/export%2Fa/reconstructions");
+  assert.deepEqual(JSON.parse(calls[1].options.body),{expected_workspace_revision:18,expected_export_archive_sha256:sha,resolution_level:9,num_tokens:null});
+  assert.equal(calls[2].url,"/api/segmentation-workspaces/workspace%2Fa/reconstructions");
+  assert.equal(calls[3].url,"/api/segmentation-workspaces/workspace%2Fa/reconstructions/job%2Fa");
+  assert.equal(calls[4].url,"/api/segmentation-artifacts/reconstruction-results/w/j/compilation-report");
+  assert.throws(()=>api.getJsonArtifact("C:\\tmp\\geometry.npz"),/Artifact URL must be an application URL/);
+});
+
+test("review-scene status normalization keeps only browser-safe response fields",()=>{
+  const normalized=normalizeReviewSceneStatus({
+    imported:true,
+    created:false,
+    workspace_id:"workspace-a",
+    export_id:"export-a",
+    job_id:"job-a",
+    scene_id:"scene-a",
+    scene_url:"/?scene=from-backend",
+    package_revision:1,
+    compilation_passed:true,
+    semantic_object_count:1,
+    object_ids:["object-a"],
+    extra:"ignored"
+  });
+  assert.deepEqual(Object.keys(normalized),["imported","created","workspace_id","export_id","job_id","scene_id","scene_url","package_revision","compilation_passed","semantic_object_count","object_ids"]);
+  assert.equal(normalized.scene_url,"/?scene=from-backend");
+  assert.equal(normalizeReviewSceneStatus({imported:false,scene_url:null}).scene_url,null);
+});
+
+test("review-scene readiness requires a succeeded result and acknowledgement only when needed",()=>{
+  const passed=succeeded({result:{...succeeded().result,compilation_passed:true}});
+  assert.equal(reviewSceneReadiness({workspace,job:job({status:"running",stage:"moge",progress_percent:10}),acknowledgement:false}).ready,false);
+  assert.equal(reviewSceneReadiness({workspace,job:succeeded(),acknowledgement:false}).reasons[0].code,"acknowledgement_required");
+  assert.equal(reviewSceneReadiness({workspace,job:succeeded(),acknowledgement:true}).ready,true);
+  assert.equal(reviewSceneReadiness({workspace,job:passed,acknowledgement:false}).ready,true);
+  assert.equal(reviewSceneReadiness({workspace,job:passed,createOperation:{jobId:"other"}}).reasons[0].code,"create_active");
+  assert.equal(reviewSceneReadiness({workspace,job:passed,statusLoading:true}).reasons[0].code,"status_loading");
+});
+
+test("review-scene request snapshot captures immutable job values",()=>{
+  const mutableWorkspace={...workspace};
+  const mutableJob=succeeded();
+  const snapshot=createReviewSceneRequestSnapshot({operationId:9,workspace:mutableWorkspace,job:mutableJob,acknowledgement:true,stateGeneration:4});
+  mutableWorkspace.workspace_id="changed";
+  mutableJob.job_version=99;
+  assert.deepEqual(snapshot,{operationId:9,workspaceId:"workspace-a",workspaceGeneration:4,jobId:"job-a",jobVersion:1,sceneId:"scene-a",compilationPassed:false,acknowledgeReviewRequired:true});
+  assert.deepEqual(reviewSceneRequestPayload(snapshot),{expected_job_version:1,acknowledge_review_required:true});
+});
+
+test("review-scene state guards workspace, job, version, status generations, and create ownership",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const current=succeeded();
+  state.upsertJob(current);
+  const selected=state.selectedJob();
+  const statusContext=state.beginReviewStatus(selected);
+  state.setReviewStatus(statusContext,{imported:false,workspace_id:"workspace-a",job_id:"job-a",scene_id:"scene-a",compilation_passed:false,semantic_object_count:1,object_ids:["object-a"]});
+  state.finishReviewStatus(statusContext);
+  assert.equal(state.reviewStatus(selected).imported,false);
+  const old=statusContext;
+  const newer=state.beginReviewStatus(selected);
+  assert.equal(state.setReviewStatus(old,{imported:true,workspace_id:"workspace-a",job_id:"job-a",scene_id:"scene-a"}),false);
+  state.setReviewStatus(newer,{imported:true,workspace_id:"workspace-a",job_id:"job-a",scene_id:"scene-a",scene_url:"/?scene=scene-a",compilation_passed:false,semantic_object_count:1,object_ids:["object-a"]});
+  state.finishReviewStatus(newer);
+  assert.equal(state.reviewStatus(selected).imported,true);
+  const snapshot=state.reviewSnapshot(workspace,selected,true);
+  assert.equal(state.beginReviewCreate(snapshot),true);
+  assert.equal(state.beginReviewCreate(snapshot),false);
+  assert.equal(state.isCurrentReviewCreate(snapshot),true);
+  state.selectJob("missing");
+  assert.equal(state.isCurrentReviewCreate(snapshot),true);
+  state.finishReviewCreate(snapshot);
+  const late=state.beginReviewStatus(selected);
+  state.reset("workspace-b");
+  assert.equal(state.setReviewStatus(late,{imported:true}),false);
+  assert.equal(state.reviewStatusByJob.size,0);
+});
+
+test("review-scene API methods encode ids and send primitive payload",async()=>{
+  const calls=[];
+  global.fetch=async(url,options={})=>{calls.push({url,options});return{ok:true,json:async()=>({ok:true})}};
+  const api=new SegmentationWorkspaceClient();
+  await api.getReviewSceneStatus("workspace/a","job/a");
+  await api.createReviewScene({workspaceId:"workspace/a",jobId:"job/a",expectedJobVersion:7,acknowledgeReviewRequired:true});
+  assert.equal(calls[0].url,"/api/segmentation-workspaces/workspace%2Fa/reconstructions/job%2Fa/review-scene");
+  assert.equal(calls[1].url,"/api/segmentation-workspaces/workspace%2Fa/reconstructions/job%2Fa/review-scene");
+  assert.deepEqual(JSON.parse(calls[1].options.body),{expected_job_version:7,acknowledge_review_required:true});
+});
+
+test("review-scene UI source uses backend scene_url and provenance back-link",()=>{
+  const segmentSource=readFileSync(new URL("../../frontend/segment-app.js",import.meta.url),"utf8");
+  assert.match(segmentSource,/href="\$\{esc\(status\.scene_url\)\}" target="_blank" rel="noopener"/);
+  assert.doesNotMatch(segmentSource,/\?scene=\$\{job\.scene_id\}/);
+  assert.match(segmentSource,/This reconstruction completed successfully, but compiler quality gates require review\./);
+  const reviewSource=readFileSync(new URL("../../frontend/app.js",import.meta.url),"utf8");
+  assert.match(reviewSource,/metadata\.import_origin==="segmentation_reconstruction_job"/);
+  assert.match(reviewSource,/\/segment\?workspace=\$\{encodeURIComponent\(workspaceId\)\}/);
+});

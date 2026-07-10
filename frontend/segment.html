@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Segmentation workspace</title>
+    <link rel="stylesheet" href="/static/segment-style.css">
+  </head>
+  <body>
+    <main class="seg-shell">
+      <header class="seg-topbar">
+        <div class="brand-block">
+          <span class="brand-mark" aria-hidden="true">S</span>
+          <div><h1>Segmentation workspace</h1><p>Pre-MoGe semantic masks</p></div>
+        </div>
+        <form id="workspace-loader" class="workspace-loader">
+          <label for="workspace-id">Workspace ID</label>
+          <input id="workspace-id" autocomplete="off" placeholder="Workspace UUID">
+          <button type="submit">Load</button>
+        </form>
+        <div id="sam-status" class="sam-status" data-state="idle"><span></span><strong>SAM</strong><output>Not prepared</output></div>
+        <button id="retry-sam" type="button" class="secondary">Retry SAM</button>
+      </header>
+
+      <section id="empty-state" class="empty-state">
+        <form id="upload-form" class="upload-panel">
+          <h2>Start from a source image</h2>
+          <p>Upload a PNG, JPEG, or WebP image, or load an existing workspace ID above.</p>
+          <label class="drop-zone" for="source-image">
+            <span>Choose source image</span>
+            <input id="source-image" name="source_image" type="file" accept="image/png,image/jpeg,image/webp" required>
+          </label>
+          <button type="submit" class="primary">Create workspace</button>
+        </form>
+      </section>
+
+      <section id="workspace-app" class="workspace-app" hidden>
+        <aside class="objects-panel panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">Objects</p><h2>Semantic objects</h2></div>
+            <button id="new-object" type="button" class="primary">+ New object</button>
+          </div>
+          <form id="object-create-form" class="object-form" hidden>
+            <label>Display name <input id="new-display-name" autocomplete="off"></label>
+            <label>Semantic label <input id="new-semantic-label" autocomplete="off"></label>
+            <div class="form-actions"><button type="submit">Create</button><button type="button" id="cancel-create" class="secondary">Cancel</button></div>
+          </form>
+          <div id="object-list" class="object-list"></div>
+        </aside>
+
+        <section class="canvas-column">
+          <div class="canvas-toolbar panel" role="toolbar" aria-label="Segmentation tools">
+            <button class="tool-button is-active" type="button" data-tool="inspect">Inspect</button>
+            <button class="tool-button" type="button" data-tool="positive">+ Positive</button>
+            <button class="tool-button" type="button" data-tool="negative">- Negative</button>
+            <button class="tool-button" type="button" data-tool="manual-add">Manual add</button>
+            <button class="tool-button" type="button" data-tool="manual-remove">Manual remove</button>
+            <button class="tool-button" type="button" data-tool="pan">Pan</button>
+            <span class="toolbar-spacer"></span>
+            <button id="undo-point" type="button" class="secondary">Undo point</button>
+            <button id="reset-draft" type="button" class="secondary">Reset draft</button>
+            <label class="brush-size-control">Brush radius <input id="brush-size" type="range" min="1" max="200" value="12"><output id="brush-size-output">12 px</output></label>
+            <button id="undo-brush" type="button" class="secondary">Undo brush</button>
+            <button id="redo-brush" type="button" class="secondary">Redo brush</button>
+            <button id="reset-brush" type="button" class="secondary">Reset local edits</button>
+            <button id="save-manual" type="button" class="primary">Save corrections</button>
+            <button id="clear-manual" type="button" class="secondary">Clear saved corrections</button>
+            <button id="zoom-out" type="button" class="icon-button" aria-label="Zoom out">-</button>
+            <output id="zoom-level">100%</output>
+            <button id="zoom-in" type="button" class="icon-button" aria-label="Zoom in">+</button>
+            <button id="fit-view" type="button" class="secondary">Fit</button>
+          </div>
+          <div id="canvas-stage" class="canvas-stage">
+            <canvas id="segment-canvas" aria-label="Source image with selected candidate mask"></canvas>
+            <div id="canvas-message" class="canvas-message">Loading image...</div>
+            <div id="mask-updating" class="mask-updating" hidden>Updating mask...</div>
+          </div>
+          <div class="overlay-bar panel">
+            <label>Mask opacity <input id="overlay-opacity" type="range" min="0" max="1" step="0.05" value="0.55"><output id="opacity-output">55%</output></label>
+          </div>
+        </section>
+
+        <aside class="details-panel panel">
+          <div class="panel-heading"><div><p class="eyebrow">Selected</p><h2>Object details</h2></div></div>
+          <form id="rename-form" class="object-form">
+            <label>Display name <input id="display-name" autocomplete="off"></label>
+            <label>Semantic label <input id="semantic-label" autocomplete="off"></label>
+            <div class="form-actions"><button type="submit">Save rename</button><button id="delete-object" type="button" class="danger">Delete</button></div>
+          </form>
+          <section class="detail-section">
+            <h3>Prompt</h3>
+            <dl class="stats"><div><dt>Points</dt><dd id="point-count">0</dd></div><div><dt>Revision</dt><dd id="prompt-revision">0</dd></div><div><dt>Object version</dt><dd id="object-version">0</dd></div></dl>
+          </section>
+          <section class="detail-section">
+            <h3>Manual corrections</h3>
+            <p id="manual-message" class="manual-message">No saved manual corrections</p>
+            <dl class="stats manual-stats">
+              <div><dt>Manual rev</dt><dd id="manual-revision">0</dd></div>
+              <div><dt>Base SAM</dt><dd id="manual-base-revision">-</dd></div>
+              <div><dt>Base cand</dt><dd id="manual-base-candidate">-</dd></div>
+              <div><dt>Area</dt><dd id="manual-area">0</dd></div>
+              <div><dt>Bounds</dt><dd id="manual-bbox">[0, 0, 0, 0]</dd></div>
+              <div><dt>Status</dt><dd id="brush-state">No mask</dd></div>
+            </dl>
+          </section>
+          <section class="detail-section">
+            <h3>Candidates</h3>
+            <div id="candidate-list" class="candidate-list"></div>
+          </section>
+          <section class="detail-section export-section" id="export-section" aria-busy="false">
+            <div class="section-heading-row">
+              <h3>Export snapshots</h3>
+              <button id="refresh-exports" type="button" class="secondary">Refresh</button>
+            </div>
+            <button id="create-export" type="button" class="primary export-create">Create export snapshot</button>
+            <p id="export-status" class="export-status">No export history loaded</p>
+            <div id="export-readiness" class="export-readiness"></div>
+            <h3>Export history</h3>
+            <div id="export-history" class="export-history"></div>
+            <div id="export-details" class="export-details"></div>
+          </section>
+          <section class="detail-section reconstruction-section" id="reconstruction-section" aria-busy="false">
+            <div class="section-heading-row">
+              <h3>Reconstruction</h3>
+              <button id="refresh-reconstruction-jobs" type="button" class="secondary">Refresh jobs</button>
+            </div>
+            <div class="section-heading-row">
+              <h4>Service status</h4>
+              <button id="refresh-reconstruction-health" type="button" class="secondary">Refresh reconstruction status</button>
+            </div>
+            <div id="reconstruction-health" class="reconstruction-health" aria-live="polite">Checking reconstruction services...</div>
+            <form id="reconstruction-settings" class="reconstruction-settings">
+              <label for="reconstruction-resolution">Resolution level
+                <input id="reconstruction-resolution" type="number" min="1" max="9" step="1" value="9">
+              </label>
+              <label for="reconstruction-num-tokens">Number of tokens (optional)
+                <input id="reconstruction-num-tokens" type="number" min="1" step="1" inputmode="numeric" placeholder="No override">
+              </label>
+              <p class="export-muted">Higher resolution levels may use more processing time and memory.</p>
+            </form>
+            <button id="start-reconstruction" type="button" class="primary export-create">Start reconstruction</button>
+            <p id="reconstruction-start-message" class="export-status" aria-live="polite"></p>
+            <h4>Jobs for selected export</h4>
+            <div id="selected-export-jobs" class="reconstruction-list"></div>
+            <h4>All reconstruction jobs</h4>
+            <div id="reconstruction-history" class="reconstruction-list"></div>
+            <div id="reconstruction-details" class="reconstruction-details"></div>
+          </section>
+        </aside>
+      </section>
+    </main>
+    <div id="status-region" class="status-region" aria-live="polite"></div>
+    <script type="module" src="/static/segment-app.js"></script>
+  </body>
+</html>

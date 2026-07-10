@@ -1,0 +1,2285 @@
+{
+  "image_id": "543d92282bfa46c19c78bc96ba1994d3",
+  "image": {
+    "width": 3000,
+    "height": 3000,
+    "area": 9000000,
+    "original_filename": "premium_photo-1675266640345-29d0e6b554c3.png"
+  },
+  "generated_at": "2026-07-08T07:45:49+00:00",
+  "thresholds": {
+    "small_area_percent": 0.1,
+    "large_area_percent": 75.0,
+    "many_components_count": 5,
+    "small_component_percent": 0.05,
+    "overlap_percent": 5.0,
+    "bbox_iou": 0.9
+  },
+  "masks": [
+    {
+      "mask_id": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label": "pink_armchair",
+      "area": 276481,
+      "bbox": [
+        583,
+        1483,
+        1366,
+        2088
+      ],
+      "percent_image_area": 3.07,
+      "connected_component_count": 2,
+      "largest_component_area": 276480,
+      "small_component_count": 1,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "e86fe422054c4e89b83b845aa6be7584",
+      "label": "armchair_pink_cushion",
+      "area": 54615,
+      "bbox": [
+        766,
+        1471,
+        1099,
+        1750
+      ],
+      "percent_image_area": 0.61,
+      "connected_component_count": 2,
+      "largest_component_area": 54614,
+      "small_component_count": 1,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label": "armchair_green_pillow",
+      "area": 16396,
+      "bbox": [
+        868,
+        1630,
+        1019,
+        1794
+      ],
+      "percent_image_area": 0.18,
+      "connected_component_count": 1,
+      "largest_component_area": 16396,
+      "small_component_count": 0,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label": "pink_sofa",
+      "area": 323239,
+      "bbox": [
+        1465,
+        1449,
+        2478,
+        2231
+      ],
+      "percent_image_area": 3.59,
+      "connected_component_count": 27,
+      "largest_component_area": 322904,
+      "small_component_count": 26,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "499c6ce99870435faa1c545baf38244e",
+      "label": "sofa_center_pink_cushion",
+      "area": 56658,
+      "bbox": [
+        1584,
+        1395,
+        2060,
+        1706
+      ],
+      "percent_image_area": 0.63,
+      "connected_component_count": 7,
+      "largest_component_area": 56592,
+      "small_component_count": 6,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "c5ea3368e1114c40a6f1773447875ef7",
+      "label": "sofa_right_pink_cushion",
+      "area": 57335,
+      "bbox": [
+        1883,
+        1468,
+        2309,
+        1766
+      ],
+      "percent_image_area": 0.64,
+      "connected_component_count": 3,
+      "largest_component_area": 55941,
+      "small_component_count": 2,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label": "sofa_left_green_pillow",
+      "area": 27912,
+      "bbox": [
+        1624,
+        1471,
+        1818,
+        1667
+      ],
+      "percent_image_area": 0.31,
+      "connected_component_count": 1,
+      "largest_component_area": 27912,
+      "small_component_count": 0,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "a94c512ccd114c1a912791532a1b57fe",
+      "label": "sofa_right_green_pillow",
+      "area": 12823,
+      "bbox": [
+        2044,
+        1682,
+        2183,
+        1840
+      ],
+      "percent_image_area": 0.14,
+      "connected_component_count": 1,
+      "largest_component_area": 12823,
+      "small_component_count": 0,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "0383351def6c4bdfa2becb053101ed14",
+      "label": "yellow_oval_coffee_table",
+      "area": 74406,
+      "bbox": [
+        1324,
+        1935,
+        1715,
+        2244
+      ],
+      "percent_image_area": 0.83,
+      "connected_component_count": 1,
+      "largest_component_area": 74406,
+      "small_component_count": 0,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label": "small_tabletop_object",
+      "area": 2355,
+      "bbox": [
+        1457,
+        1866,
+        1515,
+        1985
+      ],
+      "percent_image_area": 0.03,
+      "connected_component_count": 3,
+      "largest_component_area": 2303,
+      "small_component_count": 3,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "4459bf808120456d995d7a98d4c08ba2",
+      "label": "pink_rectangular_rug",
+      "area": 285367,
+      "bbox": [
+        887,
+        1929,
+        2092,
+        2470
+      ],
+      "percent_image_area": 3.17,
+      "connected_component_count": 18,
+      "largest_component_area": 284028,
+      "small_component_count": 17,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label": "potted_plant",
+      "area": 83024,
+      "bbox": [
+        1217,
+        1167,
+        1623,
+        1720
+      ],
+      "percent_image_area": 0.92,
+      "connected_component_count": 4,
+      "largest_component_area": 79410,
+      "small_component_count": 3,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "b45a9b530a4b471fb9c0434d66105c00",
+      "label": "framed_wall_artwork",
+      "area": 220330,
+      "bbox": [
+        1779,
+        666,
+        2341,
+        1296
+      ],
+      "percent_image_area": 2.45,
+      "connected_component_count": 1,
+      "largest_component_area": 220330,
+      "small_component_count": 0,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label": "left_green_curtain_panel",
+      "area": 197084,
+      "bbox": [
+        722,
+        559,
+        1012,
+        1367
+      ],
+      "percent_image_area": 2.19,
+      "connected_component_count": 4,
+      "largest_component_area": 196222,
+      "small_component_count": 3,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "8bad72e1478c434995a431dc0564113e",
+      "label": "right_green_curtain_panel",
+      "area": 189264,
+      "bbox": [
+        1012,
+        429,
+        1349,
+        1223
+      ],
+      "percent_image_area": 2.1,
+      "connected_component_count": 9,
+      "largest_component_area": 147040,
+      "small_component_count": 7,
+      "touches_image_border": false
+    },
+    {
+      "mask_id": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label": "brown_curtain_rod_assembly",
+      "area": 10221,
+      "bbox": [
+        1280,
+        381,
+        1459,
+        499
+      ],
+      "percent_image_area": 0.11,
+      "connected_component_count": 3,
+      "largest_component_area": 9185,
+      "small_component_count": 2,
+      "touches_image_border": false
+    }
+  ],
+  "pairwise_overlaps": [
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "e86fe422054c4e89b83b845aa6be7584",
+      "label_b": "armchair_pink_cushion",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_b": "armchair_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_b": "pink_sofa",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "499c6ce99870435faa1c545baf38244e",
+      "label_b": "sofa_center_pink_cushion",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_b": "sofa_right_pink_cushion",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_b": "armchair_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_b": "pink_sofa",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "499c6ce99870435faa1c545baf38244e",
+      "label_b": "sofa_center_pink_cushion",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_b": "sofa_right_pink_cushion",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_b": "pink_sofa",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "499c6ce99870435faa1c545baf38244e",
+      "label_b": "sofa_center_pink_cushion",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_b": "sofa_right_pink_cushion",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "499c6ce99870435faa1c545baf38244e",
+      "label_b": "sofa_center_pink_cushion",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_b": "sofa_right_pink_cushion",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "overlap_pixels": 8,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_b": "sofa_right_pink_cushion",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "4459bf808120456d995d7a98d4c08ba2",
+      "label_a": "pink_rectangular_rug",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "4459bf808120456d995d7a98d4c08ba2",
+      "label_a": "pink_rectangular_rug",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "4459bf808120456d995d7a98d4c08ba2",
+      "label_a": "pink_rectangular_rug",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "4459bf808120456d995d7a98d4c08ba2",
+      "label_a": "pink_rectangular_rug",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "4459bf808120456d995d7a98d4c08ba2",
+      "label_a": "pink_rectangular_rug",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_a": "potted_plant",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_a": "potted_plant",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_a": "potted_plant",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_a": "potted_plant",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_a": "framed_wall_artwork",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_a": "framed_wall_artwork",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_a": "framed_wall_artwork",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_a": "left_green_curtain_panel",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_a": "left_green_curtain_panel",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    },
+    {
+      "mask_a": "8bad72e1478c434995a431dc0564113e",
+      "label_a": "right_green_curtain_panel",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "overlap_pixels": 0,
+      "overlap_percent_of_smaller_mask": 0.0,
+      "overlap_percent_of_union": 0.0
+    }
+  ],
+  "bbox_comparisons": [
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "e86fe422054c4e89b83b845aa6be7584",
+      "label_b": "armchair_pink_cushion",
+      "bbox_iou": 0.1868
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_b": "armchair_green_pillow",
+      "bbox_iou": 0.0528
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_b": "pink_sofa",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "499c6ce99870435faa1c545baf38244e",
+      "label_b": "sofa_center_pink_cushion",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_b": "sofa_right_pink_cushion",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "bbox_iou": 0.0112
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "bbox_iou": 0.073
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0537
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "525bb17ae10f4e84b1520db2ab2c20d1",
+      "label_a": "pink_armchair",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_b": "armchair_green_pillow",
+      "bbox_iou": 0.1835
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_b": "pink_sofa",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "499c6ce99870435faa1c545baf38244e",
+      "label_b": "sofa_center_pink_cushion",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_b": "sofa_right_pink_cushion",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e86fe422054c4e89b83b845aa6be7584",
+      "label_a": "armchair_pink_cushion",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_b": "pink_sofa",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "499c6ce99870435faa1c545baf38244e",
+      "label_b": "sofa_center_pink_cushion",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_b": "sofa_right_pink_cushion",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "bc8627c56d3a47f59714c4a5794fe5ce",
+      "label_a": "armchair_green_pillow",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "499c6ce99870435faa1c545baf38244e",
+      "label_b": "sofa_center_pink_cushion",
+      "bbox_iou": 0.1501
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_b": "sofa_right_pink_cushion",
+      "bbox_iou": 0.1608
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "bbox_iou": 0.0484
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "bbox_iou": 0.028
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "bbox_iou": 0.0886
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "bbox_iou": 0.0077
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "bbox_iou": 0.1513
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0443
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "3aaa9d13f04642d69ad238115cfd47ce",
+      "label_a": "pink_sofa",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_b": "sofa_right_pink_cushion",
+      "bbox_iou": 0.1818
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "bbox_iou": 0.2581
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "bbox_iou": 0.0025
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0345
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "499c6ce99870435faa1c545baf38244e",
+      "label_a": "sofa_center_pink_cushion",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_b": "sofa_left_green_pillow",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "bbox_iou": 0.0862
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "c5ea3368e1114c40a6f1773447875ef7",
+      "label_a": "sofa_right_pink_cushion",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "a94c512ccd114c1a912791532a1b57fe",
+      "label_b": "sofa_right_green_pillow",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "11020b6e583c4c92a4b0d410c9ce7561",
+      "label_a": "sofa_left_green_pillow",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "0383351def6c4bdfa2becb053101ed14",
+      "label_b": "yellow_oval_coffee_table",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "a94c512ccd114c1a912791532a1b57fe",
+      "label_a": "sofa_right_green_pillow",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_b": "small_tabletop_object",
+      "bbox_iou": 0.024
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "bbox_iou": 0.1859
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "0383351def6c4bdfa2becb053101ed14",
+      "label_a": "yellow_oval_coffee_table",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "4459bf808120456d995d7a98d4c08ba2",
+      "label_b": "pink_rectangular_rug",
+      "bbox_iou": 0.0051
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "6c0d67e795bd49f9a869c7566ab64f25",
+      "label_a": "small_tabletop_object",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "4459bf808120456d995d7a98d4c08ba2",
+      "label_a": "pink_rectangular_rug",
+      "mask_b": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_b": "potted_plant",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "4459bf808120456d995d7a98d4c08ba2",
+      "label_a": "pink_rectangular_rug",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "4459bf808120456d995d7a98d4c08ba2",
+      "label_a": "pink_rectangular_rug",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "4459bf808120456d995d7a98d4c08ba2",
+      "label_a": "pink_rectangular_rug",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "4459bf808120456d995d7a98d4c08ba2",
+      "label_a": "pink_rectangular_rug",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_a": "potted_plant",
+      "mask_b": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_b": "framed_wall_artwork",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_a": "potted_plant",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_a": "potted_plant",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0156
+    },
+    {
+      "mask_a": "e0da7afa7e644cdaa9d183bd648cc15e",
+      "label_a": "potted_plant",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_a": "framed_wall_artwork",
+      "mask_b": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_b": "left_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_a": "framed_wall_artwork",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "b45a9b530a4b471fb9c0434d66105c00",
+      "label_a": "framed_wall_artwork",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_a": "left_green_curtain_panel",
+      "mask_b": "8bad72e1478c434995a431dc0564113e",
+      "label_b": "right_green_curtain_panel",
+      "bbox_iou": 0.0013
+    },
+    {
+      "mask_a": "80b690b7e8d04bcd90fe1b5211d46ff4",
+      "label_a": "left_green_curtain_panel",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0
+    },
+    {
+      "mask_a": "8bad72e1478c434995a431dc0564113e",
+      "label_a": "right_green_curtain_panel",
+      "mask_b": "9dd0ad1fc9d1458294a8890accd39cfb",
+      "label_b": "brown_curtain_rod_assembly",
+      "bbox_iou": 0.0174
+    }
+  ],
+  "summary": {
+    "mask_count": 16,
+    "warnings": [
+      {
+        "label": "pink_armchair",
+        "severity": "warning",
+        "message": "Mask has 1 small disconnected component(s)."
+      },
+      {
+        "label": "armchair_pink_cushion",
+        "severity": "warning",
+        "message": "Mask has 1 small disconnected component(s)."
+      },
+      {
+        "label": "pink_sofa",
+        "severity": "warning",
+        "message": "Mask has many disconnected components (27)."
+      },
+      {
+        "label": "pink_sofa",
+        "severity": "warning",
+        "message": "Mask has 26 small disconnected component(s)."
+      },
+      {
+        "label": "sofa_center_pink_cushion",
+        "severity": "warning",
+        "message": "Mask has many disconnected components (7)."
+      },
+      {
+        "label": "sofa_center_pink_cushion",
+        "severity": "warning",
+        "message": "Mask has 6 small disconnected component(s)."
+      },
+      {
+        "label": "sofa_right_pink_cushion",
+        "severity": "warning",
+        "message": "Mask has 2 small disconnected component(s)."
+      },
+      {
+        "label": "small_tabletop_object",
+        "severity": "warning",
+        "message": "Mask has 3 small disconnected component(s)."
+      },
+      {
+        "label": "small_tabletop_object",
+        "severity": "warning",
+        "message": "Mask area is unusually small (0.03% of image)."
+      },
+      {
+        "label": "pink_rectangular_rug",
+        "severity": "warning",
+        "message": "Mask has many disconnected components (18)."
+      },
+      {
+        "label": "pink_rectangular_rug",
+        "severity": "warning",
+        "message": "Mask has 17 small disconnected component(s)."
+      },
+      {
+        "label": "potted_plant",
+        "severity": "warning",
+        "message": "Mask has 3 small disconnected component(s)."
+      },
+      {
+        "label": "left_green_curtain_panel",
+        "severity": "warning",
+        "message": "Mask has 3 small disconnected component(s)."
+      },
+      {
+        "label": "right_green_curtain_panel",
+        "severity": "warning",
+        "message": "Mask has many disconnected components (9)."
+      },
+      {
+        "label": "right_green_curtain_panel",
+        "severity": "warning",
+        "message": "Mask has 7 small disconnected component(s)."
+      },
+      {
+        "label": "brown_curtain_rod_assembly",
+        "severity": "warning",
+        "message": "Mask has 2 small disconnected component(s)."
+      }
+    ]
+  }
+}

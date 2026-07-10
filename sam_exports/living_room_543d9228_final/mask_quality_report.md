@@ -1,0 +1,166 @@
+# Mask Quality Report
+
+- Image ID: `543d92282bfa46c19c78bc96ba1994d3`
+- Mask count: 16
+- Generated at: 2026-07-08T07:45:49+00:00
+
+## Warnings
+
+- warning: pink_armchair - Mask has 1 small disconnected component(s).
+- warning: armchair_pink_cushion - Mask has 1 small disconnected component(s).
+- warning: pink_sofa - Mask has many disconnected components (27).
+- warning: pink_sofa - Mask has 26 small disconnected component(s).
+- warning: sofa_center_pink_cushion - Mask has many disconnected components (7).
+- warning: sofa_center_pink_cushion - Mask has 6 small disconnected component(s).
+- warning: sofa_right_pink_cushion - Mask has 2 small disconnected component(s).
+- warning: small_tabletop_object - Mask has 3 small disconnected component(s).
+- warning: small_tabletop_object - Mask area is unusually small (0.03% of image).
+- warning: pink_rectangular_rug - Mask has many disconnected components (18).
+- warning: pink_rectangular_rug - Mask has 17 small disconnected component(s).
+- warning: potted_plant - Mask has 3 small disconnected component(s).
+- warning: left_green_curtain_panel - Mask has 3 small disconnected component(s).
+- warning: right_green_curtain_panel - Mask has many disconnected components (9).
+- warning: right_green_curtain_panel - Mask has 7 small disconnected component(s).
+- warning: brown_curtain_rod_assembly - Mask has 2 small disconnected component(s).
+
+## Masks
+
+- pink_armchair: area 276481 px (3.07%), components 2, bbox [583, 1483, 1366, 2088]
+- armchair_pink_cushion: area 54615 px (0.61%), components 2, bbox [766, 1471, 1099, 1750]
+- armchair_green_pillow: area 16396 px (0.18%), components 1, bbox [868, 1630, 1019, 1794]
+- pink_sofa: area 323239 px (3.59%), components 27, bbox [1465, 1449, 2478, 2231]
+- sofa_center_pink_cushion: area 56658 px (0.63%), components 7, bbox [1584, 1395, 2060, 1706]
+- sofa_right_pink_cushion: area 57335 px (0.64%), components 3, bbox [1883, 1468, 2309, 1766]
+- sofa_left_green_pillow: area 27912 px (0.31%), components 1, bbox [1624, 1471, 1818, 1667]
+- sofa_right_green_pillow: area 12823 px (0.14%), components 1, bbox [2044, 1682, 2183, 1840]
+- yellow_oval_coffee_table: area 74406 px (0.83%), components 1, bbox [1324, 1935, 1715, 2244]
+- small_tabletop_object: area 2355 px (0.03%), components 3, bbox [1457, 1866, 1515, 1985]
+- pink_rectangular_rug: area 285367 px (3.17%), components 18, bbox [887, 1929, 2092, 2470]
+- potted_plant: area 83024 px (0.92%), components 4, bbox [1217, 1167, 1623, 1720]
+- framed_wall_artwork: area 220330 px (2.45%), components 1, bbox [1779, 666, 2341, 1296]
+- left_green_curtain_panel: area 197084 px (2.19%), components 4, bbox [722, 559, 1012, 1367]
+- right_green_curtain_panel: area 189264 px (2.1%), components 9, bbox [1012, 429, 1349, 1223]
+- brown_curtain_rod_assembly: area 10221 px (0.11%), components 3, bbox [1280, 381, 1459, 499]
+
+## Pairwise Overlaps
+
+- pink_armchair / armchair_pink_cushion: 0 px, 0.0% of smaller mask
+- pink_armchair / armchair_green_pillow: 0 px, 0.0% of smaller mask
+- pink_armchair / pink_sofa: 0 px, 0.0% of smaller mask
+- pink_armchair / sofa_center_pink_cushion: 0 px, 0.0% of smaller mask
+- pink_armchair / sofa_right_pink_cushion: 0 px, 0.0% of smaller mask
+- pink_armchair / sofa_left_green_pillow: 0 px, 0.0% of smaller mask
+- pink_armchair / sofa_right_green_pillow: 0 px, 0.0% of smaller mask
+- pink_armchair / yellow_oval_coffee_table: 0 px, 0.0% of smaller mask
+- pink_armchair / small_tabletop_object: 0 px, 0.0% of smaller mask
+- pink_armchair / pink_rectangular_rug: 0 px, 0.0% of smaller mask
+- pink_armchair / potted_plant: 0 px, 0.0% of smaller mask
+- pink_armchair / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- pink_armchair / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- pink_armchair / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- pink_armchair / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / armchair_green_pillow: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / pink_sofa: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / sofa_center_pink_cushion: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / sofa_right_pink_cushion: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / sofa_left_green_pillow: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / sofa_right_green_pillow: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / yellow_oval_coffee_table: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / small_tabletop_object: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / pink_rectangular_rug: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / potted_plant: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- armchair_pink_cushion / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / pink_sofa: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / sofa_center_pink_cushion: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / sofa_right_pink_cushion: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / sofa_left_green_pillow: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / sofa_right_green_pillow: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / yellow_oval_coffee_table: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / small_tabletop_object: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / pink_rectangular_rug: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / potted_plant: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- armchair_green_pillow / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- pink_sofa / sofa_center_pink_cushion: 0 px, 0.0% of smaller mask
+- pink_sofa / sofa_right_pink_cushion: 0 px, 0.0% of smaller mask
+- pink_sofa / sofa_left_green_pillow: 0 px, 0.0% of smaller mask
+- pink_sofa / sofa_right_green_pillow: 0 px, 0.0% of smaller mask
+- pink_sofa / yellow_oval_coffee_table: 0 px, 0.0% of smaller mask
+- pink_sofa / small_tabletop_object: 0 px, 0.0% of smaller mask
+- pink_sofa / pink_rectangular_rug: 8 px, 0.0% of smaller mask
+- pink_sofa / potted_plant: 0 px, 0.0% of smaller mask
+- pink_sofa / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- pink_sofa / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- pink_sofa / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- pink_sofa / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / sofa_right_pink_cushion: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / sofa_left_green_pillow: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / sofa_right_green_pillow: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / yellow_oval_coffee_table: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / small_tabletop_object: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / pink_rectangular_rug: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / potted_plant: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- sofa_center_pink_cushion / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- sofa_right_pink_cushion / sofa_left_green_pillow: 0 px, 0.0% of smaller mask
+- sofa_right_pink_cushion / sofa_right_green_pillow: 0 px, 0.0% of smaller mask
+- sofa_right_pink_cushion / yellow_oval_coffee_table: 0 px, 0.0% of smaller mask
+- sofa_right_pink_cushion / small_tabletop_object: 0 px, 0.0% of smaller mask
+- sofa_right_pink_cushion / pink_rectangular_rug: 0 px, 0.0% of smaller mask
+- sofa_right_pink_cushion / potted_plant: 0 px, 0.0% of smaller mask
+- sofa_right_pink_cushion / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- sofa_right_pink_cushion / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- sofa_right_pink_cushion / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- sofa_right_pink_cushion / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- sofa_left_green_pillow / sofa_right_green_pillow: 0 px, 0.0% of smaller mask
+- sofa_left_green_pillow / yellow_oval_coffee_table: 0 px, 0.0% of smaller mask
+- sofa_left_green_pillow / small_tabletop_object: 0 px, 0.0% of smaller mask
+- sofa_left_green_pillow / pink_rectangular_rug: 0 px, 0.0% of smaller mask
+- sofa_left_green_pillow / potted_plant: 0 px, 0.0% of smaller mask
+- sofa_left_green_pillow / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- sofa_left_green_pillow / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- sofa_left_green_pillow / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- sofa_left_green_pillow / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- sofa_right_green_pillow / yellow_oval_coffee_table: 0 px, 0.0% of smaller mask
+- sofa_right_green_pillow / small_tabletop_object: 0 px, 0.0% of smaller mask
+- sofa_right_green_pillow / pink_rectangular_rug: 0 px, 0.0% of smaller mask
+- sofa_right_green_pillow / potted_plant: 0 px, 0.0% of smaller mask
+- sofa_right_green_pillow / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- sofa_right_green_pillow / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- sofa_right_green_pillow / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- sofa_right_green_pillow / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- yellow_oval_coffee_table / small_tabletop_object: 0 px, 0.0% of smaller mask
+- yellow_oval_coffee_table / pink_rectangular_rug: 0 px, 0.0% of smaller mask
+- yellow_oval_coffee_table / potted_plant: 0 px, 0.0% of smaller mask
+- yellow_oval_coffee_table / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- yellow_oval_coffee_table / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- yellow_oval_coffee_table / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- yellow_oval_coffee_table / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- small_tabletop_object / pink_rectangular_rug: 0 px, 0.0% of smaller mask
+- small_tabletop_object / potted_plant: 0 px, 0.0% of smaller mask
+- small_tabletop_object / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- small_tabletop_object / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- small_tabletop_object / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- small_tabletop_object / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- pink_rectangular_rug / potted_plant: 0 px, 0.0% of smaller mask
+- pink_rectangular_rug / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- pink_rectangular_rug / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- pink_rectangular_rug / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- pink_rectangular_rug / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- potted_plant / framed_wall_artwork: 0 px, 0.0% of smaller mask
+- potted_plant / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- potted_plant / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- potted_plant / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- framed_wall_artwork / left_green_curtain_panel: 0 px, 0.0% of smaller mask
+- framed_wall_artwork / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- framed_wall_artwork / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- left_green_curtain_panel / right_green_curtain_panel: 0 px, 0.0% of smaller mask
+- left_green_curtain_panel / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask
+- right_green_curtain_panel / brown_curtain_rod_assembly: 0 px, 0.0% of smaller mask

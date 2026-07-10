@@ -6,7 +6,7 @@ from uuid import uuid4
 from mcp.server.fastmcp import FastMCP
 from PIL import Image
 
-from backend import mask_ops, preview_ops, quality_ops, sam_engine
+from backend import mask_ops, moge_engine, preview_ops, quality_ops, sam_engine
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -20,6 +20,42 @@ mcp = FastMCP("Local SAM Mask Editor")
 def sam_health() -> dict:
     """Return local SAM server status without loading the model."""
     return sam_engine.get_status()
+
+
+@mcp.tool()
+def moge_health() -> dict:
+    """Return configured MoGe worker status without loading the model."""
+    return moge_engine.get_status()
+
+
+@mcp.tool()
+def moge_validate_model(load_model: bool = True) -> dict:
+    """Validate configured local MoGe paths, imports, GPU visibility, and optional model load."""
+    try:
+        return moge_engine.validate_model(load_model=load_model)
+    except moge_engine.MogeEngineError as exc:
+        raise ValueError(str(exc)) from exc
+
+
+@mcp.tool()
+def moge_run_inference(
+    image_id: str,
+    output_dir: str | None = None,
+    requested_outputs: list[str] | None = None,
+    resolution_level: int = 9,
+    num_tokens: int | None = None,
+) -> dict:
+    """Run MoGe on a registered source image and return JSON metadata plus output paths."""
+    try:
+        return moge_engine.run_inference(
+            image_id=image_id,
+            output_dir=_empty_to_none(output_dir),
+            requested_outputs=requested_outputs,
+            resolution_level=resolution_level,
+            num_tokens=num_tokens,
+        )
+    except moge_engine.MogeEngineError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 @mcp.tool()
