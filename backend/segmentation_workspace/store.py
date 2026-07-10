@@ -28,6 +28,7 @@ from .models import (
     SegmentationWorkspace,
     SourceImage,
 )
+from .reconstruction_models import ReconstructionJobRecord
 
 
 IMAGE_FORMATS = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
@@ -393,10 +394,13 @@ class SegmentationWorkspaceStore:
             if jobs_dir.is_dir():
                 for job_path in jobs_dir.glob("*.json"):
                     try:
-                        job = json.loads(job_path.read_text(encoding="utf-8"))
+                        job = ReconstructionJobRecord.model_validate_json(job_path.read_text(encoding="utf-8"))
                     except Exception:
-                        continue
-                    if job.get("status") in {"queued", "running"}:
+                        raise SegmentationWorkspaceStoreError(
+                            "workspace reconstruction job state could not be verified",
+                            409,
+                        )
+                    if job.status in {"queued", "running"}:
                         raise SegmentationWorkspaceStoreError(
                             "workspace has an active reconstruction job",
                             409,

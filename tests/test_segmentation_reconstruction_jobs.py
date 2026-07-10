@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
+from queue import Queue
 from pathlib import Path
 
 import numpy as np
@@ -20,7 +23,13 @@ def _image(path: Path, size: tuple[int, int] = (10, 8)) -> Path:
 
 def _store_with_export(tmp_path: Path) -> tuple[SegmentationWorkspaceStore, str, str]:
     store = SegmentationWorkspaceStore(tmp_path / "workspaces")
-    workspace = store.create_workspace(_image(tmp_path / "source.png"), "source.png")
+    workspace_id, export_id = _add_export(store, tmp_path, "source")
+    return store, workspace_id, export_id
+
+
+def _add_export(store: SegmentationWorkspaceStore, tmp_path: Path, name: str) -> tuple[str, str]:
+    filename = f"{name}.png"
+    workspace = store.create_workspace(_image(tmp_path / filename), filename)
     workspace = store.create_object(workspace.workspace_id, "chair", "Chair", workspace.workspace_revision)
     obj = workspace.objects[0]
     mask = np.zeros((8, 10), dtype=bool)
@@ -44,7 +53,7 @@ def _store_with_export(tmp_path: Path) -> tuple[SegmentationWorkspaceStore, str,
         expected_workspace_revision=workspace.workspace_revision,
         expected_objects=[{"object_id": item.object_id, "expected_object_version": item.object_version} for item in workspace.objects],
     )
-    return store, workspace.workspace_id, record.export_id
+    return workspace.workspace_id, record.export_id
 
 
 def _request(store: SegmentationWorkspaceStore, workspace_id: str, export_id: str, *, revision: int | None = None, sha: str | None = None) -> ReconstructionJobRequest:
@@ -245,3 +254,221 @@ def test_active_job_blocks_workspace_deletion_but_object_editing_and_export_anch
     inputs = jobs.prepare_execution_inputs(job)
     assert inputs.export_id == export_id
     assert inputs.object_ids == job.object_ids
+
+
+def test_running_job_blocks_workspace_deletion(tmp_path: Path) -> None:
+    store, workspace_id, export_id = _store_with_export(tmp_path)
+    jobs = ReconstructionJobStore(store)
+    job = jobs.create_job(workspace_id, export_id, _request(store, workspace_id, export_id))
+    running = jobs.transition_running(job, "validating")
+    workspace = store.get_workspace(workspace_id)
+
+    with pytest.raises(SegmentationWorkspaceStoreError, match="active reconstruction job"):
+        store.delete_workspace(workspace_id, workspace.workspace_revision)
+
+    assert jobs.get_job(workspace_id, running.job_id).status == "running"
+
+
+def test_terminal_reconstruction_jobs_permit_workspace_deletion(tmp_path: Path) -> None:
+    cases = ["succeeded", "failed", "interrupted"]
+    for case in cases:
+        case_root = tmp_path / case
+        store, workspace_id, export_id = _store_with_export(case_root)
+        jobs = ReconstructionJobStore(store)
+        job = jobs.create_job(workspace_id, export_id, _request(store, workspace_id, export_id))
+        if case == "succeeded":
+            manager = ReconstructionJobManager(jobs, moge_runner=_fake_moge, compiler_runner=_fake_compiler)
+            manager._run_job(job.job_id, workspace_id)
+        elif case == "failed":
+            jobs.fail_job(job, code="test_failure", message="failed safely", stage="queued")
+        else:
+            jobs.interrupt_job(job)
+
+        workspace = store.get_workspace(workspace_id)
+        store.delete_workspace(workspace_id, workspace.workspace_revision)
+
+        assert not (store.root / workspace_id).exists()
+
+
+def test_malformed_reconstruction_job_state_blocks_workspace_deletion(tmp_path: Path) -> None:
+    store, workspace_id, _export_id = _store_with_export(tmp_path)
+    workspace = store.get_workspace(workspace_id)
+    jobs_dir = store.root / workspace_id / "reconstruction-jobs"
+    jobs_dir.mkdir(parents=True)
+
+    (jobs_dir / "bad-json.json").write_text("{not json", encoding="utf-8")
+    with pytest.raises(SegmentationWorkspaceStoreError, match="could not be verified"):
+        store.delete_workspace(workspace_id, workspace.workspace_revision)
+
+    (jobs_dir / "bad-json.json").unlink()
+    (jobs_dir / "invalid-record.json").write_text(json.dumps({"status": "queued"}), encoding="utf-8")
+    with pytest.raises(SegmentationWorkspaceStoreError, match="could not be verified"):
+        store.delete_workspace(workspace_id, workspace.workspace_revision)
+
+
+def test_concurrent_job_creation_across_workspaces_does_not_deadlock(tmp_path: Path) -> None:
+    store = SegmentationWorkspaceStore(tmp_path / "workspaces")
+    first_workspace, first_export = _add_export(store, tmp_path, "first")
+    second_workspace, second_export = _add_export(store, tmp_path, "second")
+    jobs = ReconstructionJobStore(store)
+    results: Queue[object] = Queue()
+
+    def create(workspace_id: str, export_id: str) -> None:
+        try:
+            results.put(jobs.create_job(workspace_id, export_id, _request(store, workspace_id, export_id)))
+        except Exception as exc:
+            results.put(exc)
+
+    threads = [
+        threading.Thread(target=create, args=(first_workspace, first_export), daemon=True),
+        threading.Thread(target=create, args=(second_workspace, second_export), daemon=True),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=3)
+
+    assert not any(thread.is_alive() for thread in threads)
+    values = [results.get_nowait() for _ in threads]
+    assert all(not isinstance(value, Exception) for value in values)
+    assert jobs.active_count_by_status() == {"queued": 2, "running": 0}
+
+
+def test_queue_limit_is_atomic_across_stores_sharing_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RECONSTRUCTION_MAX_QUEUED_JOBS", "1")
+    root = tmp_path / "workspaces"
+    setup_store = SegmentationWorkspaceStore(root)
+    first_workspace, first_export = _add_export(setup_store, tmp_path, "first")
+    second_workspace, second_export = _add_export(setup_store, tmp_path, "second")
+    jobs_a = ReconstructionJobStore(SegmentationWorkspaceStore(root))
+    jobs_b = ReconstructionJobStore(SegmentationWorkspaceStore(root))
+    start = threading.Barrier(3)
+    results: Queue[object] = Queue()
+
+    def create(jobs: ReconstructionJobStore, workspace_id: str, export_id: str) -> None:
+        start.wait(timeout=3)
+        try:
+            results.put(jobs.create_job(workspace_id, export_id, _request(setup_store, workspace_id, export_id)))
+        except Exception as exc:
+            results.put(exc)
+
+    threads = [
+        threading.Thread(target=create, args=(jobs_a, first_workspace, first_export), daemon=True),
+        threading.Thread(target=create, args=(jobs_b, second_workspace, second_export), daemon=True),
+    ]
+    for thread in threads:
+        thread.start()
+    start.wait(timeout=3)
+    for thread in threads:
+        thread.join(timeout=3)
+
+    assert not any(thread.is_alive() for thread in threads)
+    values = [results.get_nowait() for _ in threads]
+    successes = [value for value in values if not isinstance(value, Exception)]
+    failures = [value for value in values if isinstance(value, SegmentationWorkspaceStoreError)]
+    assert len(successes) == 1
+    assert len(failures) == 1
+    assert "queue limit" in str(failures[0])
+    assert jobs_a.active_count() == 1
+
+
+def test_workspace_delete_waits_for_concurrent_job_creation_and_blocks(tmp_path: Path) -> None:
+    store, workspace_id, export_id = _store_with_export(tmp_path)
+    jobs = ReconstructionJobStore(store)
+    save_started = threading.Event()
+    create_result: Queue[object] = Queue()
+    delete_result: Queue[object] = Queue()
+    original_save = jobs._save_job
+
+    def slow_save(job) -> None:
+        save_started.set()
+        time.sleep(0.1)
+        original_save(job)
+
+    jobs._save_job = slow_save
+
+    def create() -> None:
+        try:
+            create_result.put(jobs.create_job(workspace_id, export_id, _request(store, workspace_id, export_id)))
+        except Exception as exc:
+            create_result.put(exc)
+
+    def delete() -> None:
+        try:
+            workspace = store.get_workspace(workspace_id)
+            store.delete_workspace(workspace_id, workspace.workspace_revision)
+            delete_result.put("deleted")
+        except Exception as exc:
+            delete_result.put(exc)
+
+    create_thread = threading.Thread(target=create, daemon=True)
+    create_thread.start()
+    assert save_started.wait(timeout=3)
+    delete_thread = threading.Thread(target=delete, daemon=True)
+    delete_thread.start()
+    create_thread.join(timeout=3)
+    delete_thread.join(timeout=3)
+
+    assert not create_thread.is_alive()
+    assert not delete_thread.is_alive()
+    created = create_result.get_nowait()
+    deleted = delete_result.get_nowait()
+    assert not isinstance(created, Exception)
+    assert isinstance(deleted, SegmentationWorkspaceStoreError)
+    assert "active reconstruction job" in str(deleted)
+    assert (store.root / workspace_id).exists()
+
+
+def test_submission_failure_marks_job_failed_and_allows_retry_and_delete(tmp_path: Path) -> None:
+    class RaisingExecutor:
+        def submit(self, *_args, **_kwargs):
+            raise RuntimeError(r"worker refused C:\secret\queue")
+
+    store, workspace_id, export_id = _store_with_export(tmp_path)
+    jobs = ReconstructionJobStore(store)
+    job = jobs.create_job(workspace_id, export_id, _request(store, workspace_id, export_id))
+    manager = ReconstructionJobManager(jobs, executor=RaisingExecutor(), moge_runner=_fake_moge, compiler_runner=_fake_compiler)
+
+    with pytest.raises(SegmentationWorkspaceStoreError, match="could not be submitted"):
+        manager.submit(job)
+
+    failed = jobs.get_job(workspace_id, job.job_id)
+    assert failed.status == "failed"
+    assert failed.stage == "failed"
+    assert failed.error.code == "queue_submission_failed"
+    assert failed.error.stage == "queued"
+    assert failed.error.retryable is True
+    assert r"C:\secret" not in failed.error.message
+    assert jobs.active_count() == 0
+
+    retry = jobs.create_job(workspace_id, export_id, _request(store, workspace_id, export_id))
+    assert retry.job_id != failed.job_id
+    jobs.interrupt_job(retry)
+    workspace = store.get_workspace(workspace_id)
+    store.delete_workspace(workspace_id, workspace.workspace_revision)
+    assert not (store.root / workspace_id).exists()
+
+
+def test_cancelled_future_interrupts_queued_job(tmp_path: Path) -> None:
+    class CancelledFuture:
+        def cancelled(self) -> bool:
+            return True
+
+        def add_done_callback(self, callback) -> None:
+            callback(self)
+
+    class CancellingExecutor:
+        def submit(self, *_args, **_kwargs):
+            return CancelledFuture()
+
+    store, workspace_id, export_id = _store_with_export(tmp_path)
+    jobs = ReconstructionJobStore(store)
+    job = jobs.create_job(workspace_id, export_id, _request(store, workspace_id, export_id))
+    manager = ReconstructionJobManager(jobs, executor=CancellingExecutor(), moge_runner=_fake_moge, compiler_runner=_fake_compiler)
+
+    manager.submit(job)
+
+    interrupted = jobs.get_job(workspace_id, job.job_id)
+    assert interrupted.status == "interrupted"
+    assert interrupted.error.message == "The reconstruction job was cancelled before it started."
+    assert jobs.active_count() == 0

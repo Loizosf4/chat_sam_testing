@@ -176,6 +176,30 @@ def test_start_rejects_unconfigured_environment_before_persisting_job(configured
     assert jobs.list_jobs(workspace_id) == []
 
 
+def test_start_submission_failure_returns_503_and_marks_job_failed(configured_api, monkeypatch: pytest.MonkeyPatch) -> None:
+    client, store, jobs, workspace_id, export_id = configured_api
+
+    class RaisingExecutor:
+        def submit(self, *_args, **_kwargs):
+            raise RuntimeError(r"executor failed at C:\secret\worker")
+
+    manager = ReconstructionJobManager(jobs, executor=RaisingExecutor(), moge_runner=_fake_moge, compiler_runner=_fake_compiler)
+    monkeypatch.setattr(api, "RECONSTRUCTION_MANAGER", manager)
+    response = client.post(
+        f"/api/segmentation-workspaces/{workspace_id}/exports/{export_id}/reconstructions",
+        json=_payload(store, workspace_id, export_id),
+    )
+
+    assert response.status_code == 503
+    assert "could not be submitted" in response.json()["detail"]
+    assert r"C:\secret" not in response.text
+    records = jobs.list_jobs(workspace_id)
+    assert len(records) == 1
+    assert records[0].status == "failed"
+    assert records[0].error.code == "queue_submission_failed"
+    assert jobs.active_count() == 0
+
+
 def test_health_response_is_browser_safe(monkeypatch: pytest.MonkeyPatch, configured_api) -> None:
     client, _store, jobs, _workspace_id, _export_id = configured_api
     monkeypatch.setattr(api.moge_engine, "get_status", lambda: {"configured": True, "worker_running": False, "device": "cuda", "model": "moge-2-vitl-normal", "python": r"C:\secret\python.exe"})

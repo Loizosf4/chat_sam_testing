@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import tempfile
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -38,6 +39,8 @@ from .store import (
 
 RECONSTRUCTION_KIND = "reconstruction-results"
 DEFAULT_MAX_QUEUED_JOBS = 8
+_QUEUE_LOCKS: dict[Path, threading.RLock] = {}
+_QUEUE_LOCKS_GUARD = threading.Lock()
 
 
 class ReconstructionJobStoreError(SegmentationWorkspaceStoreError):
@@ -83,6 +86,12 @@ def _entry(path: Path, relative: str, media_type: str) -> dict[str, str]:
     return {"path": relative.replace("\\", "/"), "media_type": media_type, "sha256": sha256_file(path)}
 
 
+def _queue_lock_for(root: Path) -> threading.RLock:
+    resolved = root.resolve()
+    with _QUEUE_LOCKS_GUARD:
+        return _QUEUE_LOCKS.setdefault(resolved, threading.RLock())
+
+
 class ReconstructionJobStore:
     def __init__(
         self,
@@ -94,6 +103,9 @@ class ReconstructionJobStore:
         self.workspace_store = workspace_store
         self.clock = clock
         self.id_factory = id_factory
+        # Lock order for queue-wide operations is always queue lock, then
+        # workspace locks in sorted workspace-id order.
+        self._queue_lock = _queue_lock_for(workspace_store.root)
         self.reconcile_unfinished()
 
     def _workspace_dir(self, workspace_id: str) -> Path:
@@ -129,25 +141,27 @@ class ReconstructionJobStore:
     def _all_workspace_ids(self) -> list[str]:
         if not self.workspace_store.root.is_dir():
             return []
-        return [path.name for path in self.workspace_store.root.iterdir() if path.is_dir() and valid_id(path.name)]
+        return sorted(path.name for path in self.workspace_store.root.iterdir() if path.is_dir() and valid_id(path.name))
 
     def _active_jobs_unlocked(self, workspace_id: str) -> list[ReconstructionJobRecord]:
         return [job for job in self._all_jobs_unlocked(workspace_id) if job.status in {"queued", "running"}]
 
-    def active_count(self) -> int:
-        count = 0
-        for workspace_id in self._all_workspace_ids():
-            with self.workspace_store._lock(workspace_id):
-                count += len(self._active_jobs_unlocked(workspace_id))
-        return count
-
-    def active_count_by_status(self) -> dict[str, int]:
+    def _active_counts_under_queue_lock(self) -> dict[str, int]:
         counts = {"queued": 0, "running": 0}
         for workspace_id in self._all_workspace_ids():
             with self.workspace_store._lock(workspace_id):
                 for job in self._active_jobs_unlocked(workspace_id):
                     counts[str(job.status)] += 1
         return counts
+
+    def active_count(self) -> int:
+        with self._queue_lock:
+            counts = self._active_counts_under_queue_lock()
+            return counts["queued"] + counts["running"]
+
+    def active_count_by_status(self) -> dict[str, int]:
+        with self._queue_lock:
+            return self._active_counts_under_queue_lock()
 
     def workspace_has_active_jobs(self, workspace_id: str) -> bool:
         with self.workspace_store._lock(workspace_id):
@@ -171,51 +185,53 @@ class ReconstructionJobStore:
         export_id: str,
         request: ReconstructionJobRequest,
     ) -> ReconstructionJobRecord:
-        with self.workspace_store._lock(workspace_id):
-            workspace = self.workspace_store._load(workspace_id)
-            if workspace.workspace_revision != request.expected_workspace_revision:
-                raise ReconstructionJobStoreError(
-                    f"workspace revision conflict: expected {request.expected_workspace_revision}, current {workspace.workspace_revision}",
-                    409,
-                )
-            if self.active_count() >= max_queued_jobs():
+        with self._queue_lock:
+            counts = self._active_counts_under_queue_lock()
+            if counts["queued"] + counts["running"] >= max_queued_jobs():
                 raise ReconstructionJobStoreError("reconstruction queue limit reached", 409)
-            export = next((item for item in workspace.exports if item.export_id == export_id), None)
-            if export is None:
-                raise ReconstructionJobStoreError("export not found", 404)
-            if export.archive_sha256 != request.expected_export_archive_sha256:
-                raise ReconstructionJobStoreError("export archive hash conflict", 409)
-            for job in self._active_jobs_unlocked(workspace_id):
-                if job.export_id == export_id:
-                    raise ReconstructionJobStoreError("a reconstruction job is already active for this export", 409)
-            inputs = self._verify_inputs_locked(workspace_id, export)
-            stale = self.workspace_store.export_is_stale(workspace_id, export_id)
-            job_id = self.id_factory()
-            while (self._job_path(workspace_id, job_id)).exists():
+            with self.workspace_store._lock(workspace_id):
+                workspace = self.workspace_store._load(workspace_id)
+                if workspace.workspace_revision != request.expected_workspace_revision:
+                    raise ReconstructionJobStoreError(
+                        f"workspace revision conflict: expected {request.expected_workspace_revision}, current {workspace.workspace_revision}",
+                        409,
+                    )
+                export = next((item for item in workspace.exports if item.export_id == export_id), None)
+                if export is None:
+                    raise ReconstructionJobStoreError("export not found", 404)
+                if export.archive_sha256 != request.expected_export_archive_sha256:
+                    raise ReconstructionJobStoreError("export archive hash conflict", 409)
+                for job in self._active_jobs_unlocked(workspace_id):
+                    if job.export_id == export_id:
+                        raise ReconstructionJobStoreError("a reconstruction job is already active for this export", 409)
+                inputs = self._verify_inputs_locked(workspace_id, export)
+                stale = self.workspace_store.export_is_stale(workspace_id, export_id)
                 job_id = self.id_factory()
-            scene_id = f"seg-{workspace_id[:8]}-{export_id[:8]}-{job_id[:8]}"
-            now = self.clock()
-            job = ReconstructionJobRecord(
-                job_id=job_id,
-                job_version=1,
-                workspace_id=workspace_id,
-                export_id=export_id,
-                export_archive_sha256=export.archive_sha256,
-                source_image_id=workspace.source_image.image_id,
-                status="queued",
-                stage="queued",
-                progress_percent=PROGRESS_BY_STAGE["queued"],
-                created_at=now,
-                updated_at=now,
-                request=request,
-                export_was_stale_at_start=stale,
-                semantic_object_count=len(inputs.object_ids),
-                object_ids=inputs.object_ids,
-                scene_id=scene_id,
-            )
-            self._jobs_dir(workspace_id).mkdir(parents=True, exist_ok=True)
-            self._save_job(job)
-            return job
+                while (self._job_path(workspace_id, job_id)).exists():
+                    job_id = self.id_factory()
+                scene_id = f"seg-{workspace_id[:8]}-{export_id[:8]}-{job_id[:8]}"
+                now = self.clock()
+                job = ReconstructionJobRecord(
+                    job_id=job_id,
+                    job_version=1,
+                    workspace_id=workspace_id,
+                    export_id=export_id,
+                    export_archive_sha256=export.archive_sha256,
+                    source_image_id=workspace.source_image.image_id,
+                    status="queued",
+                    stage="queued",
+                    progress_percent=PROGRESS_BY_STAGE["queued"],
+                    created_at=now,
+                    updated_at=now,
+                    request=request,
+                    export_was_stale_at_start=stale,
+                    semantic_object_count=len(inputs.object_ids),
+                    object_ids=inputs.object_ids,
+                    scene_id=scene_id,
+                )
+                self._jobs_dir(workspace_id).mkdir(parents=True, exist_ok=True)
+                self._save_job(job)
+                return job
 
     def _verify_inputs_locked(self, workspace_id: str, export: SegmentationExportRecord) -> ReconstructionInputs:
         keys = [
@@ -525,17 +541,18 @@ class ReconstructionJobStore:
         }
 
     def reconcile_unfinished(self) -> None:
-        for workspace_id in self._all_workspace_ids():
-            with self.workspace_store._lock(workspace_id):
-                jobs = self._all_jobs_unlocked(workspace_id)
-                for job in jobs:
-                    if job.status in {"queued", "running"}:
-                        self.interrupt_job(job)
-                reconstructions = self._reconstructions_dir(workspace_id)
-                if reconstructions.is_dir():
-                    for child in reconstructions.iterdir():
-                        if child.name.startswith(".") and child.is_dir():
-                            shutil.rmtree(child, ignore_errors=True)
+        with self._queue_lock:
+            for workspace_id in self._all_workspace_ids():
+                with self.workspace_store._lock(workspace_id):
+                    jobs = self._all_jobs_unlocked(workspace_id)
+                    for job in jobs:
+                        if job.status in {"queued", "running"}:
+                            self.interrupt_job(job)
+                    reconstructions = self._reconstructions_dir(workspace_id)
+                    if reconstructions.is_dir():
+                        for child in reconstructions.iterdir():
+                            if child.name.startswith(".") and child.is_dir():
+                                shutil.rmtree(child, ignore_errors=True)
 
 
 class ReconstructionJobManager:
@@ -554,7 +571,33 @@ class ReconstructionJobManager:
         atexit.register(self.shutdown)
 
     def submit(self, job: ReconstructionJobRecord) -> None:
-        self.executor.submit(self._run_job, job.job_id, job.workspace_id)
+        try:
+            future = self.executor.submit(self._run_job, job.job_id, job.workspace_id)
+        except Exception as exc:
+            self.store.fail_job(
+                job,
+                code="queue_submission_failed",
+                message="The reconstruction job could not be submitted to the worker queue.",
+                stage="queued",
+                retryable=True,
+            )
+            raise ReconstructionJobStoreError(
+                "The reconstruction job could not be submitted to the worker queue.",
+                503,
+            ) from exc
+        add_done_callback = getattr(future, "add_done_callback", None)
+        if callable(add_done_callback):
+            add_done_callback(lambda completed, submitted=job: self._handle_cancelled_before_run(submitted, completed))
+
+    def _handle_cancelled_before_run(self, job: ReconstructionJobRecord, future: Any) -> None:
+        try:
+            if not future.cancelled():
+                return
+            current = self.store.get_job(job.workspace_id, job.job_id)
+            if current.status == "queued":
+                self.store.interrupt_job(current, "The reconstruction job was cancelled before it started.")
+        except Exception:
+            return
 
     def shutdown(self) -> None:
         shutdown = getattr(self.executor, "shutdown", None)

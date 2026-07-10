@@ -556,16 +556,24 @@ progress: queued `0`, validating `5`, MoGe `10`, compiling `60`, publishing
 
 The start route validates the workspace revision, export archive SHA-256,
 managed export artifacts, export object ID set, source image artifact, duplicate
-active jobs for the workspace/export pair, and queue limit under the workspace
-lock. Stale exports are allowed because exports are immutable; the job records
-`export_was_stale_at_start`.
+active jobs for the workspace/export pair, and global queue limit. Queue
+admission is protected by a root-scoped coordination lock shared by job stores
+that point at the same workspace root. Queue-wide scans acquire locks in a fixed
+order: queue coordination lock first, then workspace locks in sorted workspace
+ID order. Stale exports are allowed because exports are immutable; the job
+records `export_was_stale_at_start`.
 
 Execution is serialized by an in-process worker with one global reconstruction
 worker. API requests return after queueing. Jobs are persisted before background
-execution, and queued/running jobs found after application startup are marked
-`interrupted` rather than replayed. Retry is creating a new job. Active
-queued/running jobs block workspace deletion with `409 Conflict`; terminal jobs
-do not.
+execution. If worker submission fails after persistence, the queued job is
+immediately marked `failed` with a controlled retryable error and the API
+returns `503 Service Unavailable`. If a queued worker future is cancelled before
+it starts, the job is marked `interrupted`. Queued/running jobs found after
+application startup are also marked `interrupted` rather than replayed. Retry is
+creating a new job. Active queued/running jobs block workspace deletion with
+`409 Conflict`; terminal jobs do not. Workspace deletion fails closed when a
+stored reconstruction job record cannot be read or validated, because the active
+job state cannot be trusted.
 
 The runner calls MoGe through the existing isolated worker using an internal
 trusted-path method against the workspace-managed source image. It always
