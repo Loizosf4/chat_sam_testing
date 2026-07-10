@@ -25,6 +25,15 @@ import {
   staleLabel
 } from "/static/segment-exports.js";
 import {
+  ReconstructionWorkspaceState,
+  isActiveReconstructionJob,
+  reconstructionOutcomeLabel,
+  reconstructionRequestPayload,
+  reconstructionStageLabel,
+  reconstructionStartReadiness,
+  reconstructionStatusLabel
+} from "/static/segment-reconstructions.js";
+import {
   CandidateMaskCache,
   ControllerRegistry,
   PredictionController,
@@ -61,6 +70,7 @@ const renderGate=new RenderGate();
 const structuralBusyByObject=new Map();
 const manualOps=new ManualOperationRegistry();
 const exportState=new ExportWorkspaceState();
+const reconstructionState=new ReconstructionWorkspaceState();
 let sourceImage=null,sourceImageId=null,renderQueued=false,panPointer=null,brushSession=null,brushGeneration=0,brushPointer=null,brushCursor=null;
 
 function absoluteUrl(path){return new URL(path,location.origin).href}
@@ -128,7 +138,7 @@ async function prepareBrushForSelection(){
 
 async function loadSourceImage(workspace,generation){const image=await imageElement(workspace.source_image.url);if(!loadGate.isCurrent(generation))return false;sourceImage=image;sourceImageId=workspace.source_image.image_id;view.setImageSize(workspace.image_dimensions.width,workspace.image_dimensions.height).fit();resizeCanvas();return true}
 async function prepareSam(generation=loadGate.generation,workspaceId=store.workspace?.workspace_id){if(!workspaceId||!loadGate.isCurrent(generation))return;store.setSamStatus("preparing","Preparing...");try{const result=await api.prepareSam(workspaceId);if(!loadGate.isCurrent(generation)||store.workspace?.workspace_id!==workspaceId)return;store.setSamStatus("ready",`Ready (${result.model_type} ${result.device})`)}catch(error){if(!loadGate.isCurrent(generation)||store.workspace?.workspace_id!==workspaceId)return;store.setSamStatus("failed",error.message);toast(error.message,true)}}
-function resetTransientForWorkspaceChange(){controllers.clear();structuralBusyByObject.clear();candidateImageCache.clear();manualOps.invalidateAll();exportState.reset(null);refreshGate.begin();disposeBrushSession();renderGate.request();$("#mask-updating").hidden=true}
+function resetTransientForWorkspaceChange(){controllers.clear();structuralBusyByObject.clear();candidateImageCache.clear();manualOps.invalidateAll();exportState.reset(null);reconstructionState.reset(null);refreshGate.begin();disposeBrushSession();renderGate.request();$("#mask-updating").hidden=true}
 async function refreshExportHistory(workspaceId=selectedWorkspaceId(),selectId=exportState.selectedExportId){
   if(!workspaceId)return;
   const generation=exportState.beginList(workspaceId);
@@ -150,11 +160,11 @@ async function refreshExportHistory(workspaceId=selectedWorkspaceId(),selectId=e
 function scheduleExportHistoryRefresh(workspaceId=selectedWorkspaceId(),selectId=exportState.selectedExportId){
   if(workspaceId)queueMicrotask(()=>{if(store.workspace?.workspace_id===workspaceId)refreshExportHistory(workspaceId,selectId)});
 }
-async function activateWorkspace(workspace,generation){if(!loadGate.isCurrent(generation))return false;resetTransientForWorkspaceChange();store.load(workspace);exportState.reset(workspace.workspace_id);history.replaceState(null,"",`/segment?workspace=${encodeURIComponent(workspace.workspace_id)}`);$("#workspace-id").value=workspace.workspace_id;$("#empty-state").hidden=true;$("#workspace-app").hidden=false;setCanvasMessage("");prepareBrushForSelection();requestDraw();refreshExportHistory(workspace.workspace_id);await prepareSam(generation,workspace.workspace_id);return loadGate.isCurrent(generation)}
+async function activateWorkspace(workspace,generation){if(!loadGate.isCurrent(generation))return false;resetTransientForWorkspaceChange();store.load(workspace);exportState.reset(workspace.workspace_id);reconstructionState.reset(workspace.workspace_id);history.replaceState(null,"",`/segment?workspace=${encodeURIComponent(workspace.workspace_id)}`);$("#workspace-id").value=workspace.workspace_id;$("#empty-state").hidden=true;$("#workspace-app").hidden=false;setCanvasMessage("");prepareBrushForSelection();requestDraw();refreshExportHistory(workspace.workspace_id);refreshReconstructionHealth(workspace.workspace_id);refreshReconstructionJobs(workspace.workspace_id,{manual:true});await prepareSam(generation,workspace.workspace_id);return loadGate.isCurrent(generation)}
 async function loadWorkspace(workspaceId){const generation=loadGate.begin();try{store.loadingState="Loading";store.setError("");setCanvasMessage("Loading workspace...");const workspace=await api.getWorkspace(workspaceId);if(!loadGate.isCurrent(generation))return;if(!await loadSourceImage(workspace,generation))return;await activateWorkspace(workspace,generation)}catch(error){if(!loadGate.isCurrent(generation))return;setCanvasMessage("");toast(error.message,true);store.setError(error.message)}}
 async function createWorkspace(file){const generation=loadGate.begin();try{const workspace=await api.createWorkspace(file);if(!loadGate.isCurrent(generation))return;if(!await loadSourceImage(workspace,generation))return;await activateWorkspace(workspace,generation)}catch(error){if(loadGate.isCurrent(generation))toast(error.message,true)}}
 
-function updateWorkspace(workspace,preserveId=store.selectedObjectId){const previousWorkspaceId=store.workspace?.workspace_id??workspace.workspace_id;const previousIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);const previousBrush=brushSession;store.load(workspace,preserveId);if(exportState.workspaceId!==workspace.workspace_id)exportState.reset(workspace.workspace_id);const currentIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);for(const id of previousIds)if(!currentIds.has(id)){controllers.dispose(previousWorkspaceId,id);structuralBusyByObject.delete(id);manualOps.invalidateObject(previousWorkspaceId,id);clearObjectMaskCache(previousWorkspaceId,id);if(previousBrush?.objectId===id)disposeBrushSession()}if(!brushSessionStillCompatible(previousBrush,currentObject())){if(previousBrush?.editor?.dirty&&previousBrush.objectId===store.selectedObjectId)brushSession={...previousBrush,error:"Workspace state changed. Save is disabled until you reload or discard local brush edits."};else prepareBrushForSelection()}else brushSession=previousBrush;renderPredictionStatus();requestDraw();scheduleExportHistoryRefresh(workspace.workspace_id,exportState.selectedExportId)}
+function updateWorkspace(workspace,preserveId=store.selectedObjectId){const previousWorkspaceId=store.workspace?.workspace_id??workspace.workspace_id;const previousIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);const previousBrush=brushSession;store.load(workspace,preserveId);if(exportState.workspaceId!==workspace.workspace_id)exportState.reset(workspace.workspace_id);if(reconstructionState.workspaceId!==workspace.workspace_id)reconstructionState.reset(workspace.workspace_id);const currentIds=new Set(store.workspace?.objects.map(o=>o.object_id)||[]);for(const id of previousIds)if(!currentIds.has(id)){controllers.dispose(previousWorkspaceId,id);structuralBusyByObject.delete(id);manualOps.invalidateObject(previousWorkspaceId,id);clearObjectMaskCache(previousWorkspaceId,id);if(previousBrush?.objectId===id)disposeBrushSession()}if(!brushSessionStillCompatible(previousBrush,currentObject())){if(previousBrush?.editor?.dirty&&previousBrush.objectId===store.selectedObjectId)brushSession={...previousBrush,error:"Workspace state changed. Save is disabled until you reload or discard local brush edits."};else prepareBrushForSelection()}else brushSession=previousBrush;renderPredictionStatus();requestDraw();scheduleExportHistoryRefresh(workspace.workspace_id,exportState.selectedExportId)}
 function selectedObjectColor(){const index=Math.max(0,(store.workspace?.objects||[]).findIndex(o=>o.object_id===store.selectedObjectId));return colorForIndex(index)}
 
 function renderObjects(){if(!store.workspace)return;$("#object-list").innerHTML=objectListHtml(store.workspace.objects,store.selectedObjectId,store.localPromptStateByObject)}
@@ -317,7 +327,193 @@ function qualityHtml(report){
     <details><summary>Bounding-box diagnostics</summary><ul class="quality-list">${bbox.length?bbox.map(b=>`<li>${esc(b.label_a||b.mask_a)} / ${esc(b.label_b||b.mask_b)}: IoU ${b.bbox_iou}</li>`).join(""):"<li>No high-IoU bounding boxes</li>"}</ul></details>
   </div>`;
 }
-function renderAll(){renderObjects();renderDetails();renderSamStatus();renderPredictionStatus();renderExports();requestDraw()}
+function selectedReconstructionJob(){return reconstructionState.selectedJob()}
+function reconstructionSettings(){
+  return {
+    resolutionLevel:Number($("#reconstruction-resolution")?.value||9),
+    numTokensInput:$("#reconstruction-num-tokens")?.value||""
+  };
+}
+function selectedExportRecord(){return exportState.selectedRecord()}
+function reconstructionReadinessState(exportRecord=selectedExportRecord()){
+  const settings=reconstructionSettings();
+  return reconstructionStartReadiness({
+    workspace:store.workspace,
+    exportRecord,
+    health:reconstructionState.health,
+    startActive:Boolean(reconstructionState.startOperation),
+    exportCreationActive:exportOperationActive(),
+    resolutionLevel:settings.resolutionLevel,
+    numTokensInput:settings.numTokensInput
+  });
+}
+function healthText(health){
+  if(reconstructionState.healthLoading)return "Checking reconstruction services...";
+  if(reconstructionState.healthError)return `Service unavailable: ${reconstructionState.healthError}`;
+  if(!health)return "Checking reconstruction services...";
+  if(health.configured)return "Ready";
+  if(!health.moge_configured)return "MoGe is not configured";
+  if(!health.compiler_configured)return "Reconstruction compiler is not configured";
+  if(health.error)return health.error;
+  return "Reconstruction compiler dependencies are unavailable";
+}
+function statusBadge(job){
+  const status=job?.status||"unknown";
+  const outcome=reconstructionOutcomeLabel(job);
+  const review=job?.status==="succeeded"&&job.result?.compilation_passed===false;
+  return `<span class="badge ${review?"review":esc(status)}">${esc(outcome)}</span>`;
+}
+function jobRowHtml(job,selected=false){
+  return `<button type="button" class="reconstruction-row ${selected?"is-selected":""}" data-reconstruction-job-id="${esc(job.job_id)}">
+    <span>
+      <strong>${esc(reconstructionStatusLabel(job.status))}</strong>
+      <small>${esc(reconstructionStageLabel(job.stage))}</small>
+      <small>Export <span class="hash-text" title="${esc(job.export_id)}">${esc(shortHash(job.export_id))}</span></small>
+      ${isActiveReconstructionJob(job)?`<progress max="100" value="${job.progress_percent}">${job.progress_percent}%</progress>`:""}
+    </span>
+    <span>${statusBadge(job)}<small>${esc(formatDate(job.created_at))}</small><small>res ${job.request.resolution_level}${job.request.num_tokens?`, ${job.request.num_tokens} tokens`:""}</small>${job.export_was_stale_at_start?"<small>stale input</small>":""}</span>
+  </button>`;
+}
+function artifactLink(label,url,{download=false}={}){
+  if(!url)return "";
+  return `<a href="${esc(url)}" ${download?"download class=\"download-link\"":"target=\"_blank\" rel=\"noopener\""}>${esc(label)}</a>`;
+}
+function previewCard(label,url,alt){
+  if(!url)return "";
+  return `<figure class="preview-card"><a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" alt="${esc(alt)}" loading="lazy"></a><span>${esc(label)}</span></figure>`;
+}
+function keyValueHtml(items){
+  return `<dl class="reconstruction-summary">${items.map(([key,value])=>`<div><dt>${esc(key)}</dt><dd>${value}</dd></div>`).join("")}</dl>`;
+}
+function exportAvailable(exportId){return exportState.records.some(record=>record.export_id===exportId)}
+function retryAllowed(job){
+  return Boolean(job&&(job.status==="failed"||job.status==="interrupted")&&job.error?.retryable&&exportAvailable(job.export_id)&&reconstructionState.health?.configured&&!reconstructionState.startOperation);
+}
+function diagnosticBlock(job,type,url,label){
+  const key=reconstructionState.diagnosticKey(job,url,type);
+  const cached=reconstructionState.cachedDiagnostic(job,url,type);
+  const loading=reconstructionState.diagnosticLoading.get(key);
+  const error=reconstructionState.diagnosticError.get(key);
+  let body="<p class='export-muted'>Open to load diagnostics.</p>";
+  if(loading)body="<p class='export-muted'>Loading diagnostics...</p>";
+  else if(error)body=`<p class="reconstruction-error">${esc(error)}</p><button type="button" class="secondary" data-diagnostic-retry="${esc(type)}" data-job-id="${esc(job.job_id)}">Retry loading</button>`;
+  else if(cached)body=type==="compilation"?compilationReportHtml(cached):mogeSummaryHtml(cached);
+  return `<details class="quality-block" data-reconstruction-diagnostic="${esc(type)}" data-job-id="${esc(job.job_id)}" data-artifact-url="${esc(url||"")}"><summary>${esc(label)} ${loading?"(loading...)":""}</summary>${body}</details>`;
+}
+function compilationReportHtml(report){
+  const counts=(value)=>value?Object.entries(value).map(([k,v])=>`<div><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join(""):"";
+  return `<div class="diagnostic-table">
+    <div><b>Passed</b><span>${report.passed===null?"Unknown":report.passed?"Yes":"No"}</span></div>
+    ${report.object_count!==null?`<div><b>Object count</b><span>${report.object_count}</span></div>`:""}
+    ${report.universal_v3_invocations!==null?`<div><b>Universal V3 invocations</b><span>${report.universal_v3_invocations}</span></div>`:""}
+    ${report.clean_scene_plan_sha256?`<div><b>Clean scene plan SHA</b><span class="hash-text">${esc(report.clean_scene_plan_sha256)}</span></div>`:""}
+    <b>Quality gates</b>
+    <ul class="gate-list">${report.quality_gates.length?report.quality_gates.map(gate=>`<li class="${gate.passed?"":"is-failed"}" title="${esc(gate.key)}">${gate.passed?"Pass":"Review"} - <code>${esc(gate.key)}</code> ${esc(gate.label)}</li>`).join(""):"<li>No quality gates reported</li>"}</ul>
+    ${report.confidence_counts?`<b>Confidence counts</b>${counts(report.confidence_counts)}`:""}
+    ${report.placement_counts?`<b>Placement counts</b>${counts(report.placement_counts)}`:""}
+  </div>`;
+}
+function primitiveDisplay(value){
+  if(value&&typeof value==="object")return `<code>${esc(JSON.stringify(value))}</code>`;
+  return `<span>${esc(value)}</span>`;
+}
+function mogeSummaryHtml(summary){
+  const entries=Object.entries(summary.visible||{});
+  return `<div class="diagnostic-table">${entries.length?entries.map(([key,value])=>`<div><b>${esc(key)}</b>${primitiveDisplay(value)}</div>`).join(""):"<p class='export-muted'>No sanitized summary fields returned.</p>"}
+    <details><summary>Raw primitive fields</summary><div class="diagnostic-table">${Object.entries(summary.raw||{}).map(([key,value])=>`<div><b>${esc(key)}</b>${primitiveDisplay(value)}</div>`).join("")||"<p class='export-muted'>No raw primitive fields.</p>"}</div></details>
+  </div>`;
+}
+function selectedJobDetailsHtml(job){
+  const result=job.result,artifacts=result?.artifacts||{};
+  const exportMissing=!exportAvailable(job.export_id);
+  const outcome=job.status==="succeeded"&&result?.compilation_passed===false?`<p class="review-required">Reconstruction succeeded. Review recommended: one or more compiler quality gates did not pass.</p>`:job.status==="succeeded"?`<p class="reconstruction-message">Reconstruction succeeded. Quality gates passed.</p>`:"";
+  const error=job.error?`<div class="reconstruction-error"><strong>${esc(job.error.code)}</strong><br>${esc(job.error.message)}<br>Stage: ${esc(reconstructionStageLabel(job.error.stage))}<br>Retryable: ${job.error.retryable?"yes":"no"}</div>`:"";
+  const retry=retryAllowed(job)?`<button type="button" class="primary" data-retry-reconstruction="${esc(job.job_id)}">Retry reconstruction</button>`:"";
+  const links=result?`<div class="artifact-actions">
+    ${artifactLink("Open result manifest",artifacts.result_manifest_url)}
+    ${artifactLink("Open Unified scene plan",artifacts.unified_scene_plan_url)}
+    ${artifactLink("Open compilation report JSON",artifacts.compilation_report_url)}
+    ${artifactLink("Open compilation report Markdown",artifacts.compilation_markdown_url)}
+    ${artifactLink("Open room plan",artifacts.room_plan_url)}
+    ${artifactLink("Open camera candidates",artifacts.camera_candidates_url)}
+    ${artifactLink("Open object pose report",artifacts.object_pose_report_url)}
+    ${artifactLink("Open placement report",artifacts.placement_report_url)}
+    ${artifactLink("Open collision report",artifacts.collision_report_url)}
+    ${artifactLink("Open confidence report",artifacts.confidence_report_url)}
+    ${artifactLink("Open support graph",artifacts.support_graph_url)}
+    ${artifactLink("Open Blender-neutral manifest",artifacts.blender_manifest_url)}
+    ${artifactLink("Open sanitized MoGe summary",artifacts.moge_summary_url)}
+    ${artifactLink("Download MoGe geometry",artifacts.moge_geometry_url,{download:true})}
+  </div>`:"";
+  const previews=result?`<div class="preview-grid">
+    ${previewCard("Scene overview",artifacts.overview_url,"Scene overview preview")}
+    ${previewCard("Projected primitives",artifacts.projected_primitives_url,"Projected primitives preview")}
+    ${previewCard("Room and camera",artifacts.room_camera_url,"Room and camera preview")}
+    ${previewCard("Confidence",artifacts.confidence_overview_url,"Confidence overview preview")}
+    ${previewCard("Ambiguity",artifacts.ambiguity_overview_url,"Ambiguity overview preview")}
+    ${previewCard("Depth",artifacts.depth_preview_url,"MoGe depth preview")}
+    ${previewCard("Normals",artifacts.normal_preview_url,"MoGe normal preview")}
+    ${previewCard("Valid mask",artifacts.valid_mask_preview_url,"MoGe valid mask preview")}
+  </div>`:"";
+  return `<section class="reconstruction-details">
+    ${outcome}
+    ${exportMissing?`<p class="reconstruction-error">Referenced export is unavailable.</p>`:""}
+    ${keyValueHtml([
+      ["Job ID",`<span class="hash-text">${esc(job.job_id)}</span>`],
+      ["Job version",esc(job.job_version)],
+      ["Status",statusBadge(job)],
+      ["Stage",esc(reconstructionStageLabel(job.stage))],
+      ["Progress",`${job.progress_percent}%`],
+      ["Created",esc(formatDate(job.created_at))],
+      ["Started",esc(formatDate(job.started_at))],
+      ["Updated",esc(formatDate(job.updated_at))],
+      ["Finished",esc(formatDate(job.finished_at))],
+      ["Export ID",`<span class="hash-text">${esc(job.export_id)}</span>`],
+      ["Export archive SHA",`<span class="hash-text">${esc(job.export_archive_sha256)}</span>`],
+      ["Export stale at start",job.export_was_stale_at_start?"Yes":"No"],
+      ["Scene ID",esc(job.scene_id||"-")],
+      ["Semantic objects",esc(job.semantic_object_count)],
+      ["Resolution level",esc(job.request.resolution_level)],
+      ["Number of tokens",job.request.num_tokens===null?"No override":esc(job.request.num_tokens)]
+    ])}
+    <div class="artifact-actions"><button type="button" class="secondary" data-select-export="${esc(job.export_id)}">Select job export</button>${retry}</div>
+    ${error}
+    ${links}
+    ${previews}
+    ${result?.artifacts?.compilation_report_url?diagnosticBlock(job,"compilation",result.artifacts.compilation_report_url,"Compilation report"):""}
+    ${result?.artifacts?.moge_summary_url?diagnosticBlock(job,"moge",result.artifacts.moge_summary_url,"Sanitized MoGe summary"):""}
+  </section>`;
+}
+function renderReconstructions(){
+  const section=$("#reconstruction-section");
+  if(!section)return;
+  section.setAttribute("aria-busy",String(reconstructionState.healthLoading||reconstructionState.jobsLoading||Boolean(reconstructionState.startOperation)));
+  const health=$("#reconstruction-health");
+  const healthState=reconstructionState.health;
+  health.className=`reconstruction-health ${healthState?.configured?"is-ready":healthState||reconstructionState.healthError?"is-blocked":""}`;
+  const healthBits=healthState?[`worker ${healthState.worker_running?"running":"not running"}`,`queued ${healthState.queue_queued}`,`running ${healthState.queue_running}`,healthState.device&&`device ${healthState.device}`,healthState.model&&`model ${healthState.model}`].filter(Boolean).join(" - "):"";
+  health.textContent=`${healthText(healthState)}${healthBits?` (${healthBits})`:""}`;
+  $("#refresh-reconstruction-health").disabled=!store.workspace||reconstructionState.healthLoading;
+  $("#refresh-reconstruction-jobs").disabled=!store.workspace||reconstructionState.jobsLoading;
+  const readiness=reconstructionReadinessState();
+  const start=$("#start-reconstruction");
+  start.disabled=!readiness.ready||Boolean(reconstructionState.startOperation);
+  start.textContent=reconstructionState.startOperation?"Starting reconstruction...":"Start reconstruction";
+  const message=$("#reconstruction-start-message");
+  message.className=`export-status ${readiness.ready?"is-ready":"is-blocked"}`;
+  message.textContent=reconstructionState.startOperation?"Submitting reconstruction...":readiness.ready?(readiness.staleAllowed?"This export is stale relative to the current workspace, but reconstruction will use its immutable saved masks.":"Ready to start reconstruction."):(readiness.reasons[0]?.message||"Reconstruction is not ready.");
+  const selectedExport=selectedExportRecord();
+  const exportJobs=selectedExport?reconstructionState.jobsForExport(selectedExport.export_id):[];
+  $("#selected-export-jobs").innerHTML=!selectedExport?"<p class='muted-pad'>Select an export</p>":exportJobs.length?exportJobs.slice(0,3).map(job=>jobRowHtml(job,job.job_id===reconstructionState.selectedJobId)).join(""):"<p class='muted-pad'>No reconstruction jobs for this export</p>";
+  const history=$("#reconstruction-history");
+  if(!store.workspace)history.innerHTML="<p class='muted-pad'>Load a workspace</p>";
+  else if(reconstructionState.jobsLoading&&!reconstructionState.jobs.length)history.innerHTML="<p class='muted-pad'>Loading reconstruction jobs...</p>";
+  else if(!reconstructionState.jobs.length)history.innerHTML=`${reconstructionState.jobsError?`<p class="reconstruction-error">${esc(reconstructionState.jobsError)}</p>`:""}<p class='muted-pad'>No reconstruction jobs yet</p>`;
+  else history.innerHTML=`${reconstructionState.jobsError?`<p class="reconstruction-error">${esc(reconstructionState.jobsError)}</p>`:""}${reconstructionState.jobs.map(job=>jobRowHtml(job,job.job_id===reconstructionState.selectedJobId)).join("")}`;
+  const selected=selectedReconstructionJob();
+  $("#reconstruction-details").innerHTML=selected?selectedJobDetailsHtml(selected):"<p class='muted-pad'>Select a reconstruction job</p>";
+}
+function renderAll(){renderObjects();renderDetails();renderSamStatus();renderPredictionStatus();renderExports();renderReconstructions();requestDraw()}
 
 async function createExportSnapshot(){
   const readiness=exportReadinessState();
@@ -364,6 +560,132 @@ async function loadSelectedQualityReport(){
   }finally{
     exportState.finishQuality(context);
     renderExports();
+  }
+}
+
+async function refreshReconstructionHealth(workspaceId=selectedWorkspaceId()){
+  if(!workspaceId)return;
+  const context=reconstructionState.beginHealth(workspaceId);
+  renderReconstructions();
+  try{
+    const health=await api.getReconstructionHealth();
+    reconstructionState.setHealth(context,health);
+  }catch(error){
+    reconstructionState.failHealth(context,error);
+  }finally{
+    renderReconstructions();
+  }
+}
+
+function scheduleReconstructionPoll(){
+  if(!store.workspace||!reconstructionState.hasActiveJobs()){reconstructionState.stopPolling();return}
+  reconstructionState.schedulePoll(context=>{
+    if(reconstructionState.workspaceId!==context.workspaceId||reconstructionState.pollGeneration!==context.pollGeneration)return;
+    refreshReconstructionJobs(context.workspaceId,{poll:true,pollGeneration:context.pollGeneration});
+  },document.hidden?Math.max(6000,reconstructionState.pollDelay()):reconstructionState.pollDelay());
+}
+
+async function refreshReconstructionJobs(workspaceId=selectedWorkspaceId(),{manual=false,poll=false,pollGeneration=null}={}){
+  if(!workspaceId)return;
+  if(poll&&reconstructionState.pollInFlight)return;
+  if(poll&&pollGeneration!==null&&pollGeneration!==reconstructionState.pollGeneration)return;
+  reconstructionState.pollInFlight=Boolean(poll);
+  const context=reconstructionState.beginJobs(workspaceId,{manual});
+  if(poll&&pollGeneration!==null)context.pollGeneration=pollGeneration;
+  renderReconstructions();
+  try{
+    const jobs=await api.listReconstructions(workspaceId);
+    if(!reconstructionState.setJobs(context,jobs))return;
+    if(reconstructionState.hasActiveJobs())scheduleReconstructionPoll();
+    else{
+      reconstructionState.stopPolling();
+      if(poll)refreshReconstructionHealth(workspaceId);
+    }
+  }catch(error){
+    reconstructionState.failJobs(context,error,{poll});
+    if(!poll)toast(error.message,true);
+    if(reconstructionState.hasActiveJobs())scheduleReconstructionPoll();
+  }finally{
+    renderReconstructions();
+  }
+}
+
+async function startReconstructionFromExport(exportRecord,settingsOverride=null){
+  const readiness=settingsOverride?reconstructionStartReadiness({
+    workspace:store.workspace,
+    exportRecord,
+    health:reconstructionState.health,
+    startActive:Boolean(reconstructionState.startOperation),
+    exportCreationActive:exportOperationActive(),
+    resolutionLevel:settingsOverride.resolutionLevel,
+    numTokensInput:settingsOverride.numTokensInput
+  }):reconstructionReadinessState(exportRecord);
+  if(!readiness.ready){toast(readiness.reasons[0]?.message||"Reconstruction is not ready.",true);renderReconstructions();return}
+  const snapshot=reconstructionState.startSnapshot(store.workspace,exportRecord,readiness);
+  if(!reconstructionState.beginStart(snapshot)){toast("A reconstruction start request is already in progress.",true);return}
+  renderReconstructions();
+  try{
+    const payload=reconstructionRequestPayload(snapshot);
+    const job=await api.startReconstruction({
+      workspaceId:snapshot.workspaceId,
+      exportId:snapshot.exportId,
+      expectedWorkspaceRevision:payload.expected_workspace_revision,
+      expectedExportArchiveSha256:payload.expected_export_archive_sha256,
+      resolutionLevel:payload.resolution_level,
+      numTokens:payload.num_tokens
+    });
+    if(!reconstructionState.isCurrentStart(snapshot)||store.workspace?.workspace_id!==snapshot.workspaceId)return;
+    reconstructionState.upsertJob(job);
+    toast("Reconstruction queued.");
+    scheduleReconstructionPoll();
+    refreshReconstructionJobs(snapshot.workspaceId);
+  }catch(error){
+    if(error.status===409){
+      toast(error.message,true);
+      await refreshActiveWorkspace(snapshot.workspaceId,store.selectedObjectId);
+      await refreshExportHistory(snapshot.workspaceId,exportRecord.export_id);
+      await refreshReconstructionJobs(snapshot.workspaceId,{manual:true});
+      const active=reconstructionState.jobs.find(job=>job.export_id===snapshot.exportId&&isActiveReconstructionJob(job));
+      if(active)reconstructionState.selectJob(active.job_id);
+    }else if(error.status===503){
+      toast(error.message,true);
+      await refreshReconstructionHealth(snapshot.workspaceId);
+      await refreshReconstructionJobs(snapshot.workspaceId,{manual:true});
+    }else{
+      toast(error.message,true);
+    }
+  }finally{
+    reconstructionState.finishStart(snapshot);
+    renderAll();
+  }
+}
+
+function startSelectedExportReconstruction(){
+  startReconstructionFromExport(selectedExportRecord());
+}
+
+function retryReconstructionJob(jobId){
+  const job=reconstructionState.jobs.find(item=>item.job_id===jobId);
+  if(!job||!retryAllowed(job)){toast("This reconstruction job cannot be retried.",true);return}
+  const exportRecord=exportState.records.find(record=>record.export_id===job.export_id);
+  startReconstructionFromExport(exportRecord,{
+    resolutionLevel:job.request.resolution_level,
+    numTokensInput:job.request.num_tokens===null?"":String(job.request.num_tokens)
+  });
+}
+
+async function loadReconstructionDiagnostic(job,type,url,{force=false}={}){
+  if(!job||!url)return;
+  if(!force&&reconstructionState.cachedDiagnostic(job,url,type)){renderReconstructions();return}
+  const context=reconstructionState.beginDiagnostic(job,url,type);
+  renderReconstructions();
+  try{
+    const payload=await api.getJsonArtifact(url);
+    reconstructionState.setDiagnostic(context,payload);
+  }catch(error){
+    reconstructionState.failDiagnostic(context,error);
+  }finally{
+    renderReconstructions();
   }
 }
 
@@ -785,11 +1107,55 @@ $("#export-history").addEventListener("click",event=>{
   const row=event.target.closest("[data-export-id]");
   if(!row)return;
   exportState.select(row.dataset.exportId);
-  renderExports();
+  renderAll();
 });
 $("#export-details").addEventListener("toggle",event=>{
   if(event.target.id==="quality-details"&&event.target.open)loadSelectedQualityReport();
 },true);
+$("#refresh-reconstruction-health").addEventListener("click",()=>refreshReconstructionHealth(selectedWorkspaceId()));
+$("#refresh-reconstruction-jobs").addEventListener("click",()=>refreshReconstructionJobs(selectedWorkspaceId(),{manual:true}));
+$("#start-reconstruction").addEventListener("click",startSelectedExportReconstruction);
+$("#reconstruction-resolution").addEventListener("input",()=>{sessionStorage.setItem("segment.reconstruction.resolution",$("#reconstruction-resolution").value);renderReconstructions()});
+$("#reconstruction-num-tokens").addEventListener("input",()=>{sessionStorage.setItem("segment.reconstruction.tokens",$("#reconstruction-num-tokens").value);renderReconstructions()});
+$("#selected-export-jobs").addEventListener("click",event=>{
+  const row=event.target.closest("[data-reconstruction-job-id]");
+  if(!row)return;
+  reconstructionState.selectJob(row.dataset.reconstructionJobId);
+  renderReconstructions();
+});
+$("#reconstruction-history").addEventListener("click",event=>{
+  const row=event.target.closest("[data-reconstruction-job-id]");
+  if(!row)return;
+  reconstructionState.selectJob(row.dataset.reconstructionJobId);
+  renderReconstructions();
+});
+$("#reconstruction-details").addEventListener("click",event=>{
+  const retry=event.target.closest("[data-retry-reconstruction]");
+  if(retry){retryReconstructionJob(retry.dataset.retryReconstruction);return}
+  const selectExport=event.target.closest("[data-select-export]");
+  if(selectExport){exportState.select(selectExport.dataset.selectExport);renderAll();return}
+  const diagnosticRetry=event.target.closest("[data-diagnostic-retry]");
+  if(diagnosticRetry){
+    const job=reconstructionState.jobs.find(item=>item.job_id===diagnosticRetry.dataset.jobId);
+    const url=diagnosticRetry.dataset.diagnosticRetry==="compilation"?job?.result?.artifacts?.compilation_report_url:job?.result?.artifacts?.moge_summary_url;
+    loadReconstructionDiagnostic(job,diagnosticRetry.dataset.diagnosticRetry,url,{force:true});
+  }
+});
+$("#reconstruction-details").addEventListener("toggle",event=>{
+  const details=event.target.closest("[data-reconstruction-diagnostic]");
+  if(!details||!details.open)return;
+  const job=reconstructionState.jobs.find(item=>item.job_id===details.dataset.jobId);
+  loadReconstructionDiagnostic(job,details.dataset.reconstructionDiagnostic,details.dataset.artifactUrl);
+},true);
+$("#reconstruction-details").addEventListener("error",event=>{
+  const img=event.target;
+  if(img.tagName!=="IMG")return;
+  const fallback=document.createElement("div");
+  fallback.className="preview-fallback";
+  fallback.textContent="Preview image could not be loaded.";
+  img.replaceWith(fallback);
+},true);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&store.workspace&&reconstructionState.hasActiveJobs())refreshReconstructionJobs(selectedWorkspaceId(),{manual:true})});
 document.querySelectorAll("[data-tool]").forEach(button=>button.addEventListener("click",()=>{store.setTool(button.dataset.tool);document.querySelectorAll("[data-tool]").forEach(item=>item.classList.toggle("is-active",item===button));stage.dataset.tool=button.dataset.tool}));
 $("#brush-size").addEventListener("input",()=>{$("#brush-size-output").textContent=`${$("#brush-size").value} px`;requestDraw()});
 $("#overlay-opacity").addEventListener("input",()=>{$("#opacity-output").textContent=`${Math.round(Number($("#overlay-opacity").value)*100)}%`;requestDraw()});
@@ -815,5 +1181,9 @@ store.subscribe(renderAll);
 new ResizeObserver(resizeCanvas).observe(stage);
 stage.dataset.tool="inspect";
 $("#retry-sam").hidden=true;
+const storedResolution=sessionStorage.getItem("segment.reconstruction.resolution");
+const storedTokens=sessionStorage.getItem("segment.reconstruction.tokens");
+if(storedResolution)$("#reconstruction-resolution").value=storedResolution;
+if(storedTokens!==null)$("#reconstruction-num-tokens").value=storedTokens;
 const initialWorkspace=new URLSearchParams(location.search).get("workspace");
 if(initialWorkspace){$("#workspace-id").value=initialWorkspace;loadWorkspace(initialWorkspace)}

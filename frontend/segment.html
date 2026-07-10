@@ -119,6 +119,33 @@
             <div id="export-history" class="export-history"></div>
             <div id="export-details" class="export-details"></div>
           </section>
+          <section class="detail-section reconstruction-section" id="reconstruction-section" aria-busy="false">
+            <div class="section-heading-row">
+              <h3>Reconstruction</h3>
+              <button id="refresh-reconstruction-jobs" type="button" class="secondary">Refresh jobs</button>
+            </div>
+            <div class="section-heading-row">
+              <h4>Service status</h4>
+              <button id="refresh-reconstruction-health" type="button" class="secondary">Refresh reconstruction status</button>
+            </div>
+            <div id="reconstruction-health" class="reconstruction-health" aria-live="polite">Checking reconstruction services...</div>
+            <form id="reconstruction-settings" class="reconstruction-settings">
+              <label for="reconstruction-resolution">Resolution level
+                <input id="reconstruction-resolution" type="number" min="1" max="9" step="1" value="9">
+              </label>
+              <label for="reconstruction-num-tokens">Number of tokens (optional)
+                <input id="reconstruction-num-tokens" type="number" min="1" step="1" inputmode="numeric" placeholder="No override">
+              </label>
+              <p class="export-muted">Higher resolution levels may use more processing time and memory.</p>
+            </form>
+            <button id="start-reconstruction" type="button" class="primary export-create">Start reconstruction</button>
+            <p id="reconstruction-start-message" class="export-status" aria-live="polite"></p>
+            <h4>Jobs for selected export</h4>
+            <div id="selected-export-jobs" class="reconstruction-list"></div>
+            <h4>All reconstruction jobs</h4>
+            <div id="reconstruction-history" class="reconstruction-list"></div>
+            <div id="reconstruction-details" class="reconstruction-details"></div>
+          </section>
         </aside>
       </section>
     </main>

@@ -430,6 +430,95 @@ workspace and export history without retrying automatically. Export-history,
 export-create, and quality-report responses are applied only when they still
 belong to the currently active workspace and selected export.
 
+`/segment` also exposes a Reconstruction panel for managed reconstruction jobs
+created from immutable export snapshots. The panel checks
+`GET /api/segmentation-reconstruction/health` when a workspace is activated and
+when the user manually refreshes reconstruction status. It displays only
+browser-safe health fields returned by the API: configured state, MoGe/compiler
+availability, worker running state, global queued/running counts, device, model,
+and controlled error text.
+
+Starting reconstruction requires an active workspace, a selected export,
+loaded configured health, a valid current workspace revision, a selected export
+archive SHA-256, no export creation in progress, no other start submission in
+flight, a resolution level from `1` through `9`, and either an empty token
+override or a positive integer. Empty token override is sent as `null`. A stale
+selected export is allowed because the job uses the export's immutable saved
+masks; the UI warns that reconstruction will use those saved masks instead of
+the current editable workspace.
+
+The browser captures an immutable start-operation snapshot before posting:
+workspace ID, workspace revision, export ID, export archive SHA-256, resolution
+level, token override, operation ID, and frontend generation. Later workspace,
+export-selection, or settings changes do not mutate that request. `409 Conflict`
+does not auto-retry; the UI refreshes the workspace, export history, and
+reconstruction history and preserves useful backend wording. `503 Service
+Unavailable` refreshes health and job history because a worker submission
+failure may still have persisted a terminal failed job. Network or other
+failures clear only the start busy state and do not create fake local jobs.
+
+Reconstruction job history is loaded from
+`GET /api/segmentation-workspaces/{workspace_id}/reconstructions` and polled
+with recursive timeout polling while the active workspace has queued or running
+jobs. The browser uses backend `progress_percent` as-is and renders the stages
+as waiting, validating, MoGe, compiling, publishing, complete, failed, or
+interrupted. Polling is invalidated on workspace switch, avoids overlapping list
+requests, uses bounded backoff on failures, and refreshes immediately when the
+document becomes visible. Late responses are guarded by workspace and generation
+identity and cannot populate another workspace.
+
+The job list is sorted newest first and merged by `job_version`: newer records
+win, older polled records cannot replace newer terminal state, and a successful
+list response is authoritative for persisted jobs in that workspace. Every job
+is anchored to `export_id` and `export_archive_sha256`; selecting an export
+shows its related jobs, while the workspace-wide history keeps all persisted
+jobs including retries. If a job references an export no longer present in
+export history, the UI displays that the referenced export is unavailable and
+disables retry.
+
+The selected-job summary shows job ID/version, status, stage, progress,
+timestamps, export ID, export archive SHA, stale-at-start state, scene ID,
+semantic object count, resolution level, and token override. `status=succeeded`
+with `result.compilation_passed=true` is rendered as reconstruction succeeded
+and quality gates passed. `status=succeeded` with
+`result.compilation_passed=false` remains a successful job and is rendered as
+review recommended, not as a failed job. Failed and interrupted jobs show the
+controlled error code, message, stage, and retryable flag without stack traces.
+
+Retry is explicit and creates a new reconstruction job. It is available only for
+failed or interrupted retryable jobs whose export still exists, when health is
+configured and no start request is active. The retry uses the current workspace
+revision, the original job's export ID, the current immutable export record's
+archive SHA-256, and the previous job's resolution and token settings. The old
+job remains in history.
+
+Succeeded jobs expose browser-safe result artifacts through the exact backend
+URLs returned in the job record. The UI links to the result manifest, Unified
+scene plan, compilation reports, room plan, camera candidates, pose, placement,
+collision, confidence, support graph, Blender-neutral manifest, and sanitized
+MoGe summary, and uses a download link for MoGe geometry without fetching
+`geometry.npz` into JavaScript. Optional previews are shown in a responsive grid
+when present and skipped cleanly when absent.
+
+Compilation report JSON and sanitized MoGe summary JSON are loaded lazily when
+their details sections are opened, cached by workspace, job, and artifact URL,
+and guarded against late responses. The compilation viewer renders dynamic
+quality gates without hardcoding a fixed gate set and treats false gates as
+diagnostics. The MoGe summary viewer renders returned sanitized primitive
+browser-safe fields and defensively hides strings that resemble absolute paths
+such as `C:\`, `/...`, or `file://...`.
+
+Queued or running reconstruction jobs do not freeze the editable segmentation
+workspace. Workspace loading/upload, object creation/rename/delete, SAM prompts,
+candidate selection, SAM draft reset, manual add/remove painting, brush
+undo/redo/reset, manual save/clear, and export creation retain their existing
+guards. The reconstruction frontend prevents only a second concurrent start
+submission, starting while export creation is pending, starting without an
+archive hash, or starting while health is unavailable. Switching workspaces
+invalidates frontend polling and clears old reconstruction UI state but sends no
+backend cancellation request; returning to the old workspace reloads its
+persisted job history.
+
 ## Optimistic Concurrency
 
 Every successful object mutation increments `workspace_revision`. Object updates
@@ -614,6 +703,5 @@ The following remain intentionally outside this contract:
 - Final-mask finalization.
 - Mask finalization.
 - Export import through `/api/scenes/import`.
-- Frontend reconstruction controls.
 - Scene-package import/review integration for reconstruction jobs.
 - Blender integration.

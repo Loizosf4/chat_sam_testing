@@ -93,4 +93,33 @@ export class SegmentationWorkspaceClient {
     if(!String(url||"").startsWith("/api/segmentation-artifacts/"))throw new Error("Artifact URL must be an application URL");
     return this.request(url);
   }
+  getReconstructionHealth(){
+    return this.request("/api/segmentation-reconstruction/health");
+  }
+  startReconstruction({
+    workspaceId,
+    exportId,
+    expectedWorkspaceRevision,
+    expectedExportArchiveSha256,
+    resolutionLevel,
+    numTokens
+  }){
+    const payload={
+      expected_workspace_revision:expectedWorkspaceRevision,
+      expected_export_archive_sha256:expectedExportArchiveSha256,
+      resolution_level:resolutionLevel,
+      num_tokens:numTokens===undefined?null:numTokens
+    };
+    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/exports/${encodeURIComponent(exportId)}/reconstructions`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload)
+    });
+  }
+  listReconstructions(workspaceId){
+    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/reconstructions`);
+  }
+  getReconstruction(workspaceId,jobId){
+    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/reconstructions/${encodeURIComponent(jobId)}`);
+  }
 }
