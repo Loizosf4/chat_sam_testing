@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from backend import moge_engine
 from backend.moge_worker import WorkerError, _check_compatibility_fix
@@ -102,6 +103,37 @@ def test_run_inference_invokes_external_worker_and_parses_json(
     assert request["resolution_level"] == 7
     assert timeout == moge_engine.WORKER_REQUEST_TIMEOUT_SECONDS
     assert result["output_paths"]["geometry_npz"] == "geometry.npz"
+
+
+def test_run_inference_from_path_uses_managed_source_without_legacy_lookup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    python, repository, checkpoint = _fake_moge_paths(tmp_path)
+    _set_moge_env(monkeypatch, python=python, repository=repository, checkpoint=checkpoint)
+    image = tmp_path / "managed-source.png"
+    Image.new("RGB", (4, 3)).save(image)
+    calls = []
+
+    def fake_request(config, request, timeout):
+        calls.append((config, request, timeout))
+        return {"success": True, "output_paths": {"geometry_npz": "geometry.npz"}}
+
+    monkeypatch.setattr(moge_engine, "_request_service", fake_request)
+
+    result = moge_engine.run_inference_from_path(
+        image_path=image,
+        output_dir=tmp_path / "workspaces" / "w" / "reconstructions" / ".job" / "moge",
+        requested_outputs=moge_engine.DEFAULT_OUTPUT_TYPES,
+        resolution_level=9,
+    )
+
+    _config, request, timeout = calls[0]
+    assert request["input"] == str(image.resolve())
+    assert request["output_type"] == moge_engine.DEFAULT_OUTPUT_TYPES
+    assert request["resolution_level"] == 9
+    assert timeout == moge_engine.WORKER_REQUEST_TIMEOUT_SECONDS
+    assert result["success"] is True
 
 
 def test_worker_requires_windows_amd_compatibility_fix(tmp_path: Path) -> None:

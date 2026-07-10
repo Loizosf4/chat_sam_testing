@@ -189,6 +189,31 @@ data/segmentation_workspaces/{workspace_id}/
                 {safe_mask_filename_stem}_overlay.png
                 all_masks_overlay.png
             segmentation-export.zip
+    reconstruction-jobs/
+        {job_id}.json
+    reconstructions/
+        {job_id}/
+            moge/
+                geometry.npz
+                moge-summary.json
+                depth_preview.png
+                normal_preview.png
+                valid_mask_preview.png
+            scene/
+                unified_scene_plan.json
+                compilation_report.json
+                compilation_report.md
+                room_plan.json
+                camera_candidates.json
+                object_pose_report.json
+                placement_report.json
+                collision_report.json
+                confidence_report.json
+                support_graph.json
+                clean_scene_plan_overview.png
+            handoff/
+                blender_one_batch_manifest.json
+            reconstruction-result-manifest.json
     artifact-index.json
 ```
 
@@ -241,6 +266,31 @@ previews/
 It never contains itself, workspace JSON, the artifact index, temporary files, or
 filesystem paths.
 
+Reconstruction result artifacts use immutable keys such as:
+
+```text
+reconstruction-results/{workspace_id}/{job_id}/result-manifest
+reconstruction-results/{workspace_id}/{job_id}/scene-plan
+reconstruction-results/{workspace_id}/{job_id}/compilation-report
+reconstruction-results/{workspace_id}/{job_id}/compilation-markdown
+reconstruction-results/{workspace_id}/{job_id}/room-plan
+reconstruction-results/{workspace_id}/{job_id}/camera-candidates
+reconstruction-results/{workspace_id}/{job_id}/object-pose-report
+reconstruction-results/{workspace_id}/{job_id}/placement-report
+reconstruction-results/{workspace_id}/{job_id}/collision-report
+reconstruction-results/{workspace_id}/{job_id}/confidence-report
+reconstruction-results/{workspace_id}/{job_id}/support-graph
+reconstruction-results/{workspace_id}/{job_id}/blender-manifest
+reconstruction-results/{workspace_id}/{job_id}/moge-geometry
+reconstruction-results/{workspace_id}/{job_id}/moge-summary
+```
+
+Optional reconstruction preview artifacts include `overview`,
+`projected-primitives`, `room-camera`, `confidence-overview`,
+`ambiguity-overview`, `depth-preview`, `normal-preview`, and
+`valid-mask-preview`. Raw MoGe `metadata.json` and compiler clean-input audits
+contain local paths and are not registered as browser artifacts.
+
 ## API Endpoints
 
 ```text
@@ -260,6 +310,10 @@ DELETE /api/segmentation-workspaces/{workspace_id}/objects/{object_id}/sam-draft
 POST   /api/segmentation-workspaces/{workspace_id}/exports
 GET    /api/segmentation-workspaces/{workspace_id}/exports
 GET    /api/segmentation-workspaces/{workspace_id}/exports/{export_id}
+POST   /api/segmentation-workspaces/{workspace_id}/exports/{export_id}/reconstructions
+GET    /api/segmentation-workspaces/{workspace_id}/reconstructions
+GET    /api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}
+GET    /api/segmentation-reconstruction/health
 GET    /api/segmentation-artifacts/{kind}/{identifier}
 ```
 
@@ -288,6 +342,22 @@ object and one non-empty binary effective mask per object.
 
 Export GET responses include computed `is_stale`. The persisted immutable export
 record is not modified when staleness changes.
+
+Reconstruction creation uses `application/json`:
+
+```json
+{
+  "expected_workspace_revision": 18,
+  "expected_export_archive_sha256": "64-character-sha256",
+  "resolution_level": 9,
+  "num_tokens": null
+}
+```
+
+The response is `202 Accepted` with a queued reconstruction job. The backend
+does not infer "latest export" when an export ID is supplied. Revision or export
+archive hash conflicts return `409 Conflict`; missing workspace/export/job
+resources return `404`.
 
 ## Browser Workspace
 
@@ -465,9 +535,68 @@ The exact repository-root invocation is:
 ```
 
 `RECONSTRUCTION_PYTHON` must provide `numpy`, `Pillow`, `scipy`, `pydantic`, and
-`jsonschema`; it is deliberately separate from `MOGE_PYTHON`. The application
-backend does not consume this variable yet. Managed reconstruction APIs and
-frontend controls remain deferred.
+`jsonschema`; it is deliberately separate from `MOGE_PYTHON`.
+`RECONSTRUCTION_COMPILER_TIMEOUT_SECONDS` defaults to `1800`, and
+`RECONSTRUCTION_MAX_QUEUED_JOBS` defaults to `8`.
+
+## Managed Reconstruction Jobs
+
+A reconstruction job is persisted separately from the segmentation workspace
+under `reconstruction-jobs/{job_id}.json`. Job state never increments
+`workspace_revision`, never mutates export records, and never increments object
+versions. Workspace editing remains allowed while a job runs. The job input is
+anchored to the selected immutable export directory and managed source image.
+
+Job statuses are `queued`, `running`, `succeeded`, `failed`, and `interrupted`.
+Job stages are `queued`, `validating`, `moge`, `compiling`, `publishing`,
+`complete`, `failed`, and `interrupted`. `job_version` starts at `1` and
+increments for each persisted state transition. Progress is coarse stage
+progress: queued `0`, validating `5`, MoGe `10`, compiling `60`, publishing
+`95`, and terminal states `100`.
+
+The start route validates the workspace revision, export archive SHA-256,
+managed export artifacts, export object ID set, source image artifact, duplicate
+active jobs for the workspace/export pair, and queue limit under the workspace
+lock. Stale exports are allowed because exports are immutable; the job records
+`export_was_stale_at_start`.
+
+Execution is serialized by an in-process worker with one global reconstruction
+worker. API requests return after queueing. Jobs are persisted before background
+execution, and queued/running jobs found after application startup are marked
+`interrupted` rather than replayed. Retry is creating a new job. Active
+queued/running jobs block workspace deletion with `409 Conflict`; terminal jobs
+do not.
+
+The runner calls MoGe through the existing isolated worker using an internal
+trusted-path method against the workspace-managed source image. It always
+requests the output set needed by the compiler: `geometry_npz`, `points`,
+`depth`, `normal`, `mask`, `intrinsics`, and `previews`. The legacy
+`run_inference(image_id=...)` and `/api/moge/infer` path remain unchanged.
+
+After MoGe, the runner invokes the generic compiler without a shell:
+
+```text
+<RECONSTRUCTION_PYTHON> -m experiments.moge_scene_graph_spike.src.compile_unified_v3_scene
+  --mode clean_reconstruction
+  --sam-dir <immutable-export-directory>
+  --source-image <managed-source-image>
+  --moge-dir <job-staging>/moge
+  --output-dir <job-staging>/scene
+  --scene-id <stable-scene-id>
+  --handoff-dir <job-staging>/handoff
+```
+
+The compiler must exit `0`, emit exactly one JSON summary, report
+`success=true`, preserve the requested scene ID, and produce object IDs exactly
+matching export `mask_id` values. `compilation_report.passed=false` is still a
+successful reconstruction job; it means the result requires review.
+
+Successful publication writes `reconstruction-result-manifest.json`, a
+sanitized `moge-summary.json`, scene outputs, handoff outputs, and artifact-index
+entries atomically. If publication fails, the artifact index and output
+directory are rolled back and the job is failed. Reconstruction artifact URLs are
+served through `/api/segmentation-artifacts/reconstruction-results/...` with
+immutable private caching and hash verification.
 
 ## Deferred Features
 
@@ -477,6 +606,6 @@ The following remain intentionally outside this contract:
 - Final-mask finalization.
 - Mask finalization.
 - Export import through `/api/scenes/import`.
-- MoGe pipeline integration.
-- MoGe execution.
+- Frontend reconstruction controls.
+- Scene-package import/review integration for reconstruction jobs.
 - Blender integration.

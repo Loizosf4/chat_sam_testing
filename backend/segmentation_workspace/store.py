@@ -389,6 +389,18 @@ class SegmentationWorkspaceStore:
                 "workspace revision",
             )
             target = self._workspace_dir(workspace_id)
+            jobs_dir = target / "reconstruction-jobs"
+            if jobs_dir.is_dir():
+                for job_path in jobs_dir.glob("*.json"):
+                    try:
+                        job = json.loads(job_path.read_text(encoding="utf-8"))
+                    except Exception:
+                        continue
+                    if job.get("status") in {"queued", "running"}:
+                        raise SegmentationWorkspaceStoreError(
+                            "workspace has an active reconstruction job",
+                            409,
+                        )
             shutil.rmtree(target)
 
     def create_object(
@@ -1022,11 +1034,11 @@ class SegmentationWorkspaceStore:
                 shutil.rmtree(child, ignore_errors=True)
 
     def resolve_artifact(self, kind: str, identifier: str) -> tuple[Path, str]:
-        if kind not in {"source-images", "sam-candidates", "manual-masks", "workspace-exports"}:
+        if kind not in {"source-images", "sam-candidates", "manual-masks", "workspace-exports", "reconstruction-results"}:
             raise SegmentationWorkspaceStoreError("artifact not found", 404)
         if kind == "source-images" and (not valid_id(identifier) or "/" in identifier or "\\" in identifier):
             raise SegmentationWorkspaceStoreError("invalid artifact identifier")
-        if kind in {"sam-candidates", "manual-masks", "workspace-exports"} and (
+        if kind in {"sam-candidates", "manual-masks", "workspace-exports", "reconstruction-results"} and (
             not identifier
             or "\\" in identifier
             or any(part in {"", ".", ".."} for part in identifier.split("/"))

@@ -169,6 +169,8 @@ invocation coverage, protected-input reads, room/camera completion, placement
 validity, and semantic collisions. Office-label expectations remain only in the
 separate `regression_audit` fixture workflow.
 
-`RECONSTRUCTION_PYTHON` is documented in the root `.env.example` for the next
-managed backend-job phase. The backend does not use it yet. Managed job APIs and
-frontend reconstruction controls remain deferred.
+`RECONSTRUCTION_PYTHON` is documented in the root `.env.example` and is used by
+the managed segmentation reconstruction-job backend. The backend invokes this
+compiler with explicit export, source-image, MoGe, scene-output, scene-ID, and
+handoff directories. Frontend reconstruction controls and scene-package
+import/review of completed jobs remain deferred.

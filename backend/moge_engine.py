@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
+from PIL import Image
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -102,6 +103,45 @@ def run_inference(
     request: dict[str, Any] = {
         "command": "infer",
         "input": str(image_path),
+        "output_dir": str(destination),
+        "resolution_level": resolution_level,
+        "output_type": outputs,
+    }
+    if num_tokens is not None:
+        if num_tokens < 1:
+            raise MogeEngineError("num_tokens must be a positive integer.")
+        request["num_tokens"] = num_tokens
+    return _request_service(config, request, timeout=WORKER_REQUEST_TIMEOUT_SECONDS)
+
+
+def run_inference_from_path(
+    *,
+    image_path: Path,
+    output_dir: Path,
+    requested_outputs: list[str] | None = None,
+    resolution_level: int = 9,
+    num_tokens: int | None = None,
+) -> dict[str, Any]:
+    """Run MoGe against an internally resolved, server-controlled image path."""
+    config = _read_config()
+    source = Path(image_path).resolve()
+    if not source.is_file() or source.suffix.lower() not in VALID_IMAGE_SUFFIXES:
+        raise MogeEngineError("source image is not a supported image", 400)
+    try:
+        with Image.open(source) as image:
+            image.verify()
+    except Exception as exc:
+        raise MogeEngineError("source image is invalid", 400) from exc
+    destination = Path(output_dir).resolve()
+    outputs = requested_outputs or DEFAULT_OUTPUT_TYPES
+    unsupported = sorted(set(outputs) - set(DEFAULT_OUTPUT_TYPES))
+    if unsupported:
+        raise MogeEngineError(f"unsupported MoGe output type(s): {', '.join(unsupported)}")
+    if resolution_level < 1 or resolution_level > 9:
+        raise MogeEngineError("resolution_level must be between 1 and 9")
+    request: dict[str, Any] = {
+        "command": "infer",
+        "input": str(source),
         "output_dir": str(destination),
         "resolution_level": resolution_level,
         "output_type": outputs,

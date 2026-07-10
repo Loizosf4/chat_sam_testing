@@ -13,6 +13,7 @@ from backend.blender_sync_proxy import router as blender_sync_router
 from backend.scene_package.api import artifact_router, router as scene_package_router
 from backend.segmentation_workspace.api import (
     artifact_router as segmentation_artifact_router,
+    reconstruction_router as segmentation_reconstruction_router,
     router as segmentation_workspace_router,
 )
 
@@ -86,6 +87,7 @@ app.include_router(scene_package_router)
 app.include_router(artifact_router)
 app.include_router(segmentation_workspace_router)
 app.include_router(segmentation_artifact_router)
+app.include_router(segmentation_reconstruction_router)
 app.include_router(blender_sync_router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")

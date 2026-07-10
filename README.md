@@ -171,3 +171,36 @@ validity mask, and normalized intrinsics. It does not require GLB or PLY output
 for the checked-in scene-package flow. SAM masks and MoGe geometry are produced
 independently from the same source image; downstream reconstruction filters the
 full-image MoGe maps with the final SAM object masks.
+
+## Managed Segmentation Reconstruction Jobs
+
+Pre-MoGe segmentation exports can now start persistent managed reconstruction
+jobs through the backend API. A job is anchored to one immutable segmentation
+export and the workspace-managed source image, runs MoGe through the isolated
+worker, then invokes the generic Unified V3 compiler with `RECONSTRUCTION_PYTHON`.
+Jobs are stored under the owning workspace in `reconstruction-jobs/`, and
+successful immutable outputs are published under `reconstructions/{job_id}/`.
+
+Required local settings:
+
+```powershell
+$env:RECONSTRUCTION_PYTHON = '<path-to-reconstruction-venv-python.exe>'
+$env:RECONSTRUCTION_COMPILER_TIMEOUT_SECONDS = '1800'
+$env:RECONSTRUCTION_MAX_QUEUED_JOBS = '8'
+```
+
+The reconstruction Python must include `numpy`, `Pillow`, `scipy`, `pydantic`,
+and `jsonschema`. Job status is available through:
+
+```text
+POST /api/segmentation-workspaces/{workspace_id}/exports/{export_id}/reconstructions
+GET  /api/segmentation-workspaces/{workspace_id}/reconstructions
+GET  /api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}
+GET  /api/segmentation-reconstruction/health
+```
+
+The backend processes one reconstruction at a time. Queued or running jobs are
+marked `interrupted` after restart; retry means creating a new job. Active jobs
+block workspace deletion, but normal object edits and new exports remain
+allowed. Frontend reconstruction controls and scene-package import/review of
+completed reconstruction jobs remain deferred.

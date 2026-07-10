@@ -13,10 +13,13 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend import sam_engine
+from backend import moge_engine, reconstruction_engine
 
 from .models import SamPromptPoint
 from . import manual_masks
 from . import service
+from .reconstruction_jobs import ReconstructionJobManager, ReconstructionJobStore
+from .reconstruction_models import ReconstructionJobRequest
 from .store import SegmentationWorkspaceStore, SegmentationWorkspaceStoreError
 
 
@@ -24,6 +27,8 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 STORE = SegmentationWorkspaceStore(
     os.environ.get("SEGMENTATION_WORKSPACE_ROOT", ROOT_DIR / "data" / "segmentation_workspaces")
 )
+RECONSTRUCTION_JOBS = ReconstructionJobStore(STORE)
+RECONSTRUCTION_MANAGER = ReconstructionJobManager(RECONSTRUCTION_JOBS)
 MAX_UPLOAD_BYTES = 128 * 1024 * 1024
 
 
@@ -88,6 +93,7 @@ class CreateWorkspaceExportRequest(BaseModel):
 
 router = APIRouter(prefix="/api/segmentation-workspaces", tags=["segmentation-workspaces"])
 artifact_router = APIRouter(prefix="/api/segmentation-artifacts", tags=["segmentation-artifacts"])
+reconstruction_router = APIRouter(prefix="/api/segmentation-reconstruction", tags=["segmentation-reconstruction"])
 
 
 def _error(exc: SegmentationWorkspaceStoreError) -> HTTPException:
@@ -96,6 +102,18 @@ def _error(exc: SegmentationWorkspaceStoreError) -> HTTPException:
 
 def _sam_error(exc: sam_engine.SamEngineError) -> HTTPException:
     return HTTPException(status_code=exc.status_code, detail=str(exc))
+
+
+def _validate_reconstruction_environment() -> None:
+    try:
+        moge_engine.validate_model_config()
+    except moge_engine.MogeEngineError as exc:
+        message = reconstruction_engine.sanitize_user_message(exc)
+        raise HTTPException(status_code=503, detail=message) from exc
+    try:
+        reconstruction_engine.reconstruction_python(validate_exists=True)
+    except reconstruction_engine.ReconstructionEngineError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 async def _save_upload(upload: UploadFile, destination: Path, *, max_bytes: int = MAX_UPLOAD_BYTES) -> None:
@@ -181,6 +199,58 @@ def get_export(workspace_id: str, export_id: str) -> dict[str, Any]:
         return _export_response(workspace_id, export_id)
     except SegmentationWorkspaceStoreError as exc:
         raise _error(exc) from exc
+
+
+@router.post("/{workspace_id}/exports/{export_id}/reconstructions", status_code=202)
+def start_reconstruction(workspace_id: str, export_id: str, payload: ReconstructionJobRequest) -> dict[str, Any]:
+    _validate_reconstruction_environment()
+    try:
+        job = RECONSTRUCTION_JOBS.create_job(workspace_id, export_id, payload)
+        RECONSTRUCTION_MANAGER.submit(job)
+        return job.model_dump(mode="json")
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+
+
+@router.get("/{workspace_id}/reconstructions")
+def list_reconstructions(workspace_id: str) -> list[dict[str, Any]]:
+    try:
+        return [job.model_dump(mode="json") for job in RECONSTRUCTION_JOBS.list_jobs(workspace_id)]
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+
+
+@router.get("/{workspace_id}/reconstructions/{job_id}")
+def get_reconstruction(workspace_id: str, job_id: str) -> dict[str, Any]:
+    try:
+        return RECONSTRUCTION_JOBS.get_job(workspace_id, job_id).model_dump(mode="json")
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+
+
+@reconstruction_router.get("/health")
+def reconstruction_health() -> dict[str, Any]:
+    moge_status = moge_engine.get_status()
+    compiler_status = reconstruction_engine.compiler_health()
+    counts = RECONSTRUCTION_JOBS.active_count_by_status()
+    moge_configured = bool(moge_status.get("configured"))
+    compiler_configured = bool(compiler_status.get("compiler_configured"))
+    error = None
+    if not moge_configured:
+        error = "MoGe is not configured."
+    elif not compiler_status.get("configured"):
+        error = compiler_status.get("error") or "Reconstruction compiler is not configured."
+    return {
+        "configured": moge_configured and bool(compiler_status.get("configured")),
+        "moge_configured": moge_configured,
+        "compiler_configured": compiler_configured,
+        "worker_running": bool(moge_status.get("worker_running")),
+        "device": moge_status.get("device") if moge_configured else None,
+        "model": moge_status.get("model") if moge_configured else None,
+        "queue_running": counts["running"],
+        "queue_queued": counts["queued"],
+        "error": error,
+    }
 
 
 @router.post("/{workspace_id}/objects", status_code=201)
@@ -371,7 +441,7 @@ def get_segmentation_artifact(kind: str, identifier: str) -> FileResponse:
                 "no-store"
                 if kind in {"sam-candidates", "manual-masks"}
                 else "private, max-age=31536000, immutable"
-                if kind == "workspace-exports"
+                if kind in {"workspace-exports", "reconstruction-results"}
                 else "private, max-age=3600"
             ),
         },
