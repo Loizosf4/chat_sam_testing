@@ -122,4 +122,14 @@ export class SegmentationWorkspaceClient {
   getReconstruction(workspaceId,jobId){
     return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/reconstructions/${encodeURIComponent(jobId)}`);
   }
+  getReviewSceneStatus(workspaceId,jobId){
+    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/reconstructions/${encodeURIComponent(jobId)}/review-scene`);
+  }
+  createReviewScene({workspaceId,jobId,expectedJobVersion,acknowledgeReviewRequired=false}){
+    return this.request(`/api/segmentation-workspaces/${encodeURIComponent(workspaceId)}/reconstructions/${encodeURIComponent(jobId)}/review-scene`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({expected_job_version:expectedJobVersion,acknowledge_review_required:Boolean(acknowledgeReviewRequired)})
+    });
+  }
 }

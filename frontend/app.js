@@ -42,7 +42,14 @@ function renderList(){if(!store.scene)return;const objects=store.scene.semantic_
 function renderDetails(){$("#object-details").innerHTML=detailsHtml(currentObject(),revisions,store.labelDraft,store.maskDirty)}
 function renderSaveState(){const el=$("#save-state");el.classList.toggle("is-saved",!store.unsaved);el.lastChild.textContent=store.unsaved?"Unsaved changes":"All changes saved";$("#undo").disabled=!editor?.undoStack.length;$("#redo").disabled=!editor?.redoStack.length;$("#reset-mask").disabled=!editor?.dirty}
 function renderStaleness(){const revisionsById=new Map((store.scene?.mask_revisions??[]).map(r=>[r.revision_id,r]));const stale=(store.scene?.semantic_objects??[]).some(o=>["invalidated","recompute_required"].includes(revisionsById.get(o.mask_revision)?.geometry_invalidation_status));$("#reconstruction-banner").hidden=!stale}
-function renderAll(){renderList();renderDetails();renderSaveState();renderStaleness();requestDraw()}
+function renderProvenance(){
+  const link=$("#back-to-segmentation");
+  const metadata=store.scene?.metadata||{};
+  const workspaceId=metadata.import_origin==="segmentation_reconstruction_job"?metadata.segmentation_workspace_id:null;
+  link.hidden=!workspaceId;
+  if(workspaceId)link.href=`/segment?workspace=${encodeURIComponent(workspaceId)}`;
+}
+function renderAll(){renderList();renderDetails();renderSaveState();renderStaleness();renderProvenance();requestDraw()}
 
 async function selectObject(id,fromBlender=false){if(id===store.selectedObjectId){if(!fromBlender&&currentObject())await bridge.select(currentObject()).catch(error=>renderBridgeStatus({status:"error",detail:error.message}));return}if(store.maskDirty&&!confirm("Discard unsaved mask edits and select another object?"))return;store.select(id);cycle.reset();await prepareSelected();if(!fromBlender&&currentObject())await bridge.select(currentObject()).catch(error=>renderBridgeStatus({status:"error",detail:error.message}))}
 function eventPoint(event){const rect=canvas.getBoundingClientRect();return{x:event.clientX-rect.left,y:event.clientY-rect.top}}

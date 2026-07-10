@@ -8,6 +8,7 @@ import os
 import shutil
 import tempfile
 import threading
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,16 @@ class SceneStoreError(RuntimeError):
     def __init__(self, message: str, status_code: int = 400):
         super().__init__(message)
         self.status_code = status_code
+
+
+@dataclass(frozen=True)
+class SceneInputArtifact:
+    artifact_url_key: str
+    artifact_id: str
+    identifier: str
+    source_path: Path
+    relative_path: str
+    media_type: str
 
 
 def valid_id(value: str) -> bool:
@@ -195,7 +206,15 @@ class SceneStore:
             return path, entry["media_type"]
         raise SceneStoreError("artifact not found", 404)
 
-    def import_scene(self, sam_dir: Path, unified_manifest: Path, source_image: Path) -> Scene:
+    def import_scene(
+        self,
+        sam_dir: Path,
+        unified_manifest: Path,
+        source_image: Path,
+        *,
+        provenance: dict[str, Any] | None = None,
+        additional_scene_inputs: list[SceneInputArtifact] | None = None,
+    ) -> Scene:
         metadata_path = sam_dir / "metadata.json"
         if not metadata_path.is_file():
             raise SceneStoreError("SAM archive must contain metadata.json")
@@ -222,6 +241,8 @@ class SceneStore:
             raise SceneStoreError(str(exc)) from exc
         if (source_width, source_height) != (scene.image_dimensions.width, scene.image_dimensions.height):
             raise SceneStoreError("source image dimensions do not match SAM metadata")
+        if provenance:
+            scene.metadata = {**scene.metadata, **provenance}
 
         target = self._scene_dir(scene.scene_id)
         with self._lock(scene.scene_id):
@@ -289,6 +310,24 @@ class SceneStore:
                         media_type="application/json",
                         sha256=sha256_file(quality),
                     )
+                for extra in additional_scene_inputs or []:
+                    if not extra.source_path.is_file():
+                        raise SceneStoreError(f"scene input artifact is missing: {extra.artifact_url_key}", 500)
+                    if extra.identifier.startswith("/") or "\\" in extra.identifier or any(part in {"", ".", ".."} for part in extra.identifier.split("/")):
+                        raise SceneStoreError("invalid scene input artifact identifier", 500)
+                    register(
+                        f"scene-inputs/{extra.identifier}",
+                        extra.source_path,
+                        extra.relative_path,
+                        extra.media_type,
+                    )
+                    scene.artifact_urls[extra.artifact_url_key] = ArtifactReference(
+                        artifact_id=extra.artifact_id,
+                        url=f"/artifacts/scene-inputs/{extra.identifier}",
+                        media_type=extra.media_type,
+                        sha256=sha256_file(extra.source_path),
+                    )
+                scene = Scene.model_validate(scene.model_dump(mode="json"))
                 atomic_bytes(staging / "scene.json", dump_scene(scene).encode())
                 atomic_json(staging / "artifact-index.json", index)
                 os.replace(staging, target)

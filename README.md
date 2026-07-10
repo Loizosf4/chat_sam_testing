@@ -202,5 +202,32 @@ GET  /api/segmentation-reconstruction/health
 The backend processes one reconstruction at a time. Queued or running jobs are
 marked `interrupted` after restart; retry means creating a new job. Active jobs
 block workspace deletion, but normal object edits and new exports remain
-allowed. Frontend reconstruction controls and scene-package import/review of
-completed reconstruction jobs remain deferred.
+allowed.
+
+Successful completed jobs can be explicitly added to scene review from the
+selected job details in `/segment`. The bridge is server-side and trusted: it
+uses the exact immutable export, exact Unified scene plan, managed source image,
+and managed reconstruction artifacts already stored by the backend. The browser
+does not upload, download, or re-upload the export ZIP, scene plan, MoGe
+geometry, or source image, and it does not call the generic multipart
+`/api/scenes/import` endpoint.
+
+```text
+GET  /api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}/review-scene
+POST /api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}/review-scene
+```
+
+The POST requires the current job version and is idempotent. A first import
+returns a self-contained scene package and later calls return the existing scene
+when provenance matches. Jobs with compiler quality gates passed can be imported
+directly. Jobs with `compilation_passed=false` are still successful, but require
+an explicit review-required acknowledgement before import.
+
+Imported scenes preserve stable object IDs and reconstruction provenance, copy
+the source image, SAM masks/overlays, Unified scene plan, reconstruction result
+manifest, compilation reports, MoGe geometry, and sanitized MoGe summary into
+the scene-package store, and open in the existing review UI with `/?scene=...`.
+They remain available after the segmentation workspace is deleted. The review UI
+shows a `Back to segmentation workspace` link for scenes created from
+reconstruction-job provenance. Blender execution and asset replacement remain
+separate, deferred steps.

@@ -5,6 +5,7 @@ import {SegmentationWorkspaceClient} from "../../frontend/segment-api.js";
 import {
   ReconstructionWorkspaceState,
   createReconstructionRequestSnapshot,
+  createReviewSceneRequestSnapshot,
   hidePathLikeValue,
   isActiveReconstructionJob,
   isTerminalReconstructionJob,
@@ -12,9 +13,12 @@ import {
   normalizeMogeSummary,
   normalizeReconstructionHealth,
   normalizeReconstructionJob,
+  normalizeReviewSceneStatus,
   reconstructionOutcomeLabel,
   reconstructionRequestPayload,
   reconstructionStartReadiness,
+  reviewSceneReadiness,
+  reviewSceneRequestPayload,
   sortReconstructionJobsNewestFirst
 } from "../../frontend/segment-reconstructions.js";
 
@@ -341,4 +345,94 @@ test("reconstruction API methods encode ids and keep artifact fetching browser-s
   assert.equal(calls[3].url,"/api/segmentation-workspaces/workspace%2Fa/reconstructions/job%2Fa");
   assert.equal(calls[4].url,"/api/segmentation-artifacts/reconstruction-results/w/j/compilation-report");
   assert.throws(()=>api.getJsonArtifact("C:\\tmp\\geometry.npz"),/Artifact URL must be an application URL/);
+});
+
+test("review-scene status normalization keeps only browser-safe response fields",()=>{
+  const normalized=normalizeReviewSceneStatus({
+    imported:true,
+    created:false,
+    workspace_id:"workspace-a",
+    export_id:"export-a",
+    job_id:"job-a",
+    scene_id:"scene-a",
+    scene_url:"/?scene=from-backend",
+    package_revision:1,
+    compilation_passed:true,
+    semantic_object_count:1,
+    object_ids:["object-a"],
+    extra:"ignored"
+  });
+  assert.deepEqual(Object.keys(normalized),["imported","created","workspace_id","export_id","job_id","scene_id","scene_url","package_revision","compilation_passed","semantic_object_count","object_ids"]);
+  assert.equal(normalized.scene_url,"/?scene=from-backend");
+  assert.equal(normalizeReviewSceneStatus({imported:false,scene_url:null}).scene_url,null);
+});
+
+test("review-scene readiness requires a succeeded result and acknowledgement only when needed",()=>{
+  const passed=succeeded({result:{...succeeded().result,compilation_passed:true}});
+  assert.equal(reviewSceneReadiness({workspace,job:job({status:"running",stage:"moge",progress_percent:10}),acknowledgement:false}).ready,false);
+  assert.equal(reviewSceneReadiness({workspace,job:succeeded(),acknowledgement:false}).reasons[0].code,"acknowledgement_required");
+  assert.equal(reviewSceneReadiness({workspace,job:succeeded(),acknowledgement:true}).ready,true);
+  assert.equal(reviewSceneReadiness({workspace,job:passed,acknowledgement:false}).ready,true);
+  assert.equal(reviewSceneReadiness({workspace,job:passed,createOperation:{jobId:"other"}}).reasons[0].code,"create_active");
+  assert.equal(reviewSceneReadiness({workspace,job:passed,statusLoading:true}).reasons[0].code,"status_loading");
+});
+
+test("review-scene request snapshot captures immutable job values",()=>{
+  const mutableWorkspace={...workspace};
+  const mutableJob=succeeded();
+  const snapshot=createReviewSceneRequestSnapshot({operationId:9,workspace:mutableWorkspace,job:mutableJob,acknowledgement:true,stateGeneration:4});
+  mutableWorkspace.workspace_id="changed";
+  mutableJob.job_version=99;
+  assert.deepEqual(snapshot,{operationId:9,workspaceId:"workspace-a",workspaceGeneration:4,jobId:"job-a",jobVersion:1,sceneId:"scene-a",compilationPassed:false,acknowledgeReviewRequired:true});
+  assert.deepEqual(reviewSceneRequestPayload(snapshot),{expected_job_version:1,acknowledge_review_required:true});
+});
+
+test("review-scene state guards workspace, job, version, status generations, and create ownership",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const current=succeeded();
+  state.upsertJob(current);
+  const selected=state.selectedJob();
+  const statusContext=state.beginReviewStatus(selected);
+  state.setReviewStatus(statusContext,{imported:false,workspace_id:"workspace-a",job_id:"job-a",scene_id:"scene-a",compilation_passed:false,semantic_object_count:1,object_ids:["object-a"]});
+  state.finishReviewStatus(statusContext);
+  assert.equal(state.reviewStatus(selected).imported,false);
+  const old=statusContext;
+  const newer=state.beginReviewStatus(selected);
+  assert.equal(state.setReviewStatus(old,{imported:true,workspace_id:"workspace-a",job_id:"job-a",scene_id:"scene-a"}),false);
+  state.setReviewStatus(newer,{imported:true,workspace_id:"workspace-a",job_id:"job-a",scene_id:"scene-a",scene_url:"/?scene=scene-a",compilation_passed:false,semantic_object_count:1,object_ids:["object-a"]});
+  state.finishReviewStatus(newer);
+  assert.equal(state.reviewStatus(selected).imported,true);
+  const snapshot=state.reviewSnapshot(workspace,selected,true);
+  assert.equal(state.beginReviewCreate(snapshot),true);
+  assert.equal(state.beginReviewCreate(snapshot),false);
+  assert.equal(state.isCurrentReviewCreate(snapshot),true);
+  state.selectJob("missing");
+  assert.equal(state.isCurrentReviewCreate(snapshot),true);
+  state.finishReviewCreate(snapshot);
+  const late=state.beginReviewStatus(selected);
+  state.reset("workspace-b");
+  assert.equal(state.setReviewStatus(late,{imported:true}),false);
+  assert.equal(state.reviewStatusByJob.size,0);
+});
+
+test("review-scene API methods encode ids and send primitive payload",async()=>{
+  const calls=[];
+  global.fetch=async(url,options={})=>{calls.push({url,options});return{ok:true,json:async()=>({ok:true})}};
+  const api=new SegmentationWorkspaceClient();
+  await api.getReviewSceneStatus("workspace/a","job/a");
+  await api.createReviewScene({workspaceId:"workspace/a",jobId:"job/a",expectedJobVersion:7,acknowledgeReviewRequired:true});
+  assert.equal(calls[0].url,"/api/segmentation-workspaces/workspace%2Fa/reconstructions/job%2Fa/review-scene");
+  assert.equal(calls[1].url,"/api/segmentation-workspaces/workspace%2Fa/reconstructions/job%2Fa/review-scene");
+  assert.deepEqual(JSON.parse(calls[1].options.body),{expected_job_version:7,acknowledge_review_required:true});
+});
+
+test("review-scene UI source uses backend scene_url and provenance back-link",()=>{
+  const segmentSource=readFileSync(new URL("../../frontend/segment-app.js",import.meta.url),"utf8");
+  assert.match(segmentSource,/href="\$\{esc\(status\.scene_url\)\}" target="_blank" rel="noopener"/);
+  assert.doesNotMatch(segmentSource,/\?scene=\$\{job\.scene_id\}/);
+  assert.match(segmentSource,/This reconstruction completed successfully, but compiler quality gates require review\./);
+  const reviewSource=readFileSync(new URL("../../frontend/app.js",import.meta.url),"utf8");
+  assert.match(reviewSource,/metadata\.import_origin==="segmentation_reconstruction_job"/);
+  assert.match(reviewSource,/\/segment\?workspace=\$\{encodeURIComponent\(workspaceId\)\}/);
 });

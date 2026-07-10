@@ -8,18 +8,20 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend import sam_engine
 from backend import moge_engine, reconstruction_engine
+from backend.scene_package.api import STORE as SCENE_PACKAGE_STORE
 
 from .models import SamPromptPoint
 from . import manual_masks
 from . import service
 from .reconstruction_jobs import ReconstructionJobManager, ReconstructionJobStore
 from .reconstruction_models import ReconstructionJobRequest
+from .review_scene import CreateReviewSceneRequest, ReconstructionReviewSceneBridge
 from .store import SegmentationWorkspaceStore, SegmentationWorkspaceStoreError
 
 
@@ -29,6 +31,7 @@ STORE = SegmentationWorkspaceStore(
 )
 RECONSTRUCTION_JOBS = ReconstructionJobStore(STORE)
 RECONSTRUCTION_MANAGER = ReconstructionJobManager(RECONSTRUCTION_JOBS)
+REVIEW_SCENES = ReconstructionReviewSceneBridge(STORE, RECONSTRUCTION_JOBS, SCENE_PACKAGE_STORE)
 MAX_UPLOAD_BYTES = 128 * 1024 * 1024
 
 
@@ -226,6 +229,29 @@ def get_reconstruction(workspace_id: str, job_id: str) -> dict[str, Any]:
         return RECONSTRUCTION_JOBS.get_job(workspace_id, job_id).model_dump(mode="json")
     except SegmentationWorkspaceStoreError as exc:
         raise _error(exc) from exc
+
+
+@router.get("/{workspace_id}/reconstructions/{job_id}/review-scene")
+def get_reconstruction_review_scene(workspace_id: str, job_id: str) -> dict[str, Any]:
+    try:
+        return REVIEW_SCENES.status(workspace_id, job_id).model_dump(mode="json")
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+
+
+@router.post("/{workspace_id}/reconstructions/{job_id}/review-scene")
+def create_reconstruction_review_scene(
+    workspace_id: str,
+    job_id: str,
+    payload: CreateReviewSceneRequest,
+    response: Response,
+) -> dict[str, Any]:
+    try:
+        result = REVIEW_SCENES.create(workspace_id, job_id, payload)
+    except SegmentationWorkspaceStoreError as exc:
+        raise _error(exc) from exc
+    response.status_code = 201 if result.created else 200
+    return result.model_dump(mode="json")
 
 
 @reconstruction_router.get("/health")

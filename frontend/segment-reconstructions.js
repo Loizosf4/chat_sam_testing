@@ -163,6 +163,72 @@ export function reconstructionRequestPayload(snapshot){
   };
 }
 
+export function reviewSceneKey(workspaceId,jobId,jobVersion){
+  return `${String(workspaceId||"")}:${String(jobId||"")}:${Number(jobVersion||0)}`;
+}
+
+export function normalizeReviewSceneStatus(status={}){
+  return {
+    imported:typeof status.imported==="boolean"?status.imported:false,
+    created:typeof status.created==="boolean"?status.created:false,
+    workspace_id:String(status.workspace_id||""),
+    export_id:String(status.export_id||""),
+    job_id:String(status.job_id||""),
+    scene_id:String(status.scene_id||""),
+    scene_url:status.scene_url===null||status.scene_url===undefined?null:String(status.scene_url),
+    package_revision:status.package_revision===null||status.package_revision===undefined?null:Number(status.package_revision),
+    compilation_passed:typeof status.compilation_passed==="boolean"?status.compilation_passed:false,
+    semantic_object_count:Number(status.semantic_object_count||0),
+    object_ids:Array.isArray(status.object_ids)?status.object_ids.map(String):[]
+  };
+}
+
+export function reviewSceneReadiness({
+  workspace,
+  job,
+  acknowledgement=false,
+  createOperation=null,
+  statusLoading=false
+}={}){
+  const reasons=[];
+  if(!workspace)reasons.push({code:"no_workspace",message:"Load a workspace before creating a review scene."});
+  if(!job)reasons.push({code:"no_job",message:"Select a reconstruction job."});
+  if(createOperation)reasons.push({code:"create_active",message:"A review-scene import is already in progress."});
+  if(statusLoading)reasons.push({code:"status_loading",message:"Wait for review-scene status to finish loading."});
+  if(job&&job.status!=="succeeded")reasons.push({code:"not_succeeded",message:"Only successful reconstruction jobs can be added to scene review."});
+  if(job&&!job.result)reasons.push({code:"missing_result",message:"The selected reconstruction has no result yet."});
+  if(job&&!job.scene_id)reasons.push({code:"missing_scene_id",message:"The selected reconstruction has no scene ID."});
+  if(job&&!Number.isFinite(Number(job.job_version)))reasons.push({code:"missing_job_version",message:"The selected reconstruction job version is unavailable."});
+  if(job?.result?.compilation_passed===false&&!acknowledgement)reasons.push({code:"acknowledgement_required",message:"Confirm that compiler quality gates require review before creating the scene."});
+  return {ready:reasons.length===0,reasons,reviewRequired:job?.result?.compilation_passed===false};
+}
+
+export function createReviewSceneRequestSnapshot({
+  operationId,
+  workspace,
+  job,
+  acknowledgement,
+  stateGeneration
+}){
+  return {
+    operationId:Number(operationId),
+    workspaceId:String(workspace.workspace_id),
+    workspaceGeneration:Number(stateGeneration),
+    jobId:String(job.job_id),
+    jobVersion:Number(job.job_version),
+    sceneId:String(job.scene_id),
+    compilationPassed:job.result?.compilation_passed===true,
+    acknowledgeReviewRequired:Boolean(acknowledgement)
+  };
+}
+
+export function reviewSceneRequestPayload(snapshot){
+  return {
+    expected_job_version:snapshot.jobVersion,
+    acknowledge_review_required:Boolean(snapshot.acknowledgeReviewRequired)
+  };
+}
+
 export function reconstructionStartReadiness({
   workspace,
   exportRecord,
@@ -270,6 +336,12 @@ export class ReconstructionWorkspaceState {
     this.diagnosticGenerationByKey=new Map();
     this.diagnosticLoading=new Map();
     this.diagnosticError=new Map();
+    this.reviewStatusByJob=new Map();
+    this.reviewLoadingByJob=new Map();
+    this.reviewErrorByJob=new Map();
+    this.reviewGenerationByJob=new Map();
+    this.reviewCreateOperation=null;
+    this.reviewAcknowledgementByJob=new Map();
   }
   beginHealth(workspaceId){
     if(this.workspaceId!==workspaceId)this.reset(workspaceId);
@@ -341,6 +413,40 @@ export class ReconstructionWorkspaceState {
   selectedJob(){return this.jobs.find(job=>job.job_id===this.selectedJobId)||null}
   jobsForExport(exportId){return this.jobs.filter(job=>job.export_id===exportId)}
   hasActiveJobs(){return this.jobs.some(isActiveReconstructionJob)}
+  reviewKey(job){return reviewSceneKey(this.workspaceId,job?.job_id,job?.job_version)}
+  reviewStatus(job){return this.reviewStatusByJob.get(this.reviewKey(job))||null}
+  reviewLoading(job){return Boolean(this.reviewLoadingByJob.get(this.reviewKey(job)))}
+  reviewError(job){return this.reviewErrorByJob.get(this.reviewKey(job))||""}
+  reviewAcknowledgement(job){return Boolean(this.reviewAcknowledgementByJob.get(this.reviewKey(job)))}
+  setReviewAcknowledgement(job,value){this.reviewAcknowledgementByJob.set(this.reviewKey(job),Boolean(value))}
+  beginReviewStatus(job){
+    const key=this.reviewKey(job);
+    const generation=(this.reviewGenerationByJob.get(key)||0)+1;
+    this.reviewGenerationByJob.set(key,generation);
+    this.reviewLoadingByJob.set(key,true);
+    this.reviewErrorByJob.delete(key);
+    return {workspaceId:this.workspaceId,workspaceGeneration:this.workspaceGeneration,jobId:job.job_id,jobVersion:job.job_version,key,generation};
+  }
+  isCurrentReviewStatus(context){
+    return this.workspaceId===context.workspaceId&&this.workspaceGeneration===context.workspaceGeneration&&this.reviewGenerationByJob.get(context.key)===context.generation;
+  }
+  setReviewStatus(context,status){
+    if(!this.isCurrentReviewStatus(context))return false;
+    this.reviewStatusByJob.set(context.key,normalizeReviewSceneStatus(status));
+    return true;
+  }
+  failReviewStatus(context,error){
+    if(!this.isCurrentReviewStatus(context))return false;
+    this.reviewErrorByJob.set(context.key,String(error?.message||error||"Could not load review-scene status."));
+    return true;
+  }
+  finishReviewStatus(context){if(this.isCurrentReviewStatus(context))this.reviewLoadingByJob.set(context.key,false)}
+  reviewSnapshot(workspace,job,acknowledgement){
+    return createReviewSceneRequestSnapshot({operationId:this.nextOperationId++,workspace,job,acknowledgement,stateGeneration:this.workspaceGeneration});
+  }
+  beginReviewCreate(snapshot){if(this.reviewCreateOperation)return false;this.reviewCreateOperation={...snapshot};return true}
+  isCurrentReviewCreate(snapshot){return Boolean(this.reviewCreateOperation)&&this.reviewCreateOperation.operationId===snapshot.operationId&&this.workspaceId===snapshot.workspaceId&&this.workspaceGeneration===snapshot.workspaceGeneration&&this.selectedJobId===snapshot.jobId}
+  finishReviewCreate(snapshot){if(this.reviewCreateOperation?.operationId===snapshot.operationId)this.reviewCreateOperation=null}
   beginStart(snapshot){if(this.startOperation)return false;this.startOperation={...snapshot};return true}
   finishStart(snapshot){if(this.startOperation?.operationId===snapshot.operationId)this.startOperation=null}
   isCurrentStart(snapshot){return Boolean(this.startOperation)&&this.startOperation.operationId===snapshot.operationId&&this.workspaceId===snapshot.workspaceId&&this.workspaceGeneration===snapshot.stateGeneration}

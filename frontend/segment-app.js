@@ -26,6 +26,8 @@ import {
 } from "/static/segment-exports.js";
 import {
   ReconstructionWorkspaceState,
+  reviewSceneReadiness,
+  reviewSceneRequestPayload,
   isActiveReconstructionJob,
   reconstructionOutcomeLabel,
   reconstructionRequestPayload,
@@ -400,6 +402,37 @@ function diagnosticBlock(job,type,url,label){
   else if(cached)body=type==="compilation"?compilationReportHtml(cached):mogeSummaryHtml(cached);
   return `<details class="quality-block" data-reconstruction-diagnostic="${esc(type)}" data-job-id="${esc(job.job_id)}" data-artifact-url="${esc(url||"")}"><summary>${esc(label)} ${loading?"(loading...)":""}</summary>${body}</details>`;
 }
+function reviewSceneBlock(job){
+  if(job?.status!=="succeeded"||!job.result||!job.scene_id)return "";
+  const status=reconstructionState.reviewStatus(job);
+  const loading=reconstructionState.reviewLoading(job);
+  const error=reconstructionState.reviewError(job);
+  const acknowledgement=reconstructionState.reviewAcknowledgement(job);
+  const readiness=reviewSceneReadiness({
+    workspace:store.workspace,
+    job,
+    acknowledgement,
+    createOperation:reconstructionState.reviewCreateOperation,
+    statusLoading:loading
+  });
+  const imported=status?.imported;
+  const creating=reconstructionState.reviewCreateOperation?.jobId===job.job_id;
+  const refresh=`<button type="button" class="secondary" data-refresh-review-scene="${esc(job.job_id)}" ${loading||creating?"disabled":""}>Refresh review status</button>`;
+  let body="";
+  if(loading)body="<p class='export-muted'>Checking review-scene status...</p>";
+  else if(creating)body="<p class='export-muted'>Creating self-contained review scene...</p>";
+  else if(imported){
+    body=`<p class="reconstruction-message">Review scene created.</p><div class="artifact-actions"><a href="${esc(status.scene_url)}" target="_blank" rel="noopener">Open scene review</a>${refresh}</div>`;
+  }else{
+    const reviewRequired=job.result.compilation_passed===false;
+    body=reviewRequired?`<p class="review-required">This reconstruction completed successfully, but compiler quality gates require review.</p>
+      <label class="review-ack"><input type="checkbox" data-review-required-ack="${esc(job.job_id)}" ${acknowledgement?"checked":""}> I understand that compiler quality gates require review.</label>`:
+      `<p class="reconstruction-message">This reconstruction has not been added to scene review.</p>`;
+    body+=`<div class="artifact-actions"><button type="button" class="primary" data-create-review-scene="${esc(job.job_id)}" ${readiness.ready?"":"disabled"}>Create review scene</button>${refresh}</div>`;
+    if(!readiness.ready&&readiness.reasons[0])body+=`<p class="export-muted">${esc(readiness.reasons[0].message)}</p>`;
+  }
+  return `<section class="quality-block review-scene-block"><h4>Scene review</h4>${error?`<p class="reconstruction-error">${esc(error)}</p>`:""}${body}</section>`;
+}
 function compilationReportHtml(report){
   const counts=(value)=>value?Object.entries(value).map(([k,v])=>`<div><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join(""):"";
   return `<div class="diagnostic-table">
@@ -478,6 +511,7 @@ function selectedJobDetailsHtml(job){
     ])}
     <div class="artifact-actions"><button type="button" class="secondary" data-select-export="${esc(job.export_id)}">Select job export</button>${retry}</div>
     ${error}
+    ${reviewSceneBlock(job)}
     ${links}
     ${previews}
     ${result?.artifacts?.compilation_report_url?diagnosticBlock(job,"compilation",result.artifacts.compilation_report_url,"Compilation report"):""}
@@ -512,6 +546,7 @@ function renderReconstructions(){
   else history.innerHTML=`${reconstructionState.jobsError?`<p class="reconstruction-error">${esc(reconstructionState.jobsError)}</p>`:""}${reconstructionState.jobs.map(job=>jobRowHtml(job,job.job_id===reconstructionState.selectedJobId)).join("")}`;
   const selected=selectedReconstructionJob();
   $("#reconstruction-details").innerHTML=selected?selectedJobDetailsHtml(selected):"<p class='muted-pad'>Select a reconstruction job</p>";
+  maybeLoadSelectedReviewSceneStatus();
 }
 function renderAll(){renderObjects();renderDetails();renderSamStatus();renderPredictionStatus();renderExports();renderReconstructions();requestDraw()}
 
@@ -685,6 +720,84 @@ async function loadReconstructionDiagnostic(job,type,url,{force=false}={}){
     reconstructionState.failDiagnostic(context,error);
   }finally{
     reconstructionState.finishDiagnostic(context);
+    renderReconstructions();
+  }
+}
+
+function maybeLoadSelectedReviewSceneStatus(){
+  const job=selectedReconstructionJob();
+  if(!job||job.status!=="succeeded"||!job.result||!job.scene_id)return;
+  if(reconstructionState.reviewStatus(job)||reconstructionState.reviewLoading(job)||reconstructionState.reviewError(job))return;
+  queueMicrotask(()=>refreshReviewSceneStatus(job));
+}
+
+async function refreshReviewSceneStatus(job=selectedReconstructionJob()){
+  if(!store.workspace||!job||job.status!=="succeeded")return;
+  const context=reconstructionState.beginReviewStatus(job);
+  renderReconstructions();
+  try{
+    const status=await api.getReviewSceneStatus(context.workspaceId,context.jobId);
+    reconstructionState.setReviewStatus(context,status);
+  }catch(error){
+    reconstructionState.failReviewStatus(context,error);
+  }finally{
+    reconstructionState.finishReviewStatus(context);
+    renderReconstructions();
+  }
+}
+
+async function createReviewSceneForJob(job=selectedReconstructionJob()){
+  if(!store.workspace||!job)return;
+  const acknowledgement=reconstructionState.reviewAcknowledgement(job);
+  const readiness=reviewSceneReadiness({
+    workspace:store.workspace,
+    job,
+    acknowledgement,
+    createOperation:reconstructionState.reviewCreateOperation,
+    statusLoading:reconstructionState.reviewLoading(job)
+  });
+  if(!readiness.ready){toast(readiness.reasons[0]?.message||"Review scene is not ready.",true);renderReconstructions();return}
+  const snapshot=reconstructionState.reviewSnapshot(store.workspace,job,acknowledgement);
+  if(!reconstructionState.beginReviewCreate(snapshot)){toast("A review-scene import is already in progress.",true);return}
+  renderReconstructions();
+  try{
+    const payload=reviewSceneRequestPayload(snapshot);
+    const status=await api.createReviewScene({
+      workspaceId:snapshot.workspaceId,
+      jobId:snapshot.jobId,
+      expectedJobVersion:payload.expected_job_version,
+      acknowledgeReviewRequired:payload.acknowledge_review_required
+    });
+    if(!reconstructionState.isCurrentReviewCreate(snapshot))return;
+    const context=reconstructionState.beginReviewStatus(job);
+    reconstructionState.setReviewStatus(context,status);
+    reconstructionState.finishReviewStatus(context);
+    toast("Review scene created.");
+  }catch(error){
+    if(error.status===409&&/version conflict/i.test(error.message||"")){
+      toast("The reconstruction job state changed. Reloaded its current status.",true);
+      await refreshReconstructionJobs(snapshot.workspaceId,{manual:true});
+      await refreshReviewSceneStatus(selectedReconstructionJob());
+    }else if(error.status===409&&/quality gates require review/i.test(error.message||"")){
+      toast(error.message,true);
+      reconstructionState.setReviewAcknowledgement(job,false);
+      await refreshReviewSceneStatus(job);
+    }else{
+      const statusContext=reconstructionState.beginReviewStatus(job);
+      try{
+        const status=await api.getReviewSceneStatus(snapshot.workspaceId,snapshot.jobId);
+        reconstructionState.setReviewStatus(statusContext,status);
+        if(!status.imported)reconstructionState.failReviewStatus(statusContext,error);
+      }catch{
+        reconstructionState.failReviewStatus(statusContext,error);
+      }finally{
+        reconstructionState.finishReviewStatus(statusContext);
+      }
+      if(error.status===409)toast(error.message,true);
+      else toast(error.message||"Could not create review scene.",true);
+    }
+  }finally{
+    reconstructionState.finishReviewCreate(snapshot);
     renderReconstructions();
   }
 }
@@ -1133,6 +1246,18 @@ $("#reconstruction-history").addEventListener("click",event=>{
 $("#reconstruction-details").addEventListener("click",event=>{
   const retry=event.target.closest("[data-retry-reconstruction]");
   if(retry){retryReconstructionJob(retry.dataset.retryReconstruction);return}
+  const refreshReview=event.target.closest("[data-refresh-review-scene]");
+  if(refreshReview){
+    const job=reconstructionState.jobs.find(item=>item.job_id===refreshReview.dataset.refreshReviewScene);
+    refreshReviewSceneStatus(job);
+    return;
+  }
+  const createReview=event.target.closest("[data-create-review-scene]");
+  if(createReview){
+    const job=reconstructionState.jobs.find(item=>item.job_id===createReview.dataset.createReviewScene);
+    createReviewSceneForJob(job);
+    return;
+  }
   const selectExport=event.target.closest("[data-select-export]");
   if(selectExport){exportState.select(selectExport.dataset.selectExport);renderAll();return}
   const diagnosticRetry=event.target.closest("[data-diagnostic-retry]");
@@ -1141,6 +1266,13 @@ $("#reconstruction-details").addEventListener("click",event=>{
     const url=diagnosticRetry.dataset.diagnosticRetry==="compilation"?job?.result?.artifacts?.compilation_report_url:job?.result?.artifacts?.moge_summary_url;
     loadReconstructionDiagnostic(job,diagnosticRetry.dataset.diagnosticRetry,url,{force:true});
   }
+});
+$("#reconstruction-details").addEventListener("change",event=>{
+  const ack=event.target.closest("[data-review-required-ack]");
+  if(!ack)return;
+  const job=reconstructionState.jobs.find(item=>item.job_id===ack.dataset.reviewRequiredAck);
+  if(job)reconstructionState.setReviewAcknowledgement(job,ack.checked);
+  renderReconstructions();
 });
 $("#reconstruction-details").addEventListener("toggle",event=>{
   const details=event.target.closest("[data-reconstruction-diagnostic]");

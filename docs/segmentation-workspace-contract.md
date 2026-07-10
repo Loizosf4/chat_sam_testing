@@ -313,6 +313,8 @@ GET    /api/segmentation-workspaces/{workspace_id}/exports/{export_id}
 POST   /api/segmentation-workspaces/{workspace_id}/exports/{export_id}/reconstructions
 GET    /api/segmentation-workspaces/{workspace_id}/reconstructions
 GET    /api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}
+GET    /api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}/review-scene
+POST   /api/segmentation-workspaces/{workspace_id}/reconstructions/{job_id}/review-scene
 GET    /api/segmentation-reconstruction/health
 GET    /api/segmentation-artifacts/{kind}/{identifier}
 ```
@@ -526,6 +528,46 @@ invalidates frontend polling and clears old reconstruction UI state but sends no
 backend cancellation request; returning to the old workspace reloads its
 persisted job history.
 
+Successful completed reconstruction jobs can be explicitly added to the existing
+scene-review UI through the selected job's `Scene review` action. This is a
+trusted server-side bridge, not a browser upload: the browser sends only the
+workspace ID, job ID, expected job version, and, when needed, a review-required
+acknowledgement. It never downloads and re-uploads the export ZIP, Unified scene
+plan, MoGe geometry, or source image, and it does not call the generic multipart
+`POST /api/scenes/import` endpoint.
+
+The bridge accepts only jobs with `status=succeeded`, `stage=complete`, a
+present result, and a scene ID. The current `job_version` must match
+`expected_job_version`; terminal jobs are not mutated and workspace revision is
+not incremented. A successful job whose `result.compilation_passed=false` is
+eligible, but the POST requires `acknowledge_review_required=true`. The UI
+distinguishes quality gates passed from review required and uses a visible
+acknowledgement before creating review scenes from review-required results.
+
+Before import, the backend revalidates the exact immutable export archive SHA,
+export metadata, final masks, overlays, workspace-managed source image hash and
+dimensions, reconstruction result manifest, Unified scene plan, compilation
+reports, MoGe geometry, and sanitized MoGe summary through managed artifact
+indexes. Object IDs must match the reconstruction job exactly and duplicates are
+rejected. No browser-supplied paths are accepted.
+
+Review scene creation is idempotent per reconstruction job. The first POST
+returns `201` with `created=true`; later POSTs for the same job return `200`
+with `created=false` after verifying scene provenance. A scene-ID collision with
+unrelated provenance returns `409` and is never overwritten. The GET status
+endpoint derives import state from the scene store and provenance so page
+reloads rediscover existing review scenes.
+
+The imported scene package is self-contained. The scene store copies the source
+image, SAM metadata, masks, overlays, Unified scene plan, optional mask quality
+report, reconstruction result manifest, compilation report JSON, compilation
+Markdown, `moge/geometry.npz`, and sanitized `moge-summary.json`. It records
+browser-safe scene provenance in `Scene.metadata` and exposes `/artifacts/`
+scene-input URLs. The scene remains loadable through `/?scene={scene_id}` after
+the segmentation workspace is deleted. The review UI shows a
+`Back to segmentation workspace` link only for scenes with reconstruction-job
+provenance.
+
 ## Optimistic Concurrency
 
 Every successful object mutation increments `workspace_revision`. Object updates
@@ -710,5 +752,4 @@ The following remain intentionally outside this contract:
 - Final-mask finalization.
 - Mask finalization.
 - Export import through `/api/scenes/import`.
-- Scene-package import/review integration for reconstruction jobs.
 - Blender integration.
