@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {SegmentationWorkspaceClient} from "../../frontend/segment-api.js";
 import {
   ReconstructionWorkspaceState,
@@ -94,13 +95,13 @@ test("health normalization and readiness block unavailable services",()=>{
   assert.equal(reconstructionStartReadiness({workspace,exportRecord,health:normalizeReconstructionHealth(readyHealth),numTokensInput:"1.5"}).reasons[0].code,"invalid_tokens");
 });
 
-test("request snapshot captures immutable values and payload sends null tokens",()=>{
+test("request snapshot captures immutable values, workspace generation, and null tokens",()=>{
   const mutableWorkspace={...workspace};
   const mutableExport={...exportRecord};
-  const snapshot=createReconstructionRequestSnapshot({operationId:7,workspace:mutableWorkspace,exportRecord:mutableExport,resolutionLevel:9,numTokens:"",generation:3});
+  const snapshot=createReconstructionRequestSnapshot({operationId:7,workspace:mutableWorkspace,exportRecord:mutableExport,resolutionLevel:9,numTokens:"",stateGeneration:3});
   mutableWorkspace.workspace_id="other";
   mutableExport.archive_sha256="b".repeat(64);
-  assert.deepEqual(snapshot,{operationId:7,workspaceId:"workspace-a",expectedWorkspaceRevision:18,exportId:"export-a",expectedExportArchiveSha256:sha,resolutionLevel:9,numTokens:null,generation:3});
+  assert.deepEqual(snapshot,{operationId:7,workspaceId:"workspace-a",expectedWorkspaceRevision:18,exportId:"export-a",expectedExportArchiveSha256:sha,resolutionLevel:9,numTokens:null,stateGeneration:3});
   assert.deepEqual(reconstructionRequestPayload(snapshot),{expected_workspace_revision:18,expected_export_archive_sha256:sha,resolution_level:9,num_tokens:null});
 });
 
@@ -139,7 +140,7 @@ test("state guards late health, job, start, poll, and diagnostic responses",()=>
   assert.equal(state.setHealth(healthA,readyHealth),false);
   const jobsB=state.beginJobs("workspace-b");
   state.setJobs(jobsB,[job({workspace_id:"workspace-b"}),job({job_id:"job-b",workspace_id:"workspace-b"})]);
-  const jobsA={workspaceId:"workspace-a",generation:jobsB.generation,pollGeneration:state.pollGeneration};
+  const jobsA={workspaceId:"workspace-a",workspaceGeneration:state.workspaceGeneration,jobsGeneration:jobsB.jobsGeneration,pollGeneration:state.pollGeneration,kind:"manual"};
   assert.equal(state.setJobs(jobsA,[job()]),false);
   const snapshot=state.startSnapshot({workspace_id:"workspace-b",workspace_revision:2},{export_id:"export-b",archive_sha256:sha},{resolutionLevel:9,numTokens:null});
   assert.equal(state.beginStart(snapshot),true);
@@ -151,7 +152,9 @@ test("state guards late health, job, start, poll, and diagnostic responses",()=>
   state.selectJob(selected.job_id);
   const diag=state.beginDiagnostic(selected,"/api/segmentation-artifacts/reconstruction-results/w/j/compilation-report","compilation");
   state.selectJob(state.jobs.find(item=>item.job_id!==selected.job_id).job_id);
-  assert.equal(state.setDiagnostic(diag,{passed:true}),false);
+  assert.equal(state.setDiagnostic(diag,{passed:true}),true);
+  state.finishDiagnostic(diag);
+  assert.equal(state.diagnosticLoading.get(diag.key),false);
 });
 
 test("poll failure backoff is bounded and manual refresh resets it",()=>{
@@ -172,11 +175,145 @@ test("poll failure backoff is bounded and manual refresh resets it",()=>{
 test("retry readiness uses a new request with original export and current workspace revision",()=>{
   const failed=normalizeReconstructionJob(job({status:"failed",stage:"failed",progress_percent:100,finished_at:"now",request:{expected_workspace_revision:8,expected_export_archive_sha256:sha,resolution_level:6,num_tokens:128},error:{code:"executor",message:"failed",stage:"failed",retryable:true}}));
   const retryExport={export_id:failed.export_id,archive_sha256:"b".repeat(64)};
-  const snapshot=createReconstructionRequestSnapshot({operationId:2,workspace:{workspace_id:failed.workspace_id,workspace_revision:20},exportRecord:retryExport,resolutionLevel:failed.request.resolution_level,numTokens:failed.request.num_tokens,generation:1});
+  const snapshot=createReconstructionRequestSnapshot({operationId:2,workspace:{workspace_id:failed.workspace_id,workspace_revision:20},exportRecord:retryExport,resolutionLevel:failed.request.resolution_level,numTokens:failed.request.num_tokens,stateGeneration:1});
   assert.equal(snapshot.expectedWorkspaceRevision,20);
   assert.equal(snapshot.exportId,failed.export_id);
   assert.equal(snapshot.expectedExportArchiveSha256,"b".repeat(64));
   assert.equal(snapshot.numTokens,128);
+});
+
+test("start operation survives health, manual list, and poll refreshes but not workspace reset",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const snapshot=state.startSnapshot(workspace,exportRecord,{resolutionLevel:9,numTokens:null});
+  assert.equal(snapshot.stateGeneration,state.workspaceGeneration);
+  assert.equal(state.beginStart(snapshot),true);
+  const list=state.beginJobs("workspace-a",{manual:true});
+  assert.equal(state.isCurrentStart(snapshot),true);
+  state.setJobs(list,[]);
+  state.finishJobs(list);
+  const poll=state.beginJobs("workspace-a",{poll:true,pollGeneration:state.pollGeneration});
+  assert.equal(state.isCurrentStart(snapshot),true);
+  state.finishJobs(poll);
+  const health=state.beginHealth("workspace-a");
+  state.setHealth(health,readyHealth);
+  assert.equal(state.isCurrentStart(snapshot),true);
+  state.reset("workspace-b");
+  assert.equal(state.isCurrentStart(snapshot),false);
+});
+
+test("successful start upsert after concurrent list keeps newer version and selected job",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const snapshot=state.startSnapshot(workspace,exportRecord,{resolutionLevel:9,numTokens:null});
+  state.beginStart(snapshot);
+  const refresh=state.beginJobs("workspace-a",{manual:true});
+  state.setJobs(refresh,[job({job_id:"job-a",job_version:3,status:"running",stage:"moge",progress_percent:10,started_at:"now"})]);
+  state.finishJobs(refresh);
+  assert.equal(state.isCurrentStart(snapshot),true);
+  state.upsertJob(job({job_id:"job-a",job_version:1,status:"queued",stage:"queued",progress_percent:0}));
+  assert.equal(state.jobs.find(item=>item.job_id==="job-a").job_version,3);
+  assert.equal(state.jobs.find(item=>item.job_id==="job-a").status,"running");
+  assert.equal(state.selectedJobId,"job-a");
+});
+
+test("compilation and MoGe diagnostics load concurrently and cache independently",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const current=succeeded();
+  state.upsertJob(current);
+  const normalized=state.selectedJob();
+  const compilation=state.beginDiagnostic(normalized,normalized.result.artifacts.compilation_report_url,"compilation");
+  const moge=state.beginDiagnostic(normalized,normalized.result.artifacts.moge_summary_url,"moge");
+  assert.equal(state.diagnosticLoading.get(compilation.key),true);
+  assert.equal(state.diagnosticLoading.get(moge.key),true);
+  assert.equal(state.setDiagnostic(compilation,{passed:false,quality_gates:{gate_a:true}}),true);
+  assert.equal(state.setDiagnostic(moge,{model:"moge",path:"C:\\secret"}),true);
+  state.finishDiagnostic(compilation);
+  state.finishDiagnostic(moge);
+  assert.equal(state.diagnosticLoading.get(compilation.key),false);
+  assert.equal(state.diagnosticLoading.get(moge.key),false);
+  assert.equal(state.cachedDiagnostic(normalized,normalized.result.artifacts.compilation_report_url,"compilation").quality_gates[0].key,"gate_a");
+  assert.equal(state.cachedDiagnostic(normalized,normalized.result.artifacts.moge_summary_url,"moge").visible.path,"Value hidden");
+});
+
+test("diagnostics cache while another job is selected and retries are per key",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const jobA=succeeded({job_id:"job-a"});
+  const jobB=succeeded({job_id:"job-b",created_at:"2026-07-11T08:00:00Z"});
+  state.setJobs(state.beginJobs("workspace-a"),[jobA,jobB]);
+  state.selectJob("job-a");
+  const selectedA=state.selectedJob();
+  const url=selectedA.result.artifacts.compilation_report_url;
+  const compilation=state.beginDiagnostic(selectedA,url,"compilation");
+  state.selectJob("job-b");
+  assert.equal(state.setDiagnostic(compilation,{passed:true,quality_gates:{after_switch:true}}),true);
+  state.finishDiagnostic(compilation);
+  state.selectJob("job-a");
+  assert.equal(state.cachedDiagnostic(selectedA,url,"compilation").quality_gates[0].key,"after_switch");
+  const moge=state.beginDiagnostic(selectedA,selectedA.result.artifacts.moge_summary_url,"moge");
+  const retry1=state.beginDiagnostic(selectedA,url,"compilation");
+  const retry2=state.beginDiagnostic(selectedA,url,"compilation");
+  assert.equal(state.setDiagnostic(retry1,{passed:false,quality_gates:{old:false}}),false);
+  state.finishDiagnostic(retry1);
+  assert.equal(state.diagnosticLoading.get(retry2.key),true);
+  assert.equal(state.setDiagnostic(retry2,{passed:false,quality_gates:{newer:true}}),true);
+  state.finishDiagnostic(retry2);
+  assert.equal(state.diagnosticLoading.get(retry2.key),false);
+  assert.equal(state.diagnosticLoading.get(moge.key),true);
+  state.failDiagnostic(moge,new Error("moge failed"));
+  state.finishDiagnostic(moge);
+  assert.equal(state.diagnosticLoading.get(moge.key),false);
+  assert.equal(state.diagnosticError.get(moge.key),"moge failed");
+});
+
+test("workspace reset rejects old diagnostics and clears loading, errors, caches, and start state",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const normalized=state.upsertJob(succeeded());
+  const diag=state.beginDiagnostic(normalized,normalized.result.artifacts.compilation_report_url,"compilation");
+  const snapshot=state.startSnapshot(workspace,exportRecord,{resolutionLevel:9,numTokens:null});
+  state.beginStart(snapshot);
+  state.failDiagnostic(diag,new Error("temporary"));
+  state.reset("workspace-b");
+  assert.equal(state.setDiagnostic(diag,{passed:true}),false);
+  state.finishDiagnostic(diag);
+  assert.equal(state.diagnosticLoading.size,0);
+  assert.equal(state.diagnosticError.size,0);
+  assert.equal(state.compilationReportByJob.size,0);
+  assert.equal(state.startOperation,null);
+});
+
+test("poll ownership handles supersession, invalidation, and workspace switching",()=>{
+  const state=new ReconstructionWorkspaceState();
+  state.reset("workspace-a");
+  const pollA=state.beginJobs("workspace-a",{poll:true,pollGeneration:state.pollGeneration});
+  assert.ok(pollA);
+  assert.equal(state.beginJobs("workspace-a",{poll:true,pollGeneration:state.pollGeneration}),null);
+  const manualB=state.beginJobs("workspace-a",{manual:true});
+  state.setJobs(manualB,[job({job_id:"manual"})]);
+  state.finishJobs(manualB);
+  assert.equal(state.setJobs(pollA,[job({job_id:"stale-poll"})]),false);
+  state.finishJobs(pollA);
+  const pollC=state.beginJobs("workspace-a",{poll:true,pollGeneration:state.pollGeneration});
+  assert.ok(pollC);
+  state.invalidatePolling();
+  assert.equal(state.setJobs(pollC,[job({job_id:"invalidated"})]),false);
+  state.finishJobs(pollC);
+  assert.equal(state.jobs.some(item=>item.job_id==="invalidated"),false);
+  assert.equal(state.activePollContext,null);
+  assert.equal(state.jobsLoading,false);
+  const pollD=state.beginJobs("workspace-a",{poll:true,pollGeneration:state.pollGeneration});
+  state.reset("workspace-b");
+  assert.equal(state.setJobs(pollD,[job({job_id:"workspace-a-job"})]),false);
+  assert.equal(state.workspaceId,"workspace-b");
+  assert.deepEqual(state.jobs,[]);
+});
+
+test("reconstruction settings form submit prevents page reload and starts once",()=>{
+  const source=readFileSync(new URL("../../frontend/segment-app.js",import.meta.url),"utf8");
+  assert.match(source,/\$\("#reconstruction-settings"\)\.addEventListener\("submit",event=>\{event\.preventDefault\(\);startSelectedExportReconstruction\(\)\}\)/);
 });
 
 test("diagnostic normalization is dynamic and hides path-like values",()=>{

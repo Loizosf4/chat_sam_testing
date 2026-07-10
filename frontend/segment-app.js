@@ -587,10 +587,8 @@ function scheduleReconstructionPoll(){
 
 async function refreshReconstructionJobs(workspaceId=selectedWorkspaceId(),{manual=false,poll=false,pollGeneration=null}={}){
   if(!workspaceId)return;
-  if(poll&&reconstructionState.pollInFlight)return;
-  if(poll&&pollGeneration!==null&&pollGeneration!==reconstructionState.pollGeneration)return;
-  reconstructionState.pollInFlight=Boolean(poll);
-  const context=reconstructionState.beginJobs(workspaceId,{manual});
+  const context=reconstructionState.beginJobs(workspaceId,{manual,poll,pollGeneration});
+  if(!context)return;
   if(poll&&pollGeneration!==null)context.pollGeneration=pollGeneration;
   renderReconstructions();
   try{
@@ -606,6 +604,7 @@ async function refreshReconstructionJobs(workspaceId=selectedWorkspaceId(),{manu
     if(!poll)toast(error.message,true);
     if(reconstructionState.hasActiveJobs())scheduleReconstructionPoll();
   }finally{
+    reconstructionState.finishJobs(context);
     renderReconstructions();
   }
 }
@@ -685,6 +684,7 @@ async function loadReconstructionDiagnostic(job,type,url,{force=false}={}){
   }catch(error){
     reconstructionState.failDiagnostic(context,error);
   }finally{
+    reconstructionState.finishDiagnostic(context);
     renderReconstructions();
   }
 }
@@ -1115,6 +1115,7 @@ $("#export-details").addEventListener("toggle",event=>{
 $("#refresh-reconstruction-health").addEventListener("click",()=>refreshReconstructionHealth(selectedWorkspaceId()));
 $("#refresh-reconstruction-jobs").addEventListener("click",()=>refreshReconstructionJobs(selectedWorkspaceId(),{manual:true}));
 $("#start-reconstruction").addEventListener("click",startSelectedExportReconstruction);
+$("#reconstruction-settings").addEventListener("submit",event=>{event.preventDefault();startSelectedExportReconstruction()});
 $("#reconstruction-resolution").addEventListener("input",()=>{sessionStorage.setItem("segment.reconstruction.resolution",$("#reconstruction-resolution").value);renderReconstructions()});
 $("#reconstruction-num-tokens").addEventListener("input",()=>{sessionStorage.setItem("segment.reconstruction.tokens",$("#reconstruction-num-tokens").value);renderReconstructions()});
 $("#selected-export-jobs").addEventListener("click",event=>{

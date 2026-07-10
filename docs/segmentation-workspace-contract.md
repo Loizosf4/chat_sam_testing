@@ -449,13 +449,17 @@ the current editable workspace.
 
 The browser captures an immutable start-operation snapshot before posting:
 workspace ID, workspace revision, export ID, export archive SHA-256, resolution
-level, token override, operation ID, and frontend generation. Later workspace,
-export-selection, or settings changes do not mutate that request. `409 Conflict`
-does not auto-retry; the UI refreshes the workspace, export history, and
-reconstruction history and preserves useful backend wording. `503 Service
-Unavailable` refreshes health and job history because a worker submission
-failure may still have persisted a terminal failed job. Network or other
-failures clear only the start busy state and do not create fake local jobs.
+level, token override, operation ID, and reconstruction workspace generation.
+Later workspace, export-selection, settings changes, health refreshes,
+job-history refreshes, or polling updates do not mutate or invalidate that
+request. A workspace switch or reconstruction state reset does invalidate it.
+`409 Conflict` does not auto-retry; the UI refreshes the workspace, export
+history, and reconstruction history and preserves useful backend wording. `503
+Service Unavailable` refreshes health and job history because a worker
+submission failure may still have persisted a terminal failed job. Network or
+other failures clear only the start busy state and do not create fake local
+jobs. Pressing Enter in the reconstruction settings form prevents normal page
+submission and invokes the same validated start action as the button.
 
 Reconstruction job history is loaded from
 `GET /api/segmentation-workspaces/{workspace_id}/reconstructions` and polled
@@ -502,11 +506,14 @@ when present and skipped cleanly when absent.
 
 Compilation report JSON and sanitized MoGe summary JSON are loaded lazily when
 their details sections are opened, cached by workspace, job, and artifact URL,
-and guarded against late responses. The compilation viewer renders dynamic
-quality gates without hardcoding a fixed gate set and treats false gates as
-diagnostics. The MoGe summary viewer renders returned sanitized primitive
-browser-safe fields and defensively hides strings that resemble absolute paths
-such as `C:\`, `/...`, or `file://...`.
+and guarded against late responses. Compilation and MoGe diagnostics use
+independent per-artifact request generations, so they may load concurrently
+without invalidating each other. A diagnostic may finish and cache while another
+job is selected; returning to the original job displays the cached result. The
+compilation viewer renders dynamic quality gates without hardcoding a fixed
+gate set and treats false gates as diagnostics. The MoGe summary viewer renders
+returned sanitized primitive browser-safe fields and defensively hides strings
+that resemble absolute paths such as `C:\`, `/...`, or `file://...`.
 
 Queued or running reconstruction jobs do not freeze the editable segmentation
 workspace. Workspace loading/upload, object creation/rename/delete, SAM prompts,

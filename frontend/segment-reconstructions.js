@@ -140,7 +140,7 @@ export function createReconstructionRequestSnapshot({
   exportRecord,
   resolutionLevel,
   numTokens,
-  generation
+  stateGeneration
 }){
   return {
     operationId:Number(operationId),
@@ -150,7 +150,7 @@ export function createReconstructionRequestSnapshot({
     expectedExportArchiveSha256:String(exportRecord.archive_sha256),
     resolutionLevel:Number(resolutionLevel),
     numTokens:numTokens===null||numTokens===undefined||numTokens===""?null:Number(numTokens),
-    generation:Number(generation)
+    stateGeneration:Number(stateGeneration)
   };
 }
 
@@ -248,6 +248,7 @@ export class ReconstructionWorkspaceState {
   }
   reset(workspaceId){
     this.stopPolling();
+    this.workspaceGeneration=(this.workspaceGeneration||0)+1;
     this.workspaceId=workspaceId;
     this.health=null;
     this.healthLoading=false;
@@ -262,11 +263,11 @@ export class ReconstructionWorkspaceState {
     this.nextOperationId=1;
     this.pollGeneration=(this.pollGeneration||0)+1;
     this.pollTimer=null;
-    this.pollInFlight=false;
+    this.activePollContext=null;
     this.pollFailureCount=0;
     this.compilationReportByJob=new Map();
     this.mogeSummaryByJob=new Map();
-    this.diagnosticGeneration=(this.diagnosticGeneration||0)+1;
+    this.diagnosticGenerationByKey=new Map();
     this.diagnosticLoading=new Map();
     this.diagnosticError=new Map();
   }
@@ -278,13 +279,33 @@ export class ReconstructionWorkspaceState {
   isCurrentHealth(context){return this.workspaceId===context.workspaceId&&this.healthGeneration===context.generation}
   setHealth(context,health){if(this.isCurrentHealth(context)){this.health=normalizeReconstructionHealth(health);this.healthLoading=false;return true}return false}
   failHealth(context,error){if(this.isCurrentHealth(context)){this.healthError=String(error?.message||error||"Service unavailable");this.healthLoading=false;return true}return false}
-  beginJobs(workspaceId,{manual=false}={}){
+  beginJobs(workspaceId,{manual=false,poll=false,pollGeneration=null}={}){
     if(this.workspaceId!==workspaceId)this.reset(workspaceId);
-    if(manual)this.pollFailureCount=0;
+    const kind=poll?"poll":"manual";
+    if(manual){this.pollFailureCount=0;this.activePollContext=null}
+    if(poll){
+      const expectedPollGeneration=pollGeneration??this.pollGeneration;
+      if(this.activePollContext||expectedPollGeneration!==this.pollGeneration)return null;
+    }
     this.jobsLoading=true;this.jobsError="";this.jobsGeneration+=1;
-    return {workspaceId,generation:this.jobsGeneration,pollGeneration:this.pollGeneration};
+    const context={
+      workspaceId,
+      workspaceGeneration:this.workspaceGeneration,
+      jobsGeneration:this.jobsGeneration,
+      pollGeneration:this.pollGeneration,
+      kind
+    };
+    if(poll)this.activePollContext={...context};
+    return context;
   }
-  isCurrentJobs(context){return this.workspaceId===context.workspaceId&&this.jobsGeneration===context.generation}
+  ownsPoll(context){
+    return Boolean(context&&this.activePollContext&&this.activePollContext.workspaceId===context.workspaceId&&this.activePollContext.workspaceGeneration===context.workspaceGeneration&&this.activePollContext.jobsGeneration===context.jobsGeneration&&this.activePollContext.pollGeneration===context.pollGeneration);
+  }
+  isCurrentJobs(context){
+    const base=this.workspaceId===context.workspaceId&&this.workspaceGeneration===context.workspaceGeneration&&this.jobsGeneration===context.jobsGeneration;
+    if(!base)return false;
+    return context.kind==="poll"?this.pollGeneration===context.pollGeneration:true;
+  }
   setJobs(context,jobs){
     if(!this.isCurrentJobs(context))return false;
     const incoming=sortReconstructionJobsNewestFirst(jobs);
@@ -293,15 +314,20 @@ export class ReconstructionWorkspaceState {
     this.jobs=sortReconstructionJobsNewestFirst(merged);
     if(this.selectedJobId&&!this.jobs.some(job=>job.job_id===this.selectedJobId))this.selectedJobId=null;
     if(!this.selectedJobId)this.selectedJobId=this.jobs[0]?.job_id??null;
-    this.jobsLoading=false;this.pollInFlight=false;this.pollFailureCount=0;
+    this.jobsLoading=false;this.pollFailureCount=0;
     return true;
   }
   failJobs(context,error,{poll=false}={}){
     if(!this.isCurrentJobs(context))return false;
     this.jobsError=String(error?.message||error||"Could not load reconstruction jobs.");
-    this.jobsLoading=false;this.pollInFlight=false;
+    this.jobsLoading=false;
     if(poll)this.pollFailureCount+=1;
     return true;
+  }
+  finishJobs(context){
+    if(!context)return;
+    if(context.kind==="poll"&&this.ownsPoll(context))this.activePollContext=null;
+    if(this.workspaceId===context.workspaceId&&this.workspaceGeneration===context.workspaceGeneration&&this.jobsGeneration===context.jobsGeneration)this.jobsLoading=false;
   }
   upsertJob(job){
     const normalized=normalizeReconstructionJob(job);
@@ -317,7 +343,7 @@ export class ReconstructionWorkspaceState {
   hasActiveJobs(){return this.jobs.some(isActiveReconstructionJob)}
   beginStart(snapshot){if(this.startOperation)return false;this.startOperation={...snapshot};return true}
   finishStart(snapshot){if(this.startOperation?.operationId===snapshot.operationId)this.startOperation=null}
-  isCurrentStart(snapshot){return Boolean(this.startOperation)&&this.startOperation.operationId===snapshot.operationId&&this.workspaceId===snapshot.workspaceId&&this.jobsGeneration===snapshot.generation}
+  isCurrentStart(snapshot){return Boolean(this.startOperation)&&this.startOperation.operationId===snapshot.operationId&&this.workspaceId===snapshot.workspaceId&&this.workspaceGeneration===snapshot.stateGeneration}
   startSnapshot(workspace,exportRecord,readiness){
     return createReconstructionRequestSnapshot({
       operationId:this.nextOperationId++,
@@ -325,7 +351,7 @@ export class ReconstructionWorkspaceState {
       exportRecord,
       resolutionLevel:readiness.resolutionLevel,
       numTokens:readiness.numTokens,
-      generation:this.jobsGeneration
+      stateGeneration:this.workspaceGeneration
     });
   }
   stopPolling(){
@@ -337,7 +363,7 @@ export class ReconstructionWorkspaceState {
     this.pollTimer=this.setTimeoutFn(()=>callback(context),delayMs);
     return context;
   }
-  invalidatePolling(){this.stopPolling();this.pollGeneration+=1;this.pollInFlight=false}
+  invalidatePolling(){this.stopPolling();this.pollGeneration+=1;this.activePollContext=null}
   pollDelay(){
     if(!this.pollFailureCount)return 2000;
     return Math.min(15000,2000*(2**Math.min(this.pollFailureCount,3)));
@@ -346,22 +372,25 @@ export class ReconstructionWorkspaceState {
   cachedDiagnostic(job,url,type){return type==="compilation"?this.compilationReportByJob.get(this.diagnosticKey(job,url,type)):this.mogeSummaryByJob.get(this.diagnosticKey(job,url,type))}
   beginDiagnostic(job,url,type){
     const key=this.diagnosticKey(job,url,type);
-    this.diagnosticGeneration+=1;
-    const context={workspaceId:this.workspaceId,jobId:job.job_id,url,type,key,generation:this.diagnosticGeneration};
+    const keyGeneration=(this.diagnosticGenerationByKey.get(key)||0)+1;
+    this.diagnosticGenerationByKey.set(key,keyGeneration);
+    const context={workspaceId:this.workspaceId,workspaceGeneration:this.workspaceGeneration,jobId:job.job_id,url,type,key,keyGeneration};
     this.diagnosticLoading.set(key,true);this.diagnosticError.delete(key);
     return context;
   }
-  isCurrentDiagnostic(context){return this.workspaceId===context.workspaceId&&this.selectedJobId===context.jobId&&this.diagnosticGeneration===context.generation}
+  isCurrentDiagnostic(context){return this.workspaceId===context.workspaceId&&this.workspaceGeneration===context.workspaceGeneration&&this.diagnosticGenerationByKey.get(context.key)===context.keyGeneration}
   setDiagnostic(context,value){
     if(!this.isCurrentDiagnostic(context))return false;
     if(context.type==="compilation")this.compilationReportByJob.set(context.key,normalizeCompilationReport(value));
     else this.mogeSummaryByJob.set(context.key,normalizeMogeSummary(value));
-    this.diagnosticLoading.set(context.key,false);
     return true;
   }
   failDiagnostic(context,error){
     if(!this.isCurrentDiagnostic(context))return false;
-    this.diagnosticLoading.set(context.key,false);this.diagnosticError.set(context.key,String(error?.message||error||"Could not load diagnostic."));
+    this.diagnosticError.set(context.key,String(error?.message||error||"Could not load diagnostic."));
     return true;
+  }
+  finishDiagnostic(context){
+    if(this.isCurrentDiagnostic(context))this.diagnosticLoading.set(context.key,false);
   }
 }
